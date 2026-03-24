@@ -10,43 +10,48 @@ return new class extends Migration
     {
         Schema::create('sales_orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('company_id')->index();
-            $table->uuid('customer_id')->index();
-            $table->string('so_number')->unique()->index();
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('party_id')->constrained('parties');
+            $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
+            $table->string('so_number')->unique();
             $table->date('so_date');
-            $table->date('delivery_date')->nullable();
+            $table->date('expected_delivery_date')->nullable();
+            $table->enum('status', ['draft', 'confirmed', 'partially_delivered', 'delivered', 'cancelled'])->default('draft');
             $table->decimal('total_amount', 15, 2)->default(0);
-            $table->decimal('tax_amount', 15, 2)->default(0);
-            $table->enum('status', ['draft', 'confirmed', 'delivered', 'cancelled'])->default('draft');
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
+            $table->decimal('gst_amount', 15, 2)->default(0);
+            $table->decimal('grand_total', 15, 2)->default(0);
+            $table->text('notes')->nullable();
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
 
             // Sync columns
-            $table->enum('sync_status', ['pending', 'synced', 'failed', 'conflict'])->default('pending');
-            $table->uuid('device_id')->nullable();
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
-            $table->timestamp('updated_at_local')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('so_lines', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('sales_order_id')->index();
-            $table->uuid('item_id')->index();
-            $table->integer('quantity');
+            $table->foreignUuid('sales_order_id')->constrained('sales_orders')->cascadeOnDelete();
+            $table->foreignUuid('item_id')->constrained('items');
+            $table->decimal('quantity', 15, 3);
             $table->decimal('rate', 15, 2);
-            $table->decimal('tax_rate', 5, 2)->default(0);
-            $table->decimal('tax_amount', 15, 2)->default(0);
-            $table->decimal('total_amount', 15, 2);
-            $table->text('narration')->nullable();
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
+            $table->decimal('discount_percent', 5, 2)->default(0);
+            $table->decimal('taxable_amount', 15, 2)->default(0);
+            $table->decimal('gst_rate', 5, 2)->default(0);
+            $table->decimal('cgst', 15, 2)->default(0);
+            $table->decimal('sgst', 15, 2)->default(0);
+            $table->decimal('igst', 15, 2)->default(0);
+            $table->decimal('line_total', 15, 2)->default(0);
+            $table->decimal('delivered_quantity', 15, 3)->default(0);
 
             // Sync columns
-            $table->enum('sync_status', ['pending', 'synced', 'failed', 'conflict'])->default('pending');
-            $table->uuid('device_id')->nullable();
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
-            $table->timestamp('updated_at_local')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
             $table->timestamps();
         });
     }

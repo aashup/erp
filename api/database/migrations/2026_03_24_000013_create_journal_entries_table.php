@@ -10,42 +10,41 @@ return new class extends Migration
     {
         Schema::create('journal_entries', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('company_id')->index();
-            $table->string('voucher_no')->unique()->index();
-            $table->enum('type', ['purchase', 'sales', 'payment', 'receipt', 'journal', 'contribution']);
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('financial_year_id')->constrained('financial_years');
+            $table->string('voucher_number')->unique();
             $table->date('voucher_date');
+            $table->enum('voucher_type', ['purchase', 'sales', 'payment', 'receipt', 'journal', 'contra']);
+            $table->text('narration')->nullable();
+            $table->string('source')->nullable()->comment('auto or manual');
             $table->string('reference_type')->nullable();
             $table->uuid('reference_id')->nullable();
-            $table->text('narration')->nullable();
-            $table->decimal('total_debit', 15, 2)->default(0);
-            $table->decimal('total_credit', 15, 2)->default(0);
-            $table->enum('status', ['posted', 'cancelled'])->default('posted');
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
+            $table->boolean('is_posted')->default(false);
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
 
             // Sync columns
-            $table->enum('sync_status', ['pending', 'synced', 'failed', 'conflict'])->default('pending');
-            $table->uuid('device_id')->nullable();
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
-            $table->timestamp('updated_at_local')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
             $table->timestamps();
+
+            $table->index(['reference_type', 'reference_id']);
         });
 
         Schema::create('journal_lines', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('journal_entry_id')->index();
-            $table->uuid('account_id')->index();
-            $table->enum('debit_credit', 'debit')->default('debit');
-            $table->decimal('amount', 15, 2);
+            $table->foreignUuid('journal_entry_id')->constrained('journal_entries')->cascadeOnDelete();
+            $table->foreignUuid('account_id')->constrained('chart_of_accounts');
+            $table->decimal('debit', 15, 2)->default(0);
+            $table->decimal('credit', 15, 2)->default(0);
             $table->text('narration')->nullable();
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
 
             // Sync columns
-            $table->enum('sync_status', ['pending', 'synced', 'failed', 'conflict'])->default('pending');
-            $table->uuid('device_id')->nullable();
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
-            $table->timestamp('updated_at_local')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
             $table->timestamps();
         });
     }
