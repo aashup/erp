@@ -15,13 +15,17 @@ class SalesOrderSeeder extends Seeder
     public function run(): void
     {
         $company = Company::first();
-        if (! $company) return;
+        if (! $company) {
+            return;
+        }
 
         $customers = Party::where('company_id', $company->id)->where('type', 'customer')->get();
         $items = Item::where('company_id', $company->id)->get();
         $user = User::where('company_id', $company->id)->first();
 
-        if ($customers->isEmpty() || $items->isEmpty() || ! $user) return;
+        if ($customers->isEmpty() || $items->isEmpty() || ! $user) {
+            return;
+        }
 
         foreach (['draft', 'confirmed', 'confirmed', 'delivered', 'cancelled'] as $idx => $status) {
             $customer = $customers->random();
@@ -30,7 +34,7 @@ class SalesOrderSeeder extends Seeder
             $so = SalesOrder::create([
                 'company_id' => $company->id,
                 'party_id' => $customer->id,
-                'so_number' => 'SO-' . str_pad($idx + 1, 6, '0', STR_PAD_LEFT),
+                'so_number' => 'SO-'.str_pad($idx + 1, 6, '0', STR_PAD_LEFT),
                 'so_date' => $soDate,
                 'expected_delivery_date' => $soDate->copy()->addDays(7),
                 'status' => $status,

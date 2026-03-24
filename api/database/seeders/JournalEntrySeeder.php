@@ -15,20 +15,26 @@ class JournalEntrySeeder extends Seeder
     public function run(): void
     {
         $company = Company::first();
-        if (! $company) return;
+        if (! $company) {
+            return;
+        }
 
         $fy = FinancialYear::where('company_id', $company->id)->where('is_current', true)->first();
         $user = User::where('company_id', $company->id)->first();
         $accounts = ChartOfAccount::where('company_id', $company->id)->get();
 
-        if (! $fy || ! $user || $accounts->count() < 4) return;
+        if (! $fy || ! $user || $accounts->count() < 4) {
+            return;
+        }
 
         $cashAccount = $accounts->where('code', '1300')->first();
         $salesAccount = $accounts->where('code', '4000')->first();
         $purchaseAccount = $accounts->where('code', '5000')->first();
         $expenseAccount = $accounts->where('code', '5200')->first();
 
-        if (! $cashAccount || ! $salesAccount || ! $purchaseAccount || ! $expenseAccount) return;
+        if (! $cashAccount || ! $salesAccount || ! $purchaseAccount || ! $expenseAccount) {
+            return;
+        }
 
         // Manual journal entries
         $entries = [
@@ -62,7 +68,7 @@ class JournalEntrySeeder extends Seeder
             $je = JournalEntry::create([
                 'company_id' => $company->id,
                 'financial_year_id' => $fy->id,
-                'voucher_number' => 'JV-' . str_pad($idx + 1, 6, '0', STR_PAD_LEFT),
+                'voucher_number' => 'JV-'.str_pad($idx + 1, 6, '0', STR_PAD_LEFT),
                 'voucher_date' => now()->subDays(rand(1, 30)),
                 'voucher_type' => $entry['voucher_type'],
                 'narration' => $entry['narration'],

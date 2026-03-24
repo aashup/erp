@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use App\Traits\HasUuid;
-use App\Traits\HasSyncColumns;
 use App\Traits\BelongsToCompany;
+use App\Traits\HasSyncColumns;
+use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Item extends Model
 {
-    use HasFactory, HasUuid, HasSyncColumns, BelongsToCompany, SoftDeletes, LogsActivity;
+    use BelongsToCompany, HasFactory, HasSyncColumns, HasUuid, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'company_id',

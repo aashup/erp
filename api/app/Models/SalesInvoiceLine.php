@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Traits\HasUuid;
 use App\Traits\HasSyncColumns;
+use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SalesInvoiceLine extends Model
 {
-    use HasFactory, HasUuid, HasSyncColumns;
+    use HasFactory, HasSyncColumns, HasUuid;
 
     protected $fillable = [
         'sales_invoice_id',

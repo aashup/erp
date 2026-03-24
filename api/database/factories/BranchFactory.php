@@ -20,7 +20,7 @@ class BranchFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'name' => fake()->city() . ' Branch',
+            'name' => fake()->city().' Branch',
             'code' => fake()->regexify('[A-Z]{3}'),
             'address' => fake()->address(),
             'city' => fake()->city(),

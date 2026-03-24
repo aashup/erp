@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Models\StockLedger;
-use App\Models\Company;
-use App\Models\Item;
 use App\Models\Batch;
+use App\Models\Company;
 use App\Models\Godown;
+use App\Models\Item;
+use App\Models\StockLedger;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

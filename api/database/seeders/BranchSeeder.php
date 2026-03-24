@@ -19,7 +19,7 @@ class BranchSeeder extends Seeder
         // Get the first company
         $company = Company::first();
 
-        if (!$company) {
+        if (! $company) {
             $company = Company::factory()->create();
         }
 

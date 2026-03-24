@@ -17,14 +17,18 @@ class PurchaseInvoiceSeeder extends Seeder
     public function run(): void
     {
         $company = Company::first();
-        if (! $company) return;
+        if (! $company) {
+            return;
+        }
 
         $vendors = Party::where('company_id', $company->id)->where('type', 'vendor')->get();
         $items = Item::where('company_id', $company->id)->get();
         $godown = Godown::where('company_id', $company->id)->first();
         $user = User::where('company_id', $company->id)->first();
 
-        if ($vendors->isEmpty() || $items->isEmpty() || ! $godown || ! $user) return;
+        if ($vendors->isEmpty() || $items->isEmpty() || ! $godown || ! $user) {
+            return;
+        }
 
         // Create 5 confirmed purchase invoices with lines
         for ($i = 1; $i <= 5; $i++) {
@@ -36,8 +40,8 @@ class PurchaseInvoiceSeeder extends Seeder
                 'company_id' => $company->id,
                 'party_id' => $vendor->id,
                 'godown_id' => $godown->id,
-                'invoice_number' => 'PI-' . str_pad($i, 6, '0', STR_PAD_LEFT),
-                'vendor_invoice_number' => 'VINV/' . now()->year . '/' . str_pad($i, 4, '0', STR_PAD_LEFT),
+                'invoice_number' => 'PI-'.str_pad($i, 6, '0', STR_PAD_LEFT),
+                'vendor_invoice_number' => 'VINV/'.now()->year.'/'.str_pad($i, 4, '0', STR_PAD_LEFT),
                 'invoice_date' => $invoiceDate,
                 'due_date' => $invoiceDate->copy()->addDays(30),
                 'is_inter_state' => $isInterState,

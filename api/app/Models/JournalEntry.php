@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use App\Traits\HasUuid;
-use App\Traits\HasSyncColumns;
 use App\Traits\BelongsToCompany;
+use App\Traits\HasSyncColumns;
+use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\LogOptions;
@@ -12,7 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class JournalEntry extends Model
 {
-    use HasFactory, HasUuid, HasSyncColumns, BelongsToCompany, LogsActivity;
+    use BelongsToCompany, HasFactory, HasSyncColumns, HasUuid, LogsActivity;
 
     protected $fillable = [
         'company_id',

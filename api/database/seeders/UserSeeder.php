@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Company;
 use App\Models\Branch;
+use App\Models\Company;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -21,10 +21,10 @@ class UserSeeder extends Seeder
         $company = Company::first();
         $branch = Branch::where('company_id', $company->id)->first();
 
-        if (!$company) {
+        if (! $company) {
             $company = Company::factory()->create();
         }
-        if (!$branch) {
+        if (! $branch) {
             $branch = Branch::factory()->create(['company_id' => $company->id]);
         }
 

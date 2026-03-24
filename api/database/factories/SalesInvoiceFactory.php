@@ -31,7 +31,7 @@ class SalesInvoiceFactory extends Factory
             'branch_id' => Branch::factory(),
             'sales_order_id' => null,
             'godown_id' => Godown::factory(),
-            'invoice_number' => 'SI-' . fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
+            'invoice_number' => 'SI-'.fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
             'invoice_date' => $invoiceDate,
             'due_date' => $dueDate,
             'is_inter_state' => $isInterState,

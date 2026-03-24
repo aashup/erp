@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
-use App\Traits\HasUuid;
-use App\Traits\HasSyncColumns;
 use App\Traits\BelongsToCompany;
+use App\Traits\HasSyncColumns;
+use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class StockLedger extends Model
 {
-    use HasFactory, HasUuid, HasSyncColumns, BelongsToCompany;
+    use BelongsToCompany, HasFactory, HasSyncColumns, HasUuid;
 
     protected $table = 'stock_ledger';
 

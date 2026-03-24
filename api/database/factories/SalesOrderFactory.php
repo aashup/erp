@@ -23,7 +23,7 @@ class SalesOrderFactory extends Factory
             'company_id' => Company::factory(),
             'party_id' => Party::factory()->state(['type' => 'customer']),
             'branch_id' => Branch::factory(),
-            'so_number' => 'SO-' . fake()->unique()->regexify('[A-Z]{3}[0-9]{6}'),
+            'so_number' => 'SO-'.fake()->unique()->regexify('[A-Z]{3}[0-9]{6}'),
             'so_date' => $soDate,
             'expected_delivery_date' => $deliveryDate,
             'status' => fake()->randomElement(['draft', 'confirmed', 'partially_delivered', 'delivered', 'cancelled']),

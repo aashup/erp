@@ -15,13 +15,17 @@ class PurchaseOrderSeeder extends Seeder
     public function run(): void
     {
         $company = Company::first();
-        if (! $company) return;
+        if (! $company) {
+            return;
+        }
 
         $vendors = Party::where('company_id', $company->id)->where('type', 'vendor')->get();
         $items = Item::where('company_id', $company->id)->get();
         $user = User::where('company_id', $company->id)->first();
 
-        if ($vendors->isEmpty() || $items->isEmpty() || ! $user) return;
+        if ($vendors->isEmpty() || $items->isEmpty() || ! $user) {
+            return;
+        }
 
         foreach (['draft', 'confirmed', 'confirmed', 'received'] as $idx => $status) {
             $vendor = $vendors->random();
@@ -30,7 +34,7 @@ class PurchaseOrderSeeder extends Seeder
             $po = PurchaseOrder::create([
                 'company_id' => $company->id,
                 'party_id' => $vendor->id,
-                'po_number' => 'PO-' . str_pad($idx + 1, 6, '0', STR_PAD_LEFT),
+                'po_number' => 'PO-'.str_pad($idx + 1, 6, '0', STR_PAD_LEFT),
                 'po_date' => $poDate,
                 'expected_delivery_date' => $poDate->copy()->addDays(14),
                 'status' => $status,

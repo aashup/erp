@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\StockLedger;
-use App\Models\Company;
-use App\Models\Item;
 use App\Models\Batch;
+use App\Models\Company;
 use App\Models\Godown;
+use App\Models\Item;
+use App\Models\StockLedger;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -26,7 +26,7 @@ class StockLedgerSeeder extends Seeder
         $godowns = Godown::where('company_id', $company->id)->get();
         $user = User::where('company_id', $company->id)->first();
 
-        if (!$company || $items->isEmpty() || $godowns->isEmpty() || !$user) {
+        if (! $company || $items->isEmpty() || $godowns->isEmpty() || ! $user) {
             // Skip if prerequisites not met
             return;
         }
@@ -38,7 +38,7 @@ class StockLedgerSeeder extends Seeder
 
             if ($item->is_batch_tracked) {
                 $batch = Batch::where('item_id', $item->id)->first();
-                if (!$batch) {
+                if (! $batch) {
                     $batch = Batch::factory()->create([
                         'item_id' => $item->id,
                     ]);

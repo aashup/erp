@@ -19,7 +19,7 @@ class SalesReturnFactory extends Factory
             'company_id' => Company::factory(),
             'sales_invoice_id' => SalesInvoice::factory(),
             'party_id' => Party::factory()->state(['type' => 'customer']),
-            'return_number' => 'SR-' . fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
+            'return_number' => 'SR-'.fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
             'return_date' => fake()->dateTimeBetween('-2 months', 'now'),
             'status' => fake()->randomElement(['draft', 'confirmed', 'cancelled']),
             'total_amount' => $totalAmount,

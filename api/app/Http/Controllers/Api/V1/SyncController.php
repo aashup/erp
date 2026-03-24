@@ -3,6 +3,17 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Godown;
+use App\Models\Item;
+use App\Models\JournalEntry;
+use App\Models\Party;
+use App\Models\PaymentReceipt;
+use App\Models\PurchaseInvoice;
+use App\Models\PurchaseOrder;
+use App\Models\SalesInvoice;
+use App\Models\SalesOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,17 +21,17 @@ use Illuminate\Support\Facades\DB;
 class SyncController extends Controller
 {
     private array $syncableModels = [
-        'items' => \App\Models\Item::class,
-        'parties' => \App\Models\Party::class,
-        'batches' => \App\Models\Batch::class,
-        'godowns' => \App\Models\Godown::class,
-        'branches' => \App\Models\Branch::class,
-        'purchase_orders' => \App\Models\PurchaseOrder::class,
-        'purchase_invoices' => \App\Models\PurchaseInvoice::class,
-        'sales_orders' => \App\Models\SalesOrder::class,
-        'sales_invoices' => \App\Models\SalesInvoice::class,
-        'journal_entries' => \App\Models\JournalEntry::class,
-        'payment_receipts' => \App\Models\PaymentReceipt::class,
+        'items' => Item::class,
+        'parties' => Party::class,
+        'batches' => Batch::class,
+        'godowns' => Godown::class,
+        'branches' => Branch::class,
+        'purchase_orders' => PurchaseOrder::class,
+        'purchase_invoices' => PurchaseInvoice::class,
+        'sales_orders' => SalesOrder::class,
+        'sales_invoices' => SalesInvoice::class,
+        'journal_entries' => JournalEntry::class,
+        'payment_receipts' => PaymentReceipt::class,
     ];
 
     public function push(Request $request): JsonResponse

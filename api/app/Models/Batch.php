@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Traits\HasUuid;
 use App\Traits\HasSyncColumns;
+use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\LogOptions;
@@ -11,7 +11,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Batch extends Model
 {
-    use HasFactory, HasUuid, HasSyncColumns, LogsActivity;
+    use HasFactory, HasSyncColumns, HasUuid, LogsActivity;
 
     protected $fillable = [
         'item_id',

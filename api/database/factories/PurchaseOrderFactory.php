@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\PurchaseOrder;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Party;
-use App\Models\Branch;
+use App\Models\PurchaseOrder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -29,7 +29,7 @@ class PurchaseOrderFactory extends Factory
             'company_id' => Company::factory(),
             'party_id' => Party::factory()->create(['type' => 'vendor']),
             'branch_id' => Branch::factory(),
-            'po_number' => 'PO-' . fake()->unique()->regexify('[A-Z]{3}[0-9]{6}'),
+            'po_number' => 'PO-'.fake()->unique()->regexify('[A-Z]{3}[0-9]{6}'),
             'po_date' => $poDate,
             'expected_delivery_date' => $expectedDeliveryDate,
             'status' => fake()->randomElement(['draft', 'approved', 'partially_received', 'completed', 'cancelled']),

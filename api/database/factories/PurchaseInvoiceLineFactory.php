@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Batch;
 use App\Models\Item;
 use App\Models\PurchaseInvoice;
 use Illuminate\Database\Eloquent\Factories\Factory;

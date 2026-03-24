@@ -19,7 +19,7 @@ class PurchaseReturnFactory extends Factory
             'company_id' => Company::factory(),
             'purchase_invoice_id' => PurchaseInvoice::factory(),
             'party_id' => Party::factory()->state(['type' => 'vendor']),
-            'return_number' => 'PR-' . fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
+            'return_number' => 'PR-'.fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
             'return_date' => fake()->dateTimeBetween('-2 months', 'now'),
             'status' => fake()->randomElement(['draft', 'confirmed', 'cancelled']),
             'total_amount' => $totalAmount,

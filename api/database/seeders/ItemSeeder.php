@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Item;
 use App\Models\Company;
+use App\Models\Item;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -77,7 +77,7 @@ class ItemSeeder extends Seeder
         // Get the first company
         $company = Company::first();
 
-        if (!$company) {
+        if (! $company) {
             $company = Company::factory()->create();
         }
 

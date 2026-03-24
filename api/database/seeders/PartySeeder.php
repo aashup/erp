@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Party;
 use App\Models\Company;
+use App\Models\Party;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -19,7 +19,7 @@ class PartySeeder extends Seeder
         // Get the first company
         $company = Company::first();
 
-        if (!$company) {
+        if (! $company) {
             $company = Company::factory()->create();
         }
 

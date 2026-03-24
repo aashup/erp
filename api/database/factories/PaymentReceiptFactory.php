@@ -17,7 +17,7 @@ class PaymentReceiptFactory extends Factory
             'company_id' => Company::factory(),
             'party_id' => Party::factory(),
             'type' => $type,
-            'receipt_number' => ($type === 'payment' ? 'PAY-' : 'RCT-') . fake()->unique()->regexify('[0-9]{6}'),
+            'receipt_number' => ($type === 'payment' ? 'PAY-' : 'RCT-').fake()->unique()->regexify('[0-9]{6}'),
             'receipt_date' => fake()->dateTimeBetween('-3 months', 'now'),
             'amount' => fake()->randomFloat(2, 100, 50000),
             'payment_mode' => fake()->randomElement(['cash', 'bank', 'cheque', 'upi', 'other']),

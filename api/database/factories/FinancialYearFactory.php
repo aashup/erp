@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\FinancialYear;
 use App\Models\Company;
+use App\Models\FinancialYear;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -24,7 +24,7 @@ class FinancialYearFactory extends Factory
 
         return [
             'company_id' => Company::factory(),
-            'label' => $startDate->format('Y') . '-' . $endDate->format('y'),
+            'label' => $startDate->format('Y').'-'.$endDate->format('y'),
             'start_date' => $startDate,
             'end_date' => $endDate,
             'is_locked' => false,

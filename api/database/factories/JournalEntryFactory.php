@@ -14,7 +14,7 @@ class JournalEntryFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'financial_year_id' => FinancialYear::factory(),
-            'voucher_number' => 'JV-' . fake()->unique()->regexify('[0-9]{6}'),
+            'voucher_number' => 'JV-'.fake()->unique()->regexify('[0-9]{6}'),
             'voucher_date' => fake()->dateTimeBetween('-3 months', 'now'),
             'voucher_type' => fake()->randomElement(['purchase', 'sales', 'payment', 'receipt', 'journal', 'contra']),
             'narration' => fake()->sentence(),

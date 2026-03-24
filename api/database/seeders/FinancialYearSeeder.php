@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\FinancialYear;
 use App\Models\Company;
+use App\Models\FinancialYear;
+use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Carbon\Carbon;
 
 class FinancialYearSeeder extends Seeder
 {
@@ -20,7 +20,7 @@ class FinancialYearSeeder extends Seeder
         // Get the first company
         $company = Company::first();
 
-        if (!$company) {
+        if (! $company) {
             $company = Company::factory()->create();
         }
 
@@ -31,7 +31,7 @@ class FinancialYearSeeder extends Seeder
 
         FinancialYear::factory()->create([
             'company_id' => $company->id,
-            'label' => $currentYear . '-' . ($currentYear + 1),
+            'label' => $currentYear.'-'.($currentYear + 1),
             'start_date' => $startDate,
             'end_date' => $endDate,
             'is_current' => true,
@@ -44,7 +44,7 @@ class FinancialYearSeeder extends Seeder
 
         FinancialYear::factory()->create([
             'company_id' => $company->id,
-            'label' => ($currentYear - 1) . '-' . $currentYear,
+            'label' => ($currentYear - 1).'-'.$currentYear,
             'start_date' => $prevStartDate,
             'end_date' => $prevEndDate,
             'is_current' => false,

@@ -6,7 +6,6 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Godown;
 use App\Models\Party;
-use App\Models\PurchaseOrder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -32,7 +31,7 @@ class PurchaseInvoiceFactory extends Factory
             'branch_id' => Branch::factory(),
             'purchase_order_id' => null,
             'godown_id' => Godown::factory(),
-            'invoice_number' => 'PI-' . fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
+            'invoice_number' => 'PI-'.fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
             'vendor_invoice_number' => fake()->optional()->regexify('[A-Z]{3}/[0-9]{4}'),
             'invoice_date' => $invoiceDate,
             'due_date' => $dueDate,

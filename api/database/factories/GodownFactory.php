@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Godown;
-use App\Models\Company;
 use App\Models\Branch;
+use App\Models\Company;
+use App\Models\Godown;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,7 +22,7 @@ class GodownFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'branch_id' => Branch::factory(),
-            'name' => fake()->words(2, true) . ' Godown',
+            'name' => fake()->words(2, true).' Godown',
             'code' => fake()->regexify('[A-Z]{3}'),
             'address' => fake()->address(),
             'is_default' => false,

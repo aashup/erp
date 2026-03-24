@@ -3,11 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\Batch;
-use App\Models\Item;
 use App\Models\Company;
+use App\Models\Item;
+use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Carbon\Carbon;
 
 class BatchSeeder extends Seeder
 {
@@ -21,7 +21,7 @@ class BatchSeeder extends Seeder
         // Get the first company
         $company = Company::first();
 
-        if (!$company) {
+        if (! $company) {
             $company = Company::factory()->create();
         }
 
@@ -41,7 +41,7 @@ class BatchSeeder extends Seeder
         foreach ($batchItems as $item) {
             Batch::factory()->create([
                 'item_id' => $item->id,
-                'batch_number' => 'BATCH' . Carbon::now()->format('Ym') . '001',
+                'batch_number' => 'BATCH'.Carbon::now()->format('Ym').'001',
                 'manufacturing_date' => Carbon::now()->subMonths(6),
                 'expiry_date' => Carbon::now()->addYears(1),
                 'purchase_price' => $item->purchase_price,

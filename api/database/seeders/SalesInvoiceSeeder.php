@@ -17,14 +17,18 @@ class SalesInvoiceSeeder extends Seeder
     public function run(): void
     {
         $company = Company::first();
-        if (! $company) return;
+        if (! $company) {
+            return;
+        }
 
         $customers = Party::where('company_id', $company->id)->where('type', 'customer')->get();
         $items = Item::where('company_id', $company->id)->get();
         $godown = Godown::where('company_id', $company->id)->first();
         $user = User::where('company_id', $company->id)->first();
 
-        if ($customers->isEmpty() || $items->isEmpty() || ! $godown || ! $user) return;
+        if ($customers->isEmpty() || $items->isEmpty() || ! $godown || ! $user) {
+            return;
+        }
 
         for ($i = 1; $i <= 8; $i++) {
             $customer = $customers->random();
@@ -35,7 +39,7 @@ class SalesInvoiceSeeder extends Seeder
                 'company_id' => $company->id,
                 'party_id' => $customer->id,
                 'godown_id' => $godown->id,
-                'invoice_number' => 'SI-' . str_pad($i, 6, '0', STR_PAD_LEFT),
+                'invoice_number' => 'SI-'.str_pad($i, 6, '0', STR_PAD_LEFT),
                 'invoice_date' => $invoiceDate,
                 'due_date' => $invoiceDate->copy()->addDays(15),
                 'is_inter_state' => $isInterState,
