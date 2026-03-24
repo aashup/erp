@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasUuid;
 use App\Traits\HasSyncColumns;
 use App\Traits\BelongsToCompany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Godown extends Model
 {
-    use HasUuid, HasSyncColumns, BelongsToCompany, SoftDeletes, LogsActivity;
+    use HasFactory, HasUuid, HasSyncColumns, BelongsToCompany, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'company_id',

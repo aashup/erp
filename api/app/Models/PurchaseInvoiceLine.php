@@ -4,11 +4,12 @@ namespace App\Models;
 
 use App\Traits\HasUuid;
 use App\Traits\HasSyncColumns;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseInvoiceLine extends Model
 {
-    use HasUuid, HasSyncColumns;
+    use HasFactory, HasUuid, HasSyncColumns;
 
     protected $fillable = [
         'purchase_invoice_id',

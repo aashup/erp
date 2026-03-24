@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\HasUuid;
 use App\Traits\HasSyncColumns;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
@@ -11,7 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Company extends Model
 {
-    use HasUuid, HasSyncColumns, SoftDeletes, LogsActivity;
+    use HasFactory, HasUuid, HasSyncColumns, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'name',
