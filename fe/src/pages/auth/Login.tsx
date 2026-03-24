@@ -1,0 +1,87 @@
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { authApi } from '@/api/auth';
+import { useAuthStore } from '@/store/authStore';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent } from '@/components/ui/Card';
+
+const schema = z.object({
+  email: z.string().email('Invalid email'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type FormData = z.infer<typeof schema>;
+
+export default function Login() {
+  const navigate = useNavigate();
+  const { setAuth } = useAuthStore();
+  const [error, setError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  const onSubmit = async (data: FormData) => {
+    try {
+      setError('');
+      const res = await authApi.login({
+        ...data,
+        device_name: navigator.userAgent,
+      });
+      setAuth(res.data.data.user, res.data.data.token);
+      navigate('/');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr.response?.data?.message ?? 'Login failed');
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-900 text-center">Sign In</h2>
+
+          {error && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
+          )}
+
+          <Input
+            id="email"
+            label="Email"
+            type="email"
+            placeholder="you@company.com"
+            error={errors.email?.message}
+            {...register('email')}
+          />
+
+          <Input
+            id="password"
+            label="Password"
+            type="password"
+            placeholder="Enter password"
+            error={errors.password?.message}
+            {...register('password')}
+          />
+
+          <Button type="submit" className="w-full" loading={isSubmitting}>
+            Sign In
+          </Button>
+
+          <p className="text-center text-sm text-gray-500">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+              Register
+            </Link>
+          </p>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

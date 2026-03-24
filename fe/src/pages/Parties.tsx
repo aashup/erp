@@ -1,0 +1,148 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import type { ColumnDef } from '@tanstack/react-table';
+import { partiesApi } from '@/api/parties';
+import type { Party } from '@/types';
+import { formatCurrency } from '@/lib/utils';
+import { Card, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Badge } from '@/components/ui/Badge';
+import { DataTable } from '@/components/ui/DataTable';
+import { Modal } from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+
+const schema = z.object({
+  type: z.enum(['customer', 'vendor', 'both']),
+  name: z.string().min(1, 'Name is required'),
+  gstin: z.string().optional(),
+  pan: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  state_code: z.string().optional(),
+  contact_person: z.string().optional(),
+  credit_limit: z.number().min(0).optional(),
+});
+
+type PartyForm = z.infer<typeof schema>;
+
+export default function Parties() {
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editParty, setEditParty] = useState<Party | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['parties', page, search, typeFilter],
+    queryFn: () => partiesApi.list({ page: String(page), search, ...(typeFilter ? { type: typeFilter } : {}) }),
+    select: (res) => res.data,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: PartyForm) => partiesApi.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['parties'] }); setShowModal(false); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<PartyForm> }) => partiesApi.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['parties'] }); setShowModal(false); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => partiesApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parties'] }),
+  });
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<PartyForm>({ resolver: zodResolver(schema) });
+
+  const openCreate = () => { setEditParty(null); reset({ type: 'customer', name: '' }); setShowModal(true); };
+  const openEdit = (p: Party) => {
+    setEditParty(p);
+    reset({ type: p.type, name: p.name, gstin: p.gstin ?? '', pan: p.pan ?? '', phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', city: p.city ?? '', state: p.state ?? '', state_code: p.state_code ?? '', contact_person: p.contact_person ?? '', credit_limit: p.credit_limit ?? undefined });
+    setShowModal(true);
+  };
+
+  const onSubmit = (formData: PartyForm) => {
+    if (editParty) updateMutation.mutate({ id: editParty.id, data: formData });
+    else createMutation.mutate(formData);
+  };
+
+  const typeColor: Record<string, 'info' | 'success' | 'warning'> = { customer: 'info', vendor: 'success', both: 'warning' };
+
+  const columns: ColumnDef<Party, unknown>[] = [
+    { accessorKey: 'name', header: 'Name' },
+    { accessorKey: 'type', header: 'Type', cell: ({ getValue }) => { const t = getValue() as string; return <Badge variant={typeColor[t]}>{t}</Badge>; } },
+    { accessorKey: 'gstin', header: 'GSTIN' },
+    { accessorKey: 'city', header: 'City' },
+    { accessorKey: 'phone', header: 'Phone' },
+    { accessorKey: 'credit_limit', header: 'Credit Limit', cell: ({ getValue }) => { const v = getValue() as number | null; return v ? formatCurrency(v) : '—'; } },
+    {
+      id: 'actions', header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100"><Pencil className="h-4 w-4 text-gray-500" /></button>
+          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100"><Trash2 className="h-4 w-4 text-red-500" /></button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Parties</h1>
+        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Party</Button>
+      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex gap-3">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none" placeholder="Search..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+            </div>
+            <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}>
+              <option value="">All types</option>
+              <option value="customer">Customers</option>
+              <option value="vendor">Vendors</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+        </CardHeader>
+        <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
+        {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}
+      </Card>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editParty ? 'Edit Party' : 'New Party'} size="lg">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Select id="type" label="Type" options={[{ value: 'customer', label: 'Customer' }, { value: 'vendor', label: 'Vendor' }, { value: 'both', label: 'Both' }]} error={errors.type?.message} {...register('type')} />
+            <Input id="name" label="Name" error={errors.name?.message} {...register('name')} />
+            <Input id="gstin" label="GSTIN" {...register('gstin')} />
+            <Input id="pan" label="PAN" {...register('pan')} />
+            <Input id="phone" label="Phone" {...register('phone')} />
+            <Input id="email" label="Email" {...register('email')} />
+            <Input id="address" label="Address" {...register('address')} />
+            <Input id="city" label="City" {...register('city')} />
+            <Input id="state" label="State" {...register('state')} />
+            <Input id="state_code" label="State Code" {...register('state_code')} />
+            <Input id="contact_person" label="Contact Person" {...register('contact_person')} />
+            <Input id="credit_limit" label="Credit Limit" type="number" step="0.01" {...register('credit_limit')} />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>{editParty ? 'Update' : 'Create'}</Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+}

@@ -1,0 +1,34 @@
+import api from '@/lib/axios';
+import type { ApiResponse, PaginatedResponse, SalesOrder, SalesInvoice } from '@/types';
+
+export const salesOrdersApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<SalesOrder>>('/sales-orders', { params }),
+
+  get: (id: string) =>
+    api.get<ApiResponse<SalesOrder>>(`/sales-orders/${id}`),
+
+  create: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<SalesOrder>>('/sales-orders', data),
+
+  update: (id: string, data: Record<string, unknown>) =>
+    api.put<ApiResponse<SalesOrder>>(`/sales-orders/${id}`, data),
+
+  delete: (id: string) => api.delete(`/sales-orders/${id}`),
+};
+
+export const salesInvoicesApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<SalesInvoice>>('/sales-invoices', { params }),
+
+  get: (id: string) =>
+    api.get<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}`),
+
+  create: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<SalesInvoice>>('/sales-invoices', data),
+
+  update: (id: string, data: Record<string, unknown>) =>
+    api.put<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}`, data),
+
+  delete: (id: string) => api.delete(`/sales-invoices/${id}`),
+};
