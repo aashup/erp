@@ -50,7 +50,7 @@ class StockLedgerSeeder extends Seeder
                 'item_id' => $item->id,
                 'batch_id' => $batch?->id,
                 'godown_id' => $godown->id,
-                'type' => 'in',
+                'type' => 'opening',
                 'reference_type' => 'OpeningStock',
                 'reference_id' => null,
                 'quantity' => fake()->numberBetween(50, 500),
@@ -60,13 +60,6 @@ class StockLedgerSeeder extends Seeder
                 'created_by' => $user->id,
             ]);
         }
-
-        // Create additional ledger entries if needed
-        if (app()->environment('local', 'testing')) {
-            StockLedger::factory()->count(30)->create([
-                'company_id' => $company->id,
-                'created_by' => $user->id,
-            ]);
-        }
+ 
     }
 }

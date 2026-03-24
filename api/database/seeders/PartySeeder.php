@@ -79,14 +79,14 @@ class PartySeeder extends Seeder
 
         // Create additional parties if needed
         if (app()->environment('local', 'testing')) {
-            Party::factory()->count(10)->create([
-                'company_id' => $company->id,
-                'type' => 'vendor',
-            ]);
-            Party::factory()->count(15)->create([
-                'company_id' => $company->id,
-                'type' => 'customer',
-            ]);
+            // Party::factory()->count(10)->create([
+            //     'company_id' => $company->id,
+            //     'type' => 'vendor',
+            // ]);
+            // Party::factory()->count(15)->create([
+            //     'company_id' => $company->id,
+            //     'type' => 'customer',
+            // ]);
         }
     }
 }

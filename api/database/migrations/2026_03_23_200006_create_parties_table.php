@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('parties', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->enum('type', ['customer', 'vendor', 'both']);
             $table->string('name');
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('contact_person')->nullable();
             $table->decimal('credit_limit', 15, 2)->default(0);
             $table->decimal('opening_balance', 15, 2)->default(0);
-            $table->enum('balance_type', ['debit', 'credit'])->default('debit');
+            $table->enum('balance_type', ['dr', 'cr'])->default('dr');
             $table->boolean('is_active')->default(true);
 
             // Sync columns

@@ -3,13 +3,14 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::create('sales_returns', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignUuid('sales_invoice_id')->constrained('sales_invoices');
             $table->foreignUuid('party_id')->constrained('parties');
@@ -32,7 +33,7 @@ return new class extends Migration
         });
 
         Schema::create('sales_return_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('sales_return_id')->constrained('sales_returns')->cascadeOnDelete();
             $table->foreignUuid('item_id')->constrained('items');
             $table->foreignUuid('batch_id')->nullable()->constrained('batches')->nullOnDelete();

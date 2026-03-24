@@ -25,7 +25,7 @@ class CompanyFactory extends Factory
             'city' => fake()->city(),
             'state' => fake()->state(),
             'state_code' => fake()->regexify('[0-9]{2}'),
-            'pincode' => fake()->postcode(),
+            'pincode' => fake('en_IN')->postcode(),
             'phone' => fake()->phoneNumber(),
             'email' => fake()->companyEmail(),
             'logo_path' => null,

@@ -3,13 +3,14 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::create('journal_entries', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignUuid('financial_year_id')->constrained('financial_years');
             $table->string('voucher_number')->unique();
@@ -33,7 +34,7 @@ return new class extends Migration
         });
 
         Schema::create('journal_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('journal_entry_id')->constrained('journal_entries')->cascadeOnDelete();
             $table->foreignUuid('account_id')->constrained('chart_of_accounts');
             $table->decimal('debit', 15, 2)->default(0);

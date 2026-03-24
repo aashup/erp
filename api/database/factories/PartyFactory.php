@@ -31,7 +31,7 @@ class PartyFactory extends Factory
             'city' => fake()->city(),
             'state' => fake()->state(),
             'state_code' => fake()->regexify('[0-9]{2}'),
-            'pincode' => fake()->postcode(),
+            'pincode' => fake('en_IN')->postcode(),
             'phone' => fake()->phoneNumber(),
             'email' => fake()->safeEmail(),
             'contact_person' => fake()->name(),
