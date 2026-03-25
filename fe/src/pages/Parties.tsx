@@ -29,7 +29,7 @@ const schema = z.object({
   state: z.string().optional(),
   state_code: z.string().optional(),
   contact_person: z.string().optional(),
-  credit_limit: z.number().min(0).optional(),
+  credit_limit: z.coerce.number().min(0).optional(),
 });
 
 type PartyForm = z.infer<typeof schema>;

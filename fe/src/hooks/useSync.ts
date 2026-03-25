@@ -33,7 +33,7 @@ export function useSync() {
   // Auto-sync when coming back online
   useEffect(() => {
     if (isOnline && isAuthenticated) {
-      doSync();
+      // doSync();
     }
   }, [isOnline, isAuthenticated, doSync]);
 
@@ -41,7 +41,7 @@ export function useSync() {
   useEffect(() => {
     if (!isOnline || !isAuthenticated) return;
 
-    const interval = setInterval(doSync, 60_000);
+    const interval = setInterval(doSync, 1000*120);
     return () => clearInterval(interval);
   }, [isOnline, isAuthenticated, doSync]);
 

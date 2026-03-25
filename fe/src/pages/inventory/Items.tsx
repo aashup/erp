@@ -24,7 +24,7 @@ const itemSchema = z.object({
   unit: z.string().min(1, 'Unit is required'),
   category: z.string().optional(),
   gst_rate: z.number().min(0),
-  mrp: z.number().min(0).optional(),
+  mrp: z.union([z.number(), z.nan()]).transform((val) => (isNaN(val) ? undefined : val)).optional(),
   purchase_price: z.number().min(0).optional(),
   selling_price: z.number().min(0).optional(),
   reorder_level: z.number().int().min(0).optional(),
@@ -219,11 +219,11 @@ export default function Items() {
               {...register('unit')}
             />
             <Input id="category" label="Category" {...register('category')} />
-            <Input id="gst_rate" label="GST Rate (%)" type="number" step="0.01" error={errors.gst_rate?.message} {...register('gst_rate')} />
-            <Input id="mrp" label="MRP" type="number" step="0.01" {...register('mrp')} />
-            <Input id="purchase_price" label="Purchase Price" type="number" step="0.01" {...register('purchase_price')} />
-            <Input id="selling_price" label="Selling Price" type="number" step="0.01" {...register('selling_price')} />
-            <Input id="reorder_level" label="Reorder Level" type="number" {...register('reorder_level')} />
+            <Input id="gst_rate" label="GST Rate (%)" type="number" step="0.01" error={errors.gst_rate?.message} {...register('gst_rate', { valueAsNumber: true })} />
+            <Input id="mrp" label="MRP" type="number" step="0.01" error={errors.mrp?.message} {...register('mrp', { valueAsNumber: true })} />
+            <Input id="purchase_price" label="Purchase Price" type="number" step="0.01" error={errors.purchase_price?.message} {...register('purchase_price', { valueAsNumber: true })} />
+            <Input id="selling_price" label="Selling Price" type="number" step="0.01" error={errors.selling_price?.message} {...register('selling_price', { valueAsNumber: true })} />
+            <Input id="reorder_level" label="Reorder Level" type="number" error={errors.reorder_level?.message} {...register('reorder_level', { valueAsNumber: true })} />
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="is_batch_tracked" {...register('is_batch_tracked')} className="rounded" />
