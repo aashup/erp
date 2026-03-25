@@ -1,15 +1,41 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { salesOrdersApi } from '@/api/sales';
+import { partiesApi } from '@/api/parties';
+import { itemsApi } from '@/api/inventory';
 import type { SalesOrder } from '@/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, calcGST } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
+import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+
+const lineSchema = z.object({
+  item_id: z.string().min(1, 'Item required'),
+  quantity: z.coerce.number().min(1, 'Min 1'),
+  rate: z.coerce.number().min(0),
+  discount_percent: z.coerce.number().min(0).max(100).optional().default(0),
+  gst_rate: z.coerce.number().min(0).optional().default(18),
+});
+
+const soSchema = z.object({
+  party_id: z.string().min(1, 'Customer is required'),
+  so_date: z.string().min(1, 'Date is required'),
+  expected_delivery_date: z.string().optional(),
+  notes: z.string().optional(),
+  lines: z.array(lineSchema).min(1, 'Add at least one item'),
+});
+
+type SoForm = z.infer<typeof soSchema>;
 
 const statusVariant: Record<string, 'default' | 'info' | 'success' | 'warning' | 'danger'> = {
   draft: 'default',
@@ -20,14 +46,109 @@ const statusVariant: Record<string, 'default' | 'info' | 'success' | 'warning' |
 };
 
 export default function SalesOrders() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editSo, setEditSo] = useState<SalesOrder | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales-orders', page, search],
     queryFn: () => salesOrdersApi.list({ page: String(page), search }),
     select: (res) => res.data,
   });
+
+  const { data: customersData } = useQuery({
+    queryKey: ['parties-customers'],
+    queryFn: () => partiesApi.list({ per_page: '500', type: 'customer' }),
+    select: (res) => res.data,
+  });
+
+  const { data: itemsData } = useQuery({
+    queryKey: ['items-all'],
+    queryFn: () => itemsApi.list({ per_page: '500' }),
+    select: (res) => res.data,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => salesOrdersApi.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); closeModal(); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => salesOrdersApi.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); closeModal(); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => salesOrdersApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sales-orders'] }),
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<SoForm>({
+    resolver: zodResolver(soSchema) as any,
+    defaultValues: { lines: [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }] },
+  });
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
+  const watchedLines = watch('lines');
+
+  const openCreate = () => {
+    setEditSo(null);
+    reset({
+      party_id: '',
+      so_date: new Date().toISOString().split('T')[0],
+      expected_delivery_date: '',
+      notes: '',
+      lines: [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
+    });
+    setShowModal(true);
+  };
+
+  const openEdit = (so: SalesOrder) => {
+    setEditSo(so);
+    reset({
+      party_id: so.party_id,
+      so_date: so.so_date,
+      expected_delivery_date: so.expected_delivery_date ?? '',
+      notes: so.notes ?? '',
+      lines: so.lines?.map((l) => ({
+        item_id: l.item_id,
+        quantity: l.quantity,
+        rate: l.rate,
+        discount_percent: l.discount_percent,
+        gst_rate: l.gst_rate,
+      })) ?? [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditSo(null);
+    reset();
+  };
+
+  const onSubmit = (formData: SoForm) => {
+    const payload = { ...formData } as Record<string, unknown>;
+    if (editSo) {
+      updateMutation.mutate({ id: editSo.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const calcLineTotal = (line: SoForm['lines'][number]) => {
+    const taxable = line.quantity * line.rate * (1 - (line.discount_percent ?? 0) / 100);
+    const gst = calcGST(taxable, line.gst_rate ?? 18, false);
+    return taxable + gst.cgst + gst.sgst + gst.igst;
+  };
+
+  const grandTotal = (watchedLines ?? []).reduce((sum, line) => sum + calcLineTotal(line), 0);
+
+  const customerOptions = (customersData?.data ?? []).map((p) => ({ value: p.id, label: p.name }));
+  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? i.hsn_code ?? ''})` }));
 
   const columns: ColumnDef<SalesOrder, unknown>[] = [
     { accessorKey: 'so_number', header: 'SO #' },
@@ -42,13 +163,30 @@ export default function SalesOrders() {
         return <Badge variant={statusVariant[s] ?? 'default'}>{s.replace('_', ' ')}</Badge>;
       },
     },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
+            <Pencil className="h-4 w-4 text-gray-500" />
+          </button>
+          <button
+            onClick={() => { if (confirm('Delete this SO?')) deleteMutation.mutate(row.original.id); }}
+            className="rounded p-1 hover:bg-gray-100"
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </button>
+        </div>
+      ),
+    },
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Sales Orders</h1>
-        <Button><Plus className="mr-2 h-4 w-4" /> New SO</Button>
+        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New SO</Button>
       </div>
       <Card>
         <CardHeader>
@@ -60,6 +198,84 @@ export default function SalesOrders() {
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
         {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}
       </Card>
+
+      <Modal open={showModal} onClose={closeModal} title={editSo ? 'Edit Sales Order' : 'New Sales Order'} size="xl">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Select id="party_id" label="Customer" options={customerOptions} error={errors.party_id?.message} {...register('party_id')} />
+            <Input id="so_date" label="SO Date" type="date" error={errors.so_date?.message} {...register('so_date')} />
+            <Input id="expected_delivery_date" label="Expected Delivery" type="date" {...register('expected_delivery_date')} />
+            <Input id="notes" label="Notes" {...register('notes')} />
+          </div>
+
+          {/* Line Items */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">Line Items</h3>
+              <Button type="button" variant="secondary" size="sm" onClick={() => append({ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 })}>
+                <Plus className="mr-1 h-3 w-3" /> Add Line
+              </Button>
+            </div>
+            {errors.lines?.message && <p className="text-sm text-red-500 mb-2">{errors.lines.message}</p>}
+            <div className="space-y-3">
+              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
+                <div className="col-span-4">Item</div>
+                <div className="col-span-2">Qty</div>
+                <div className="col-span-2">Rate (₹)</div>
+                <div className="col-span-1">Disc %</div>
+                <div className="col-span-1">GST %</div>
+                <div className="col-span-1 text-right">Total</div>
+                <div className="col-span-1"></div>
+              </div>
+              {fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
+                  <div className="col-span-4">
+                    <select className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.item_id`)}>
+                      <option value="">Select item</option>
+                      {itemOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <input type="number" min="1" step="1" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.quantity`)} />
+                  </div>
+                  <div className="col-span-2">
+                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.rate`)} />
+                  </div>
+                  <div className="col-span-1">
+                    <input type="number" min="0" max="100" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.discount_percent`)} />
+                  </div>
+                  <div className="col-span-1">
+                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.gst_rate`)} />
+                  </div>
+                  <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
+                    {formatCurrency(calcLineTotal(watchedLines?.[index] ?? { item_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
+                  </div>
+                  <div className="col-span-1 flex items-center justify-center">
+                    {fields.length > 1 && (
+                      <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50">
+                        <X className="h-4 w-4 text-red-500" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <div className="text-right">
+                <span className="text-sm text-gray-500">Grand Total: </span>
+                <span className="text-lg font-bold text-gray-900">{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
+              {editSo ? 'Update' : 'Create'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

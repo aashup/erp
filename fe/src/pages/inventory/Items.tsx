@@ -23,11 +23,11 @@ const itemSchema = z.object({
   hsn_code: z.string().optional(),
   unit: z.string().min(1, 'Unit is required'),
   category: z.string().optional(),
-  gst_rate: z.number().min(0),
-  mrp: z.union([z.number(), z.nan()]).transform((val) => (isNaN(val) ? undefined : val)).optional(),
-  purchase_price: z.number().min(0).optional(),
-  selling_price: z.number().min(0).optional(),
-  reorder_level: z.number().int().min(0).optional(),
+  gst_rate: z.coerce.number().min(0),
+  mrp: z.union([z.coerce.number(), z.nan()]).transform((val) => (isNaN(val) ? undefined : val)).optional(),
+  purchase_price: z.coerce.number().min(0).optional(),
+  selling_price: z.coerce.number().min(0).optional(),
+  reorder_level: z.coerce.number().int().min(0).optional(),
   is_batch_tracked: z.boolean().optional(),
 });
 
@@ -73,8 +73,9 @@ export default function Items() {
     handleSubmit,
     reset,
     formState: { errors },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ItemForm>({
-    resolver: zodResolver(itemSchema),
+    resolver: zodResolver(itemSchema) as any,
     defaultValues: { gst_rate: 18 },
   });
 

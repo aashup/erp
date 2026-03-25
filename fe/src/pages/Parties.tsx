@@ -63,7 +63,8 @@ export default function Parties() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parties'] }),
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<PartyForm>({ resolver: zodResolver(schema) });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<PartyForm>({ resolver: zodResolver(schema) as any });
 
   const openCreate = () => { setEditParty(null); reset({ type: 'customer', name: '' }); setShowModal(true); };
   const openEdit = (p: Party) => {

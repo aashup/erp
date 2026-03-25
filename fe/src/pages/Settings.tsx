@@ -1,37 +1,198 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Modal } from '@/components/ui/Modal';
+import api from '@/lib/axios';
+import type { User } from '@/types';
+import { Pencil } from 'lucide-react';
+
+const INDIAN_STATES = [
+  { value: '01', label: 'Jammu & Kashmir (01)' },
+  { value: '02', label: 'Himachal Pradesh (02)' },
+  { value: '03', label: 'Punjab (03)' },
+  { value: '05', label: 'Uttarakhand (05)' },
+  { value: '06', label: 'Haryana (06)' },
+  { value: '07', label: 'Delhi (07)' },
+  { value: '08', label: 'Rajasthan (08)' },
+  { value: '09', label: 'Uttar Pradesh (09)' },
+  { value: '10', label: 'Bihar (10)' },
+  { value: '18', label: 'Assam (18)' },
+  { value: '19', label: 'West Bengal (19)' },
+  { value: '21', label: 'Odisha (21)' },
+  { value: '23', label: 'Madhya Pradesh (23)' },
+  { value: '24', label: 'Gujarat (24)' },
+  { value: '27', label: 'Maharashtra (27)' },
+  { value: '29', label: 'Karnataka (29)' },
+  { value: '32', label: 'Kerala (32)' },
+  { value: '33', label: 'Tamil Nadu (33)' },
+  { value: '36', label: 'Telangana (36)' },
+  { value: '37', label: 'Andhra Pradesh (37)' },
+];
+
+const companySchema = z.object({
+  name: z.string().min(1, 'Company name is required'),
+  gstin: z.string().optional(),
+  pan: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  state_code: z.string().optional(),
+  pincode: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
+});
+
+const profileSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+  phone: z.string().optional(),
+});
+
+const passwordSchema = z.object({
+  current_password: z.string().min(1, 'Current password is required'),
+  password: z.string().min(8, 'Min 8 characters'),
+  password_confirmation: z.string().min(1, 'Confirm your password'),
+}).refine((d) => d.password === d.password_confirmation, {
+  message: 'Passwords do not match',
+  path: ['password_confirmation'],
+});
+
+type CompanyForm = z.infer<typeof companySchema>;
+type ProfileForm = z.infer<typeof profileSchema>;
+type PasswordForm = z.infer<typeof passwordSchema>;
 
 export default function Settings() {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // Company form
+  const companyForm = useForm<CompanyForm>({ resolver: zodResolver(companySchema) });
+  const companyMutation = useMutation({
+    mutationFn: (data: CompanyForm) => api.put(`/companies/${user?.company?.id}`, data),
+    onSuccess: (res) => {
+      if (user) {
+        updateUser({ ...user, company: res.data.data ?? res.data } as User);
+      }
+      setShowCompanyModal(false);
+      setSuccessMsg('Company updated successfully');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    },
+  });
+
+  // Profile form
+  const profileForm = useForm<ProfileForm>({ resolver: zodResolver(profileSchema) });
+  const profileMutation = useMutation({
+    mutationFn: (data: ProfileForm) => api.put('/auth/profile', data),
+    onSuccess: (res) => {
+      if (user) {
+        const updated = res.data.data ?? res.data;
+        updateUser({ ...user, ...updated } as User);
+      }
+      setShowProfileModal(false);
+      setSuccessMsg('Profile updated successfully');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    },
+  });
+
+  // Password form
+  const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(passwordSchema) });
+  const passwordMutation = useMutation({
+    mutationFn: (data: PasswordForm) => api.put('/auth/password', data),
+    onSuccess: () => {
+      setShowPasswordModal(false);
+      passwordForm.reset();
+      setSuccessMsg('Password changed successfully');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    },
+  });
+
+  const openCompanyEdit = () => {
+    companyForm.reset({
+      name: user?.company?.name ?? '',
+      gstin: user?.company?.gstin ?? '',
+      pan: user?.company?.pan ?? '',
+      address: user?.company?.address ?? '',
+      city: user?.company?.city ?? '',
+      state: user?.company?.state ?? '',
+      state_code: user?.company?.state_code ?? '',
+      pincode: user?.company?.pincode ?? '',
+      phone: user?.company?.phone ?? '',
+      email: user?.company?.email ?? '',
+    });
+    setShowCompanyModal(true);
+  };
+
+  const openProfileEdit = () => {
+    profileForm.reset({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      phone: user?.phone ?? '',
+    });
+    setShowProfileModal(true);
+  };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
 
+      {successMsg && (
+        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Company Info */}
         <Card>
-          <CardHeader><h3 className="text-lg font-semibold">Company Info</h3></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Company Info</h3>
+              <button onClick={openCompanyEdit} className="rounded p-1 hover:bg-gray-100">
+                <Pencil className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+          </CardHeader>
           <CardContent>
             <dl className="space-y-3">
-              <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">Company</dt>
-                <dd className="text-sm font-medium">{user?.company?.name ?? '—'}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">GSTIN</dt>
-                <dd className="text-sm font-medium">{user?.company?.gstin ?? '—'}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">State</dt>
-                <dd className="text-sm font-medium">{user?.company?.state ?? '—'}</dd>
-              </div>
+              {[
+                ['Company', user?.company?.name],
+                ['GSTIN', user?.company?.gstin],
+                ['PAN', user?.company?.pan],
+                ['State', user?.company?.state],
+                ['State Code', user?.company?.state_code],
+                ['City', user?.company?.city],
+                ['Address', user?.company?.address],
+                ['Phone', user?.company?.phone],
+                ['Email', user?.company?.email],
+              ].map(([label, val]) => (
+                <div key={label as string} className="flex justify-between">
+                  <dt className="text-sm text-gray-500">{label}</dt>
+                  <dd className="text-sm font-medium">{(val as string) || '—'}</dd>
+                </div>
+              ))}
             </dl>
           </CardContent>
         </Card>
 
+        {/* Profile */}
         <Card>
-          <CardHeader><h3 className="text-lg font-semibold">Your Profile</h3></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Your Profile</h3>
+              <button onClick={openProfileEdit} className="rounded p-1 hover:bg-gray-100">
+                <Pencil className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+          </CardHeader>
           <CardContent>
             <dl className="space-y-3">
               <div className="flex justify-between">
@@ -43,13 +204,69 @@ export default function Settings() {
                 <dd className="text-sm font-medium">{user?.email}</dd>
               </div>
               <div className="flex justify-between">
+                <dt className="text-sm text-gray-500">Phone</dt>
+                <dd className="text-sm font-medium">{user?.phone ?? '—'}</dd>
+              </div>
+              <div className="flex justify-between">
                 <dt className="text-sm text-gray-500">Role</dt>
                 <dd><Badge variant="info">{user?.role}</Badge></dd>
               </div>
             </dl>
+            <div className="mt-4 pt-4 border-t">
+              <Button variant="secondary" size="sm" onClick={() => { passwordForm.reset(); setShowPasswordModal(true); }}>
+                Change Password
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Company Edit Modal */}
+      <Modal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} title="Edit Company" size="lg">
+        <form onSubmit={companyForm.handleSubmit((d) => companyMutation.mutate(d))} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input id="name" label="Company Name" error={companyForm.formState.errors.name?.message} {...companyForm.register('name')} />
+            <Input id="gstin" label="GSTIN" {...companyForm.register('gstin')} />
+            <Input id="pan" label="PAN" {...companyForm.register('pan')} />
+            <Select id="state_code" label="State" options={INDIAN_STATES} {...companyForm.register('state_code')} />
+            <Input id="city" label="City" {...companyForm.register('city')} />
+            <Input id="pincode" label="Pincode" {...companyForm.register('pincode')} />
+            <Input id="phone" label="Phone" {...companyForm.register('phone')} />
+            <Input id="email" label="Email" type="email" error={companyForm.formState.errors.email?.message} {...companyForm.register('email')} />
+          </div>
+          <Input id="address" label="Address" {...companyForm.register('address')} />
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={() => setShowCompanyModal(false)}>Cancel</Button>
+            <Button type="submit" loading={companyMutation.isPending}>Save</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Profile Edit Modal */}
+      <Modal open={showProfileModal} onClose={() => setShowProfileModal(false)} title="Edit Profile">
+        <form onSubmit={profileForm.handleSubmit((d) => profileMutation.mutate(d))} className="space-y-4">
+          <Input id="name" label="Name" error={profileForm.formState.errors.name?.message} {...profileForm.register('name')} />
+          <Input id="email" label="Email" type="email" error={profileForm.formState.errors.email?.message} {...profileForm.register('email')} />
+          <Input id="phone" label="Phone" {...profileForm.register('phone')} />
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={() => setShowProfileModal(false)}>Cancel</Button>
+            <Button type="submit" loading={profileMutation.isPending}>Save</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Password Modal */}
+      <Modal open={showPasswordModal} onClose={() => setShowPasswordModal(false)} title="Change Password">
+        <form onSubmit={passwordForm.handleSubmit((d) => passwordMutation.mutate(d))} className="space-y-4">
+          <Input id="current_password" label="Current Password" type="password" error={passwordForm.formState.errors.current_password?.message} {...passwordForm.register('current_password')} />
+          <Input id="password" label="New Password" type="password" error={passwordForm.formState.errors.password?.message} {...passwordForm.register('password')} />
+          <Input id="password_confirmation" label="Confirm Password" type="password" error={passwordForm.formState.errors.password_confirmation?.message} {...passwordForm.register('password_confirmation')} />
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="secondary" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
+            <Button type="submit" loading={passwordMutation.isPending}>Change Password</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
