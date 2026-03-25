@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
@@ -11,7 +11,10 @@ import {
   Warehouse,
   Building2,
   Settings,
+  X,
+  Menu,
 } from 'lucide-react';
+import { useState } from 'react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -49,80 +52,112 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const { theme } = useTheme();
+  const location = useLocation();
+
+  const isActive = (href: string) => {
+    if (href === '/') return location.pathname === '/';
+    return location.pathname.startsWith(href);
+  };
 
   return (
-    <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r ${
-        theme === 'dark'
-          ? 'border-gray-700 bg-gray-900'
-          : 'border-gray-200 bg-white'
-      }`}
-    >
-      <div
-        className={`flex h-16 items-center gap-2 border-b ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-        } px-6`}
-      >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-sm">
-          E
-        </div>
-        <span className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>ERP</span>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {navigation.map((item) =>
-          'children' in item ? (
-            <div key={item.name} className="pt-3">
-              <p
-                className={`px-3 pb-1 text-xs font-semibold uppercase tracking-wider ${
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                }`}
-              >
-                {item.name}
-              </p>
-              {item.children?.map((child) => (
-                <NavLink
-                  key={child.href}
-                  to={child.href}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                        : theme === 'dark'
-                        ? 'text-gray-300 hover:bg-gray-800 hover:text-gray-100'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    )
-                  }
-                >
-                  <child.icon className="h-4 w-4" />
-                  {child.name}
-                </NavLink>
-              ))}
-            </div>
-          ) : (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                    : theme === 'dark'
-                    ? 'text-gray-300 hover:bg-gray-800 hover:text-gray-100'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                )
-              }
-            >
-              <item.icon className="h-4 w-4" />
-              {item.name}
-            </NavLink>
-          )
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r transition-transform duration-300 ease-in-out',
+          theme === 'dark'
+            ? 'border-gray-700 bg-gray-900'
+            : 'border-gray-200 bg-white',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
-      </nav>
-    </aside>
+      >
+        <div
+          className={`flex h-16 items-center gap-2 border-b px-6 ${
+            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          }`}
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-sm">
+            E
+          </div>
+          <span className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            ERP
+          </span>
+          {mobileOpen && (
+            <button
+              onClick={onClose}
+              className="ml-auto rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
+            >
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          )}
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+          {navigation.map((item) =>
+            'children' in item ? (
+              <div key={item.name} className="pt-3">
+                <p
+                  className={`px-3 pb-1 text-xs font-semibold uppercase tracking-wider ${
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                  }`}
+                >
+                  {item.name}
+                </p>
+                {item.children?.map((child) => (
+                  <NavLink
+                    key={child.href}
+                    to={child.href}
+                    className={({ isActive: active }) =>
+                      cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        isActive(child.href)
+                          ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+                          : theme === 'dark'
+                          ? 'text-gray-300 hover:bg-gray-800 hover:text-gray-100'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      )
+                    }
+                  >
+                    <child.icon className="h-4 w-4" />
+                    {child.name}
+                  </NavLink>
+                ))}
+              </div>
+            ) : (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                className={({ isActive: active }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive(item.href)
+                      ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+                      : theme === 'dark'
+                      ? 'text-gray-300 hover:bg-gray-800 hover:text-gray-100'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  )
+                }
+              >
+                <item.icon className="h-4 w-4" />
+                {item.name}
+              </NavLink>
+            )
+          )}
+        </nav>
+      </aside>
+    </>
   );
 }

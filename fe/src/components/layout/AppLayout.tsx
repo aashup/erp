@@ -3,10 +3,12 @@ import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { useState } from 'react';
 
 export function AppLayout() {
   const { isAuthenticated } = useAuthStore();
   const { theme } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -14,11 +16,15 @@ export function AppLayout() {
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <Sidebar />
-      <div className="pl-64">
-        <Header />
-        <main className="p-6">
-          <Outlet />
+      {/* Mobile Sidebar Overlay */}
+      <Sidebar mobileOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+
+      <div className="md:pl-64">
+        <Header onMobileMenuToggle={() => setMobileMenuOpen(true)} />
+        <main className="p-4 sm:p-6">
+          <div className="mx-auto max-w-7xl">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

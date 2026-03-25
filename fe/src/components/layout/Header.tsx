@@ -2,11 +2,11 @@ import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/api/auth';
 import { useSync } from '@/hooks/useSync';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings } from 'lucide-react';
+import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 
-export function Header() {
+export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { isOnline, isSyncing, pendingCount, doSync } = useSync();
@@ -46,11 +46,19 @@ export function Header() {
   }, [showDropdown]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-700 dark:bg-gray-900">
-      <div>
-        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-          {user?.company?.name ?? 'ERP'}
-        </h2>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMobileMenuToggle}
+          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 md:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            {user?.company?.name ?? 'ERP'}
+          </h2>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -71,7 +79,7 @@ export function Header() {
         <button
           onClick={doSync}
           disabled={!isOnline || isSyncing}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800 sm:px-3 sm:py-1.5"
           title={isOnline ? 'Click to sync' : 'Offline'}
         >
           {!isOnline ? (
@@ -87,7 +95,7 @@ export function Header() {
           ) : pendingCount > 0 ? (
             <>
               <CloudOff className="h-3.5 w-3.5 text-yellow-500" />
-              <span className="text-yellow-600">{pendingCount} pending</span>
+              <span className="text-yellow-600">{pendingCount}</span>
             </>
           ) : (
             <>
@@ -106,7 +114,7 @@ export function Header() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
               <User className="h-4 w-4" />
             </div>
-            <div className="hidden sm:block">
+            <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{user?.name}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{user?.role}</p>
             </div>
