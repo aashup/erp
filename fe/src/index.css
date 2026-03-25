@@ -18,3 +18,8 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Dark theme */
+.dark {
+  color-scheme: dark;
+}

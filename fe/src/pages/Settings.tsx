@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +13,7 @@ import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import api from '@/lib/axios';
 import type { User } from '@/types';
-import { Pencil } from 'lucide-react';
+import { Pencil, Sun, Moon } from 'lucide-react';
 
 const INDIAN_STATES = [
   { value: '01', label: 'Jammu & Kashmir (01)' },
@@ -71,6 +72,7 @@ type PasswordForm = z.infer<typeof passwordSchema>;
 
 export default function Settings() {
   const { user, updateUser } = useAuthStore();
+  const { theme, setTheme } = useTheme();
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -144,10 +146,10 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
 
       {successMsg && (
-        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>
+        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">{successMsg}</div>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -188,8 +190,8 @@ export default function Settings() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Your Profile</h3>
-              <button onClick={openProfileEdit} className="rounded p-1 hover:bg-gray-100">
-                <Pencil className="h-4 w-4 text-gray-500" />
+              <button onClick={openProfileEdit} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
           </CardHeader>
@@ -219,7 +221,45 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Theme Settings */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold">Appearance</h3>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">Choose how the app looks for you</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setTheme('light')}
+                className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                  theme === 'light'
+                    ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20'
+                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                }`}
+              >
+                <Sun className="h-6 w-6 text-yellow-500" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Light</span>
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                  theme === 'dark'
+                    ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20'
+                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                }`}
+              >
+                <Moon className="h-6 w-6 text-primary-500" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Dark</span>
+              </button>
+            </div>
+            <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
+              Theme saved automatically
+            </p>
+          </CardContent>
+        </Card>
       </div>
+       
 
       {/* Company Edit Modal */}
       <Modal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} title="Edit Company" size="lg">
