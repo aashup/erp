@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Godown;
+use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
+use App\Models\StockLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SalesOrderController extends Controller
 {
@@ -30,7 +34,7 @@ class SalesOrderController extends Controller
         $validated = $request->validate([
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
-            'so_number' => 'required|string|unique:sales_orders',
+            'so_number' => 'nullable|string|unique:sales_orders',
             'so_date' => 'required|date',
             'expected_delivery_date' => 'nullable|date|after_or_equal:so_date',
             'notes' => 'nullable|string',
@@ -43,6 +47,16 @@ class SalesOrderController extends Controller
         ]);
 
         $so = DB::transaction(function () use ($validated, $request) {
+            // Auto-generate SO number if not provided
+            if (empty($validated['so_number'])) {
+                $validated['so_number'] = 'SO-' . str_pad(
+                    SalesOrder::withoutGlobalScopes()->count() + 1,
+                    6,
+                    '0',
+                    STR_PAD_LEFT
+                );
+            }
+
             $so = SalesOrder::create([
                 ...$validated,
                 'created_by' => $request->user()->id,
@@ -93,12 +107,153 @@ class SalesOrderController extends Controller
             'party_id' => 'sometimes|uuid|exists:parties,id',
             'expected_delivery_date' => 'nullable|date',
             'notes' => 'nullable|string',
-            'status' => 'sometimes|in:draft,confirmed,cancelled',
         ]);
 
         $salesOrder->update($validated);
 
         return response()->json(['data' => $salesOrder]);
+    }
+
+    /**
+     * Update SO status with business logic.
+     *
+     * Allowed transitions:
+     *   draft → confirmed | cancelled
+     *   confirmed → partially_delivered | delivered | cancelled
+     *   partially_delivered → delivered | cancelled
+     *
+     * On confirm: auto-creates a sales invoice from SO lines + stock out.
+     */
+    public function updateStatus(Request $request, SalesOrder $salesOrder): JsonResponse
+    {
+        $this->authorize('update', $salesOrder);
+
+        $validated = $request->validate([
+            'status' => 'required|in:draft,confirmed,partially_delivered,delivered,cancelled',
+        ]);
+
+        $newStatus = $validated['status'];
+        $currentStatus = $salesOrder->status;
+
+        $allowedTransitions = [
+            'draft' => ['confirmed', 'cancelled'],
+            'confirmed' => ['partially_delivered', 'delivered', 'cancelled'],
+            'partially_delivered' => ['delivered', 'cancelled'],
+            'delivered' => [],
+            'cancelled' => [],
+        ];
+
+        if (! in_array($newStatus, $allowedTransitions[$currentStatus] ?? [])) {
+            throw ValidationException::withMessages([
+                'status' => ["Cannot change status from '{$currentStatus}' to '{$newStatus}'."],
+            ]);
+        }
+
+        $result = DB::transaction(function () use ($salesOrder, $newStatus, $request) {
+            $salesOrder->update(['status' => $newStatus]);
+
+            // On confirm → auto-create sales invoice from SO lines
+            if ($newStatus === 'confirmed') {
+                $this->createInvoiceFromSo($salesOrder, $request);
+            }
+
+            return $salesOrder->load('lines.item', 'party', 'branch', 'salesInvoices');
+        });
+
+        return response()->json([
+            'data' => $result,
+            'message' => "Sales order status changed to '{$newStatus}'.",
+        ]);
+    }
+
+    /**
+     * Auto-create a sales invoice when SO is confirmed.
+     */
+    private function createInvoiceFromSo(SalesOrder $so, Request $request): SalesInvoice
+    {
+        $so->loadMissing('lines', 'party');
+
+        // Determine inter-state from party vs company state codes
+        $companyStateCode = $request->user()->company?->state_code;
+        $partyStateCode = $so->party?->state_code;
+        $isInterState = $companyStateCode && $partyStateCode && $companyStateCode !== $partyStateCode;
+
+        // Get default godown
+        $defaultGodown = Godown::where('company_id', $so->company_id)
+            ->where('is_default', true)
+            ->first();
+
+        // Generate invoice number
+        $invoiceNumber = 'SI-' . str_pad(
+            SalesInvoice::withoutGlobalScopes()->count() + 1,
+            6,
+            '0',
+            STR_PAD_LEFT
+        );
+
+        $invoice = SalesInvoice::create([
+            'company_id' => $so->company_id,
+            'party_id' => $so->party_id,
+            'branch_id' => $so->branch_id,
+            'sales_order_id' => $so->id,
+            'godown_id' => $defaultGodown?->id,
+            'invoice_number' => $invoiceNumber,
+            'invoice_date' => now()->toDateString(),
+            'is_inter_state' => $isInterState,
+            'status' => 'confirmed',
+            'created_by' => $request->user()->id,
+        ]);
+
+        foreach ($so->lines as $soLine) {
+            $taxable = $soLine->taxable_amount;
+            $gstAmt = $taxable * $soLine->gst_rate / 100;
+
+            $invoice->lines()->create([
+                'item_id' => $soLine->item_id,
+                'godown_id' => $defaultGodown?->id,
+                'quantity' => $soLine->quantity,
+                'rate' => $soLine->rate,
+                'discount_percent' => $soLine->discount_percent,
+                'taxable_amount' => $taxable,
+                'gst_rate' => $soLine->gst_rate,
+                'cgst' => $isInterState ? 0 : $gstAmt / 2,
+                'sgst' => $isInterState ? 0 : $gstAmt / 2,
+                'igst' => $isInterState ? $gstAmt : 0,
+                'line_total' => $taxable + $gstAmt,
+            ]);
+
+            // Stock ledger entry — stock OUT (negative quantity)
+            StockLedger::create([
+                'company_id' => $so->company_id,
+                'item_id' => $soLine->item_id,
+                'godown_id' => $defaultGodown?->id,
+                'type' => 'sale',
+                'reference_type' => SalesInvoice::class,
+                'reference_id' => $invoice->id,
+                'quantity' => -$soLine->quantity,
+                'rate' => $soLine->rate,
+                'value' => $soLine->quantity * $soLine->rate,
+                'narration' => "Auto from SO #{$so->so_number}",
+                'created_by' => $request->user()->id,
+            ]);
+
+            // Mark SO line as fully delivered
+            $soLine->update(['delivered_quantity' => $soLine->quantity]);
+        }
+
+        // Update invoice totals
+        $invoice->refresh();
+        $invoice->update([
+            'total_amount' => $invoice->lines->sum('taxable_amount'),
+            'taxable_amount' => $invoice->lines->sum('taxable_amount'),
+            'cgst_total' => $invoice->lines->sum('cgst'),
+            'sgst_total' => $invoice->lines->sum('sgst'),
+            'igst_total' => $invoice->lines->sum('igst'),
+            'grand_total' => $invoice->lines->sum('line_total'),
+            'balance_due' => $invoice->lines->sum('line_total'),
+        ]);
+
+        return $invoice;
     }
 
     public function destroy(SalesOrder $salesOrder): JsonResponse

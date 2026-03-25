@@ -50,11 +50,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('branches', BranchController::class);
 
     // Purchase
+    Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
 
     // Sales
+    Route::patch('sales-orders/{sales_order}/status', [SalesOrderController::class, 'updateStatus']);
     Route::apiResource('sales-orders', SalesOrderController::class);
+    Route::patch('sales-invoices/{sales_invoice}/status', [SalesInvoiceController::class, 'updateStatus']);
     Route::apiResource('sales-invoices', SalesInvoiceController::class);
 
     // Accounting

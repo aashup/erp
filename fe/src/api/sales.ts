@@ -15,6 +15,9 @@ export const salesOrdersApi = {
     api.put<ApiResponse<SalesOrder>>(`/sales-orders/${id}`, data),
 
   delete: (id: string) => api.delete(`/sales-orders/${id}`),
+
+  updateStatus: (id: string, status: string) =>
+    api.patch<ApiResponse<SalesOrder>>(`/sales-orders/${id}/status`, { status }),
 };
 
 export const salesInvoicesApi = {
@@ -31,4 +34,7 @@ export const salesInvoicesApi = {
     api.put<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}`, data),
 
   delete: (id: string) => api.delete(`/sales-invoices/${id}`),
+
+  updateStatus: (id: string, status: string) =>
+    api.patch<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}/status`, { status }),
 };

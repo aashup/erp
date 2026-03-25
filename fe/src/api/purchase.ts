@@ -15,6 +15,9 @@ export const purchaseOrdersApi = {
     api.put<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}`, data),
 
   delete: (id: string) => api.delete(`/purchase-orders/${id}`),
+
+  updateStatus: (id: string, status: string) =>
+    api.patch<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}/status`, { status }),
 };
 
 export const purchaseInvoicesApi = {

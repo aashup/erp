@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import toast from 'react-hot-toast';
 import type { ColumnDef } from '@tanstack/react-table';
 import { purchaseOrdersApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
@@ -46,6 +47,23 @@ const statusVariant: Record<string, 'default' | 'info' | 'success' | 'warning' |
   cancelled: 'danger',
 };
 
+// Which statuses can a given status transition to?
+const allowedTransitions: Record<string, string[]> = {
+  draft: ['confirmed', 'cancelled'],
+  confirmed: ['partially_received', 'received', 'cancelled'],
+  partially_received: ['received', 'cancelled'],
+  received: [],
+  cancelled: [],
+};
+
+const statusLabels: Record<string, string> = {
+  draft: 'Draft',
+  confirmed: 'Confirmed',
+  partially_received: 'Partially Received',
+  received: 'Received',
+  cancelled: 'Cancelled',
+};
+
 export default function PurchaseOrders() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -73,17 +91,27 @@ export default function PurchaseOrders() {
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => purchaseOrdersApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }); closeModal(); toast.success('Purchase order created'); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => purchaseOrdersApi.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }); closeModal(); toast.success('Purchase order updated'); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => purchaseOrdersApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }); toast.success('Purchase order deleted'); },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => purchaseOrdersApi.updateStatus(id, status),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] });
+      const msg = res.data?.message ?? 'Status updated';
+      toast.success(msg);
+    },
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,6 +170,21 @@ export default function PurchaseOrders() {
     }
   };
 
+  const handleStatusChange = (po: PurchaseOrder, newStatus: string) => {
+    if (newStatus === po.status) return;
+
+    const label = statusLabels[newStatus] ?? newStatus;
+    const confirmMsg = newStatus === 'confirmed'
+      ? `Confirm PO "${po.po_number}"? This will auto-create a Purchase Invoice and add stock.`
+      : newStatus === 'cancelled'
+        ? `Cancel PO "${po.po_number}"? This cannot be undone.`
+        : `Change status of "${po.po_number}" to "${label}"?`;
+
+    if (confirm(confirmMsg)) {
+      statusMutation.mutate({ id: po.id, status: newStatus });
+    }
+  };
+
   // Calculate line totals for preview
   const calcLineTotal = (line: PoForm['lines'][number]) => {
     const taxable = line.quantity * line.rate * (1 - (line.discount_percent ?? 0) / 100);
@@ -162,27 +205,54 @@ export default function PurchaseOrders() {
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ getValue }) => {
-        const s = getValue() as string;
-        return <Badge variant={statusVariant[s] ?? 'default'}>{s.replace('_', ' ')}</Badge>;
+      cell: ({ row }) => {
+        const po = row.original;
+        const currentStatus = po.status;
+        const transitions = allowedTransitions[currentStatus] ?? [];
+
+        // If no transitions available, just show badge
+        if (transitions.length === 0) {
+          return <Badge variant={statusVariant[currentStatus] ?? 'default'}>{statusLabels[currentStatus] ?? currentStatus}</Badge>;
+        }
+
+        return (
+          <select
+            className="rounded-lg border border-gray-300 py-1 px-2 text-xs font-medium focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            value={currentStatus}
+            disabled={statusMutation.isPending}
+            onChange={(e) => handleStatusChange(po, e.target.value)}
+          >
+            <option value={currentStatus}>{statusLabels[currentStatus]}</option>
+            {transitions.map((s) => (
+              <option key={s} value={s}>{statusLabels[s]}</option>
+            ))}
+          </select>
+        );
       },
     },
     {
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
-            <Pencil className="h-4 w-4 text-gray-500" />
-          </button>
-          <button
-            onClick={() => { if (confirm('Delete this PO?')) deleteMutation.mutate(row.original.id); }}
-            className="rounded p-1 hover:bg-gray-100"
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const isDraft = row.original.status === 'draft';
+        return (
+          <div className="flex items-center gap-1">
+            {isDraft && (
+              <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
+                <Pencil className="h-4 w-4 text-gray-500" />
+              </button>
+            )}
+            {isDraft && (
+              <button
+                onClick={() => { if (confirm('Delete this PO?')) deleteMutation.mutate(row.original.id); }}
+                className="rounded p-1 hover:bg-gray-100"
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

@@ -18,6 +18,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
@@ -44,6 +45,18 @@ const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
   draft: 'default',
   confirmed: 'success',
   cancelled: 'danger',
+};
+
+const statusLabels: Record<string, string> = {
+  draft: 'Draft',
+  confirmed: 'Confirmed',
+  cancelled: 'Cancelled',
+};
+
+const allowedTransitions: Record<string, string[]> = {
+  draft: ['confirmed', 'cancelled'],
+  confirmed: ['cancelled'],
+  cancelled: [],
 };
 
 export default function SalesInvoices() {
@@ -81,18 +94,36 @@ export default function SalesInvoices() {
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => salesInvoicesApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); closeModal(); toast.success('Sales invoice created'); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => salesInvoicesApi.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); closeModal(); toast.success('Sales invoice updated'); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => salesInvoicesApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); toast.success('Sales invoice deleted'); },
   });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => salesInvoicesApi.updateStatus(id, status),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+      toast.success(res.data.message ?? 'Status updated');
+    },
+  });
+
+  const handleStatusChange = (inv: SalesInvoice, newStatus: string) => {
+    const messages: Record<string, string> = {
+      confirmed: 'Confirming will deduct stock from inventory. Continue?',
+      cancelled: 'Are you sure you want to cancel this invoice? Stock will be reversed if previously confirmed.',
+    };
+    if (confirm(messages[newStatus] ?? `Change status to ${newStatus}?`)) {
+      statusMutation.mutate({ id: inv.id, status: newStatus });
+    }
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<InvoiceForm>({
@@ -119,6 +150,10 @@ export default function SalesInvoices() {
   };
 
   const openEdit = (inv: SalesInvoice) => {
+    if (inv.status !== 'draft') {
+      toast.error('Only draft invoices can be edited');
+      return;
+    }
     setEditInv(inv);
     reset({
       invoice_number: inv.invoice_number ?? '',
@@ -192,27 +227,50 @@ export default function SalesInvoices() {
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ getValue }) => {
-        const s = getValue() as string;
-        return <Badge variant={statusVariant[s] ?? 'default'}>{s}</Badge>;
+      cell: ({ row }) => {
+        const currentStatus = row.original.status ?? 'draft';
+        const transitions = allowedTransitions[currentStatus] ?? [];
+        if (transitions.length === 0) {
+          return <Badge variant={statusVariant[currentStatus] ?? 'default'}>{statusLabels[currentStatus] ?? currentStatus}</Badge>;
+        }
+        return (
+          <select
+            value={currentStatus}
+            onChange={(e) => handleStatusChange(row.original, e.target.value)}
+            className="rounded-lg border border-gray-300 py-1 px-2 text-sm focus:border-primary-500 focus:outline-none"
+            disabled={statusMutation.isPending}
+          >
+            <option value={currentStatus}>{statusLabels[currentStatus] ?? currentStatus}</option>
+            {transitions.map((s) => (
+              <option key={s} value={s}>{statusLabels[s] ?? s}</option>
+            ))}
+          </select>
+        );
       },
     },
     {
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
-            <Pencil className="h-4 w-4 text-gray-500" />
-          </button>
-          <button
-            onClick={() => { if (confirm('Delete this invoice?')) deleteMutation.mutate(row.original.id); }}
-            className="rounded p-1 hover:bg-gray-100"
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const isDraft = row.original.status === 'draft';
+        return (
+          <div className="flex items-center gap-1">
+            {isDraft && (
+              <>
+                <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
+                  <Pencil className="h-4 w-4 text-gray-500" />
+                </button>
+                <button
+                  onClick={() => { if (confirm('Delete this invoice?')) deleteMutation.mutate(row.original.id); }}
+                  className="rounded p-1 hover:bg-gray-100"
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </button>
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

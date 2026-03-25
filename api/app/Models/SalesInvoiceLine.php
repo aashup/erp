@@ -15,6 +15,7 @@ class SalesInvoiceLine extends Model
         'sales_invoice_id',
         'item_id',
         'batch_id',
+        'godown_id',
         'quantity',
         'rate',
         'discount_percent',
@@ -54,5 +55,10 @@ class SalesInvoiceLine extends Model
     public function batch()
     {
         return $this->belongsTo(Batch::class);
+    }
+
+    public function godown()
+    {
+        return $this->belongsTo(Godown::class);
     }
 }

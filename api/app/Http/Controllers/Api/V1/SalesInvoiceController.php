@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\StockLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SalesInvoiceController extends Controller
 {
@@ -32,7 +34,6 @@ class SalesInvoiceController extends Controller
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
             'sales_order_id' => 'nullable|uuid|exists:sales_orders,id',
-            'godown_id' => 'nullable|uuid|exists:godowns,id',
             'invoice_number' => 'required|string|unique:sales_invoices',
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date',
@@ -45,6 +46,7 @@ class SalesInvoiceController extends Controller
             'lines.*.rate' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate' => 'required|numeric|min:0',
+            'lines.*.godown_id' => 'nullable|uuid|exists:godowns,id',
         ]);
 
         $invoice = DB::transaction(function () use ($validated, $request) {
@@ -73,7 +75,7 @@ class SalesInvoiceController extends Controller
                     'company_id' => $request->user()->company_id,
                     'item_id' => $line['item_id'],
                     'batch_id' => $line['batch_id'] ?? null,
-                    'godown_id' => $validated['godown_id'],
+                    'godown_id' => $line['godown_id'],
                     'type' => 'sale',
                     'reference_type' => SalesInvoice::class,
                     'reference_id' => $invoice->id,
@@ -125,6 +127,102 @@ class SalesInvoiceController extends Controller
         $salesInvoice->update($validated);
 
         return response()->json(['data' => $salesInvoice]);
+    }
+
+    /**
+     * Update Sales Invoice status with business logic.
+     *
+     * Allowed transitions:
+     *   draft → confirmed | cancelled
+     *   confirmed → cancelled
+     *
+     * On confirm: creates stock ledger entries (stock OUT) for each line.
+     */
+    public function updateStatus(Request $request, SalesInvoice $salesInvoice): JsonResponse
+    {
+        $this->authorize('update', $salesInvoice);
+
+        $validated = $request->validate([
+            'status' => 'required|in:draft,confirmed,cancelled',
+        ]);
+
+        $newStatus = $validated['status'];
+        $currentStatus = $salesInvoice->status;
+
+        $allowedTransitions = [
+            'draft' => ['confirmed', 'cancelled'],
+            'confirmed' => ['cancelled'],
+            'cancelled' => [],
+        ];
+
+        if (! in_array($newStatus, $allowedTransitions[$currentStatus] ?? [])) {
+            throw ValidationException::withMessages([
+                'status' => ["Cannot change status from '{$currentStatus}' to '{$newStatus}'."],
+            ]);
+        }
+
+        $result = DB::transaction(function () use ($salesInvoice, $newStatus, $request) {
+            $salesInvoice->update(['status' => $newStatus]);
+
+            // On confirm → create stock ledger entries (stock out)
+            if ($newStatus === 'confirmed') {
+                $salesInvoice->loadMissing('lines');
+
+                $defaultGodown = Godown::where('company_id', $salesInvoice->company_id)
+                    ->where('is_default', true)
+                    ->first();
+
+                foreach ($salesInvoice->lines as $line) {
+                    StockLedger::create([
+                        'company_id' => $salesInvoice->company_id,
+                        'item_id' => $line->item_id,
+                        'batch_id' => $line->batch_id ?? null,
+                        'godown_id' => $line->godown_id ?? $defaultGodown?->id,
+                        'type' => 'sale',
+                        'reference_type' => SalesInvoice::class,
+                        'reference_id' => $salesInvoice->id,
+                        'quantity' => -$line->quantity,
+                        'rate' => $line->rate,
+                        'value' => $line->quantity * $line->rate,
+                        'narration' => "Invoice #{$salesInvoice->invoice_number} confirmed",
+                        'created_by' => $request->user()->id,
+                    ]);
+                }
+            }
+
+            // On cancel → reverse stock if previously confirmed
+            if ($newStatus === 'cancelled' && $currentStatus === 'confirmed') {
+                $salesInvoice->loadMissing('lines');
+
+                $defaultGodown = Godown::where('company_id', $salesInvoice->company_id)
+                    ->where('is_default', true)
+                    ->first();
+
+                foreach ($salesInvoice->lines as $line) {
+                    StockLedger::create([
+                        'company_id' => $salesInvoice->company_id,
+                        'item_id' => $line->item_id,
+                        'batch_id' => $line->batch_id ?? null,
+                        'godown_id' => $line->godown_id ?? $defaultGodown?->id,
+                        'type' => 'sale_reversal',
+                        'reference_type' => SalesInvoice::class,
+                        'reference_id' => $salesInvoice->id,
+                        'quantity' => $line->quantity,
+                        'rate' => $line->rate,
+                        'value' => $line->quantity * $line->rate,
+                        'narration' => "Reversal: Invoice #{$salesInvoice->invoice_number} cancelled",
+                        'created_by' => $request->user()->id,
+                    ]);
+                }
+            }
+
+            return $salesInvoice->load('lines.item', 'party', 'branch');
+        });
+
+        return response()->json([
+            'data' => $result,
+            'message' => "Sales invoice status changed to '{$newStatus}'.",
+        ]);
     }
 
     public function destroy(SalesInvoice $salesInvoice): JsonResponse

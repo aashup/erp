@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Godown;
+use App\Models\PurchaseInvoice;
 use App\Models\PurchaseOrder;
+use App\Models\StockLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
@@ -30,7 +34,7 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
-            'po_number' => 'string|unique:purchase_orders',
+            'po_number' => 'nullable|string|unique:purchase_orders',
             'po_date' => 'required|date',
             'expected_delivery_date' => 'nullable|date|after_or_equal:po_date',
             'notes' => 'nullable|string',
@@ -43,6 +47,16 @@ class PurchaseOrderController extends Controller
         ]);
 
         $po = DB::transaction(function () use ($validated, $request) {
+            // Auto-generate PO number if not provided
+            if (empty($validated['po_number'])) {
+                $validated['po_number'] = 'PO-' . str_pad(
+                    PurchaseOrder::withoutGlobalScopes()->count() + 1,
+                    6,
+                    '0',
+                    STR_PAD_LEFT
+                );
+            }
+
             $po = PurchaseOrder::create([
                 ...$validated,
                 'created_by' => $request->user()->id,
@@ -93,12 +107,154 @@ class PurchaseOrderController extends Controller
             'party_id' => 'sometimes|uuid|exists:parties,id',
             'expected_delivery_date' => 'nullable|date',
             'notes' => 'nullable|string',
-            'status' => 'sometimes|in:draft,confirmed,cancelled',
         ]);
 
         $purchaseOrder->update($validated);
 
         return response()->json(['data' => $purchaseOrder]);
+    }
+
+    /**
+     * Update PO status with business logic.
+     *
+     * Allowed transitions:
+     *   draft → confirmed | cancelled
+     *   confirmed → partially_received | received | cancelled
+     *   partially_received → received | cancelled
+     *
+     * On confirm: auto-creates a purchase invoice from PO lines.
+     */
+    public function updateStatus(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+    {
+        $this->authorize('update', $purchaseOrder);
+
+        $validated = $request->validate([
+            'status' => 'required|in:draft,confirmed,partially_received,received,cancelled',
+        ]);
+
+        $newStatus = $validated['status'];
+        $currentStatus = $purchaseOrder->status;
+
+        // Validate allowed transitions
+        $allowedTransitions = [
+            'draft' => ['confirmed', 'cancelled'],
+            'confirmed' => ['partially_received', 'received', 'cancelled'],
+            'partially_received' => ['received', 'cancelled'],
+            'received' => [],      // terminal
+            'cancelled' => [],     // terminal
+        ];
+
+        if (! in_array($newStatus, $allowedTransitions[$currentStatus] ?? [])) {
+            throw ValidationException::withMessages([
+                'status' => ["Cannot change status from '{$currentStatus}' to '{$newStatus}'."],
+            ]);
+        }
+
+        $result = DB::transaction(function () use ($purchaseOrder, $newStatus, $request) {
+            $purchaseOrder->update(['status' => $newStatus]);
+
+            // On confirm → auto-create purchase invoice from PO lines
+            if ($newStatus === 'confirmed') {
+                $this->createInvoiceFromPo($purchaseOrder, $request);
+            }
+
+            return $purchaseOrder->load('lines.item', 'party', 'branch', 'purchaseInvoices');
+        });
+
+        return response()->json([
+            'data' => $result,
+            'message' => "Purchase order status changed to '{$newStatus}'.",
+        ]);
+    }
+
+    /**
+     * Auto-create a purchase invoice when PO is confirmed.
+     */
+    private function createInvoiceFromPo(PurchaseOrder $po, Request $request): PurchaseInvoice
+    {
+        $po->loadMissing('lines', 'party');
+
+        // Determine inter-state from party vs company state codes
+        $companyStateCode = $request->user()->company?->state_code;
+        $partyStateCode = $po->party?->state_code;
+        $isInterState = $companyStateCode && $partyStateCode && $companyStateCode !== $partyStateCode;
+
+        // Get default godown
+        $defaultGodown = Godown::where('company_id', $po->company_id)
+            ->where('is_default', true)
+            ->first();
+
+        // Generate invoice number
+        $invoiceNumber = 'PI-' . str_pad(
+            PurchaseInvoice::withoutGlobalScopes()->count() + 1,
+            6,
+            '0',
+            STR_PAD_LEFT
+        );
+
+        $invoice = PurchaseInvoice::create([
+            'company_id' => $po->company_id,
+            'party_id' => $po->party_id,
+            'branch_id' => $po->branch_id,
+            'purchase_order_id' => $po->id,
+            'godown_id' => $defaultGodown?->id,
+            'invoice_number' => $invoiceNumber,
+            'invoice_date' => now()->toDateString(),
+            'is_inter_state' => $isInterState,
+            'status' => 'confirmed',
+            'created_by' => $request->user()->id,
+        ]);
+
+        foreach ($po->lines as $poLine) {
+            $taxable = $poLine->taxable_amount;
+            $gstAmt = $taxable * $poLine->gst_rate / 100;
+
+            $invoice->lines()->create([
+                'item_id' => $poLine->item_id,
+                'godown_id' => $defaultGodown?->id,
+                'quantity' => $poLine->quantity,
+                'rate' => $poLine->rate,
+                'discount_percent' => $poLine->discount_percent,
+                'taxable_amount' => $taxable,
+                'gst_rate' => $poLine->gst_rate,
+                'cgst' => $isInterState ? 0 : $gstAmt / 2,
+                'sgst' => $isInterState ? 0 : $gstAmt / 2,
+                'igst' => $isInterState ? $gstAmt : 0,
+                'line_total' => $taxable + $gstAmt,
+            ]);
+
+            // Stock ledger entry — stock IN
+            StockLedger::create([
+                'company_id' => $po->company_id,
+                'item_id' => $poLine->item_id,
+                'godown_id' => $defaultGodown?->id,
+                'type' => 'purchase',
+                'reference_type' => PurchaseInvoice::class,
+                'reference_id' => $invoice->id,
+                'quantity' => $poLine->quantity,
+                'rate' => $poLine->rate,
+                'value' => $poLine->quantity * $poLine->rate,
+                'narration' => "Auto from PO #{$po->po_number}",
+                'created_by' => $request->user()->id,
+            ]);
+
+            // Mark PO line as fully received
+            $poLine->update(['received_quantity' => $poLine->quantity]);
+        }
+
+        // Update invoice totals
+        $invoice->refresh();
+        $invoice->update([
+            'total_amount' => $invoice->lines->sum('taxable_amount'),
+            'taxable_amount' => $invoice->lines->sum('taxable_amount'),
+            'cgst_total' => $invoice->lines->sum('cgst'),
+            'sgst_total' => $invoice->lines->sum('sgst'),
+            'igst_total' => $invoice->lines->sum('igst'),
+            'grand_total' => $invoice->lines->sum('line_total'),
+            'balance_due' => $invoice->lines->sum('line_total'),
+        ]);
+
+        return $invoice;
     }
 
     public function destroy(PurchaseOrder $purchaseOrder): JsonResponse
