@@ -28,6 +28,7 @@ const lineSchema = z.object({
 });
 
 const poSchema = z.object({
+  po_number: z.string().optional(),
   party_id: z.string().min(1, 'Vendor is required'),
   po_date: z.string().min(1, 'Date is required'),
   expected_delivery_date: z.string().optional(),
@@ -97,6 +98,7 @@ export default function PurchaseOrders() {
   const openCreate = () => {
     setEditPo(null);
     reset({
+      po_number: '',
       party_id: '',
       po_date: new Date().toISOString().split('T')[0],
       expected_delivery_date: '',
@@ -109,6 +111,7 @@ export default function PurchaseOrders() {
   const openEdit = (po: PurchaseOrder) => {
     setEditPo(po);
     reset({
+      po_number: po.po_number ?? '',
       party_id: po.party_id,
       po_date: po.po_date,
       expected_delivery_date: po.expected_delivery_date ?? '',
@@ -208,6 +211,7 @@ export default function PurchaseOrders() {
       <Modal open={showModal} onClose={closeModal} title={editPo ? 'Edit Purchase Order' : 'New Purchase Order'} size="xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <Input id="po_number" label="PO Number (optional)" placeholder="Auto-generated if empty" error={errors.po_number?.message} {...register('po_number')} />
             <Select id="party_id" label="Vendor" options={vendorOptions} error={errors.party_id?.message} {...register('party_id')} />
             <Input id="po_date" label="PO Date" type="date" error={errors.po_date?.message} {...register('po_date')} />
             <Input id="expected_delivery_date" label="Expected Delivery" type="date" {...register('expected_delivery_date')} />

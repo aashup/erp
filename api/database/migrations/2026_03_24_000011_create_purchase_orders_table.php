@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignUuid('party_id')->constrained('parties');
             $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
-            $table->string('po_number')->unique();
+            $table->string('po_number')->unique()->nullable();
             $table->date('po_date');
             $table->date('expected_delivery_date')->nullable();
             $table->enum('status', ['draft', 'confirmed', 'partially_received', 'received', 'cancelled'])->default('draft');

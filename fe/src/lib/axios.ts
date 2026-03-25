@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -16,14 +17,37 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+interface ApiValidationError {
+  message: string;
+  errors?: Record<string, string[]>;
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError<ApiValidationError>) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+      return Promise.reject(error);
     }
+
+    const data = error.response?.data;
+
+    if (data?.errors) {
+      // 422 validation — collect all field errors into one toast
+      const messages = Object.values(data.errors).flat();
+      toast.error(messages.join('\n'), { duration: 5000 });
+    } else if (data?.message) {
+      // Other server errors with a message (403, 404, 409, 500, etc.)
+      toast.error(data.message, { duration: 4000 });
+    } else if (error.message === 'Network Error') {
+      // Offline / unreachable
+      toast.error('Network error — you may be offline.', { duration: 4000 });
+    } else {
+      toast.error('Something went wrong. Please try again.', { duration: 4000 });
+    }
+
     return Promise.reject(error);
   }
 );

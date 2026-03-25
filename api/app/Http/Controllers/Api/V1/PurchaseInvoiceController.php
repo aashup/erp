@@ -32,7 +32,6 @@ class PurchaseInvoiceController extends Controller
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
             'purchase_order_id' => 'nullable|uuid|exists:purchase_orders,id',
-            'godown_id' => 'nullable|uuid|exists:godowns,id',
             'invoice_number' => 'required|string|unique:purchase_invoices',
             'vendor_invoice_number' => 'nullable|string',
             'invoice_date' => 'required|date',
@@ -46,6 +45,8 @@ class PurchaseInvoiceController extends Controller
             'lines.*.rate' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate' => 'required|numeric|min:0',
+            'lines.*.godown_id' => 'nullable|uuid|exists:godowns,id',
+
         ]);
 
         $invoice = DB::transaction(function () use ($validated, $request) {
@@ -74,7 +75,7 @@ class PurchaseInvoiceController extends Controller
                     'company_id' => $request->user()->company_id,
                     'item_id' => $line['item_id'],
                     'batch_id' => $line['batch_id'] ?? null,
-                    'godown_id' => $validated['godown_id'],
+                    'godown_id' => $line['godown_id'] ?? null,
                     'type' => 'purchase',
                     'reference_type' => PurchaseInvoice::class,
                     'reference_id' => $invoice->id,

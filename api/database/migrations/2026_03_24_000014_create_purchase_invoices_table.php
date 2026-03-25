@@ -57,7 +57,7 @@ return new class extends Migration
             $table->decimal('sgst', 15, 2)->default(0);
             $table->decimal('igst', 15, 2)->default(0);
             $table->decimal('line_total', 15, 2)->default(0);
-
+            $table->foreignUuid('godown_id')->nullable()->constrained('godowns')->nullOnDelete();
             // Sync columns
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
             $table->string('device_id', 255)->nullable();

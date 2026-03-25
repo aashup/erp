@@ -30,7 +30,7 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
-            'po_number' => 'required|string|unique:purchase_orders',
+            'po_number' => 'string|unique:purchase_orders',
             'po_date' => 'required|date',
             'expected_delivery_date' => 'nullable|date|after_or_equal:po_date',
             'notes' => 'nullable|string',

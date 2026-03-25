@@ -16,6 +16,7 @@ class PurchaseInvoiceLine extends Model
         'item_id',
         'batch_id',
         'quantity',
+        'godown_id',
         'rate',
         'discount_percent',
         'taxable_amount',
@@ -54,5 +55,10 @@ class PurchaseInvoiceLine extends Model
     public function batch()
     {
         return $this->belongsTo(Batch::class);
+    }
+
+    public function godown()
+    {
+        return $this->belongsTo(Godown::class);
     }
 }

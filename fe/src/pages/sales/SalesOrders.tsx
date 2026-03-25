@@ -28,6 +28,7 @@ const lineSchema = z.object({
 });
 
 const soSchema = z.object({
+  so_number: z.string().optional(),
   party_id: z.string().min(1, 'Customer is required'),
   so_date: z.string().min(1, 'Date is required'),
   expected_delivery_date: z.string().optional(),
@@ -97,6 +98,7 @@ export default function SalesOrders() {
   const openCreate = () => {
     setEditSo(null);
     reset({
+      so_number: '',
       party_id: '',
       so_date: new Date().toISOString().split('T')[0],
       expected_delivery_date: '',
@@ -109,6 +111,7 @@ export default function SalesOrders() {
   const openEdit = (so: SalesOrder) => {
     setEditSo(so);
     reset({
+      so_number: so.so_number ?? '',
       party_id: so.party_id,
       so_date: so.so_date,
       expected_delivery_date: so.expected_delivery_date ?? '',
@@ -202,6 +205,7 @@ export default function SalesOrders() {
       <Modal open={showModal} onClose={closeModal} title={editSo ? 'Edit Sales Order' : 'New Sales Order'} size="xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <Input id="so_number" label="SO Number (optional)" placeholder="Auto-generated if empty" error={errors.so_number?.message} {...register('so_number')} />
             <Select id="party_id" label="Customer" options={customerOptions} error={errors.party_id?.message} {...register('party_id')} />
             <Input id="so_date" label="SO Date" type="date" error={errors.so_date?.message} {...register('so_date')} />
             <Input id="expected_delivery_date" label="Expected Delivery" type="date" {...register('expected_delivery_date')} />

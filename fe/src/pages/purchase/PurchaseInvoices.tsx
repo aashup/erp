@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { purchaseInvoicesApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
-import { itemsApi } from '@/api/inventory';
+import { itemsApi, godownsApi } from '@/api/inventory';
 import type { PurchaseInvoice } from '@/types';
 import { formatCurrency, formatDate, calcGST } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -21,6 +21,7 @@ import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
 
 const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
+  godown_id: z.string().min(1, 'Godown required'),
   quantity: z.coerce.number().min(1, 'Min 1'),
   rate: z.coerce.number().min(0),
   discount_percent: z.coerce.number().min(0).max(100).optional().default(0),
@@ -28,6 +29,7 @@ const lineSchema = z.object({
 });
 
 const invoiceSchema = z.object({
+  invoice_number: z.string().optional(),
   party_id: z.string().min(1, 'Vendor is required'),
   invoice_date: z.string().min(1, 'Date is required'),
   vendor_invoice_number: z.string().optional(),
@@ -70,6 +72,14 @@ export default function PurchaseInvoices() {
     select: (res) => res.data,
   });
 
+  const { data: godownsData } = useQuery({
+    queryKey: ['godowns-all'],
+    queryFn: () => godownsApi.list({ per_page: '500' }),
+    select: (res) => res.data,
+  });
+
+  const defaultGodownId = (godownsData?.data ?? []).find((g) => g.is_default)?.id ?? (godownsData?.data ?? [])[0]?.id ?? '';
+
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => purchaseInvoicesApi.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] }); closeModal(); },
@@ -88,7 +98,7 @@ export default function PurchaseInvoices() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<InvoiceForm>({
     resolver: zodResolver(invoiceSchema) as any,
-    defaultValues: { is_inter_state: false, lines: [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }] },
+    defaultValues: { is_inter_state: false, lines: [{ item_id: '', godown_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }] },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
@@ -98,13 +108,14 @@ export default function PurchaseInvoices() {
   const openCreate = () => {
     setEditInv(null);
     reset({
+      invoice_number: '',
       party_id: '',
       invoice_date: new Date().toISOString().split('T')[0],
       vendor_invoice_number: '',
       due_date: '',
       is_inter_state: false,
       notes: '',
-      lines: [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
+      lines: [{ item_id: '', godown_id: defaultGodownId, quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
     });
     setShowModal(true);
   };
@@ -112,6 +123,7 @@ export default function PurchaseInvoices() {
   const openEdit = (inv: PurchaseInvoice) => {
     setEditInv(inv);
     reset({
+      invoice_number: inv.invoice_number ?? '',
       party_id: inv.party_id,
       invoice_date: inv.invoice_date,
       vendor_invoice_number: inv.vendor_invoice_number ?? '',
@@ -120,11 +132,12 @@ export default function PurchaseInvoices() {
       notes: inv.notes ?? '',
       lines: inv.lines?.map((l) => ({
         item_id: l.item_id,
+        godown_id: (l as unknown as { godown_id?: string }).godown_id ?? defaultGodownId,
         quantity: l.quantity,
         rate: l.rate,
         discount_percent: l.discount_percent,
         gst_rate: l.gst_rate,
-      })) ?? [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
+      })) ?? [{ item_id: '', godown_id: defaultGodownId, quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
     });
     setShowModal(true);
   };
@@ -171,6 +184,7 @@ export default function PurchaseInvoices() {
 
   const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name }));
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? i.hsn_code ?? ''})` }));
+  const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: `${g.name}${g.is_default ? ' (Default)' : ''}` }));
 
   const columns: ColumnDef<PurchaseInvoice, unknown>[] = [
     { accessorKey: 'invoice_number', header: 'Invoice #' },
@@ -226,6 +240,7 @@ export default function PurchaseInvoices() {
       <Modal open={showModal} onClose={closeModal} title={editInv ? 'Edit Purchase Invoice' : 'New Purchase Invoice'} size="xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <Input id="invoice_number" label="Invoice Number (optional)" placeholder="Auto-generated if empty" error={errors.invoice_number?.message} {...register('invoice_number')} />
             <Select id="party_id" label="Vendor" options={vendorOptions} error={errors.party_id?.message} {...register('party_id')} />
             <Input id="invoice_date" label="Invoice Date" type="date" error={errors.invoice_date?.message} {...register('invoice_date')} />
             <Input id="vendor_invoice_number" label="Vendor Invoice #" {...register('vendor_invoice_number')} />
@@ -240,15 +255,16 @@ export default function PurchaseInvoices() {
           <div className="border-t pt-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">Line Items</h3>
-              <Button type="button" variant="secondary" size="sm" onClick={() => append({ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 })}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => append({ item_id: '', godown_id: defaultGodownId, quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 })}>
                 <Plus className="mr-1 h-3 w-3" /> Add Line
               </Button>
             </div>
             {errors.lines?.message && <p className="text-sm text-red-500 mb-2">{errors.lines.message}</p>}
             <div className="space-y-3">
               <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
-                <div className="col-span-4">Item</div>
-                <div className="col-span-2">Qty</div>
+                <div className="col-span-3">Item</div>
+                <div className="col-span-2">Godown</div>
+                <div className="col-span-1">Qty</div>
                 <div className="col-span-2">Rate (₹)</div>
                 <div className="col-span-1">Disc %</div>
                 <div className="col-span-1">GST %</div>
@@ -257,13 +273,19 @@ export default function PurchaseInvoices() {
               </div>
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <select className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.item_id`)}>
                       <option value="">Select item</option>
                       {itemOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </div>
                   <div className="col-span-2">
+                    <select className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.godown_id`)}>
+                      <option value="">Select godown</option>
+                      {godownOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-1">
                     <input type="number" min="1" step="1" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.quantity`)} />
                   </div>
                   <div className="col-span-2">
@@ -276,7 +298,7 @@ export default function PurchaseInvoices() {
                     <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.gst_rate`)} />
                   </div>
                   <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
-                    {formatCurrency(calcLineTotal(watchedLines?.[index] ?? { item_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
+                    {formatCurrency(calcLineTotal(watchedLines?.[index] ?? { item_id: '', godown_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
                   </div>
                   <div className="col-span-1 flex items-center justify-center">
                     {fields.length > 1 && (
