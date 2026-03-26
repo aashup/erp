@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\V1\PartyController;
 use App\Http\Controllers\Api\V1\PaymentReceiptController;
 use App\Http\Controllers\Api\V1\PurchaseInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
+use App\Http\Controllers\Api\V1\CompanySettingController;
+use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
 use App\Http\Controllers\Api\V1\SyncController;
@@ -61,8 +63,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sales
     Route::patch('sales-orders/{sales_order}/status', [SalesOrderController::class, 'updateStatus']);
     Route::apiResource('sales-orders', SalesOrderController::class);
+    Route::get('sales-invoices/{sales_invoice}/pdf', [SalesInvoiceController::class, 'pdf']);
     Route::patch('sales-invoices/{sales_invoice}/status', [SalesInvoiceController::class, 'updateStatus']);
     Route::apiResource('sales-invoices', SalesInvoiceController::class);
+
+    // Invoice Templates & Company Settings
+    Route::get('invoice-templates', [InvoiceTemplateController::class, 'index']);
+    Route::get('company-settings', [CompanySettingController::class, 'index']);
+    Route::put('company-settings', [CompanySettingController::class, 'update']);
 
     // Accounting
     Route::apiResource('chart-of-accounts', ChartOfAccountController::class);

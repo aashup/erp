@@ -334,6 +334,15 @@ export interface PaymentReceipt extends SyncColumns {
   party?: Party;
 }
 
+// Invoice Templates & Company Settings
+export interface InvoiceTemplate {
+  slug: string;
+  name: string;
+  description: string;
+}
+
+export type CompanySettings = Record<string, string | null>;
+
 // API response types
 export interface PaginatedResponse<T> {
   data: T[];

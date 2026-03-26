@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\StockLedger;
+use App\Services\InvoicePdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -223,6 +224,28 @@ class SalesInvoiceController extends Controller
             'data' => $result,
             'message' => "Sales invoice status changed to '{$newStatus}'.",
         ]);
+    }
+
+    /**
+     * Generate and download PDF for a sales invoice.
+     */
+    public function pdf(Request $request, SalesInvoice $salesInvoice)
+    {
+        $this->authorize('view', $salesInvoice);
+
+        $templateSlug = $request->query('template');
+
+        $service = app(InvoicePdfService::class);
+        $pdf = $service->generate($salesInvoice, $templateSlug);
+
+        // Mark as printed on first download
+        if (! $salesInvoice->is_printed) {
+            $salesInvoice->update(['is_printed' => true]);
+        }
+
+        $filename = "Invoice-{$salesInvoice->invoice_number}.pdf";
+
+        return $pdf->download($filename);
     }
 
     public function destroy(SalesInvoice $salesInvoice): JsonResponse

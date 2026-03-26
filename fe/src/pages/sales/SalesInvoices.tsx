@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, X, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const lineSchema = z.object({
@@ -105,6 +105,24 @@ export default function SalesInvoices() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => salesInvoicesApi.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); toast.success('Sales invoice deleted'); },
+  });
+
+  const pdfMutation = useMutation({
+    mutationFn: (id: string) => salesInvoicesApi.downloadPdf(id),
+    onSuccess: (response, id) => {
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Invoice-${id}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+      toast.success('PDF downloaded');
+    },
+    onError: () => {
+      toast.error('Failed to download PDF');
+    },
   });
 
   const statusMutation = useMutation({
@@ -255,14 +273,22 @@ export default function SalesInvoices() {
         const isDraft = row.original.status === 'draft';
         return (
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => pdfMutation.mutate(row.original.id)}
+              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Download PDF"
+              disabled={pdfMutation.isPending}
+            >
+              <Printer className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+            </button>
             {isDraft && (
               <>
-                <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
+                <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
                   <Pencil className="h-4 w-4 text-gray-500" />
                 </button>
                 <button
                   onClick={() => { if (confirm('Delete this invoice?')) deleteMutation.mutate(row.original.id); }}
-                  className="rounded p-1 hover:bg-gray-100"
+                  className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </button>

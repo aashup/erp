@@ -97,4 +97,9 @@ class Company extends Model
     {
         return $this->hasMany(PaymentReceipt::class);
     }
+
+    public function settings()
+    {
+        return $this->hasMany(CompanySetting::class);
+    }
 }

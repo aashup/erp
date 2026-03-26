@@ -37,4 +37,10 @@ export const salesInvoicesApi = {
 
   updateStatus: (id: string, status: string) =>
     api.patch<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}/status`, { status }),
+
+  downloadPdf: (id: string, template?: string) =>
+    api.get(`/sales-invoices/${id}/pdf`, {
+      params: template ? { template } : {},
+      responseType: 'blob',
+    }),
 };
