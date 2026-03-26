@@ -1,45 +1,17 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useNavigate } from 'react-router-dom';
 import { salesInvoicesApi } from '@/api/sales';
-import { partiesApi } from '@/api/parties';
-import { itemsApi, godownsApi } from '@/api/inventory';
 import type { SalesInvoice } from '@/types';
-import { formatCurrency, formatDate, calcGST } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
-import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Search, Pencil, Trash2, X, Printer } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const lineSchema = z.object({
-  item_id: z.string().min(1, 'Item required'),
-  godown_id: z.string().min(1, 'Godown required'),
-  quantity: z.coerce.number().min(1, 'Min 1'),
-  rate: z.coerce.number().min(0),
-  discount_percent: z.coerce.number().min(0).max(100).optional().default(0),
-  gst_rate: z.coerce.number().min(0).optional().default(18),
-});
-
-const invoiceSchema = z.object({
-  invoice_number: z.string().optional(),
-  party_id: z.string().min(1, 'Customer is required'),
-  invoice_date: z.string().min(1, 'Date is required'),
-  due_date: z.string().optional(),
-  is_inter_state: z.boolean().optional().default(false),
-  notes: z.string().optional(),
-  lines: z.array(lineSchema).min(1, 'Add at least one item'),
-});
-
-type InvoiceForm = z.infer<typeof invoiceSchema>;
 
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
   draft: 'default',
@@ -60,11 +32,10 @@ const allowedTransitions: Record<string, string[]> = {
 };
 
 export default function SalesInvoices() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editInv, setEditInv] = useState<SalesInvoice | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales-invoices', page, search],
@@ -72,39 +43,12 @@ export default function SalesInvoices() {
     select: (res) => res.data,
   });
 
-  const { data: customersData } = useQuery({
-    queryKey: ['parties-customers'],
-    queryFn: () => partiesApi.list({ per_page: '500', type: 'customer' }),
-    select: (res) => res.data,
-  });
-
-  const { data: itemsData } = useQuery({
-    queryKey: ['items-all'],
-    queryFn: () => itemsApi.list({ per_page: '500' }),
-    select: (res) => res.data,
-  });
-
-  const { data: godownsData } = useQuery({
-    queryKey: ['godowns-all'],
-    queryFn: () => godownsApi.list({ per_page: '500' }),
-    select: (res) => res.data,
-  });
-
-  const defaultGodownId = (godownsData?.data ?? []).find((g) => g.is_default)?.id ?? (godownsData?.data ?? [])[0]?.id ?? '';
-
-  const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => salesInvoicesApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); closeModal(); toast.success('Sales invoice created'); },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => salesInvoicesApi.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); closeModal(); toast.success('Sales invoice updated'); },
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (id: string) => salesInvoicesApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-invoices'] }); toast.success('Sales invoice deleted'); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+      toast.success('Sales invoice deleted');
+    },
   });
 
   const pdfMutation = useMutation({
@@ -133,108 +77,16 @@ export default function SalesInvoices() {
     },
   });
 
-  const handleStatusChange = (inv: SalesInvoice, newStatus: string) => {
+  const handleStatusChange = (invoice: SalesInvoice, newStatus: string) => {
     const messages: Record<string, string> = {
       confirmed: 'Confirming will deduct stock from inventory. Continue?',
       cancelled: 'Are you sure you want to cancel this invoice? Stock will be reversed if previously confirmed.',
     };
+
     if (confirm(messages[newStatus] ?? `Change status to ${newStatus}?`)) {
-      statusMutation.mutate({ id: inv.id, status: newStatus });
+      statusMutation.mutate({ id: invoice.id, status: newStatus });
     }
   };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<InvoiceForm>({
-    resolver: zodResolver(invoiceSchema) as any,
-    defaultValues: { is_inter_state: false, lines: [{ item_id: '', godown_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }] },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
-  const watchedLines = watch('lines');
-  const isInterState = watch('is_inter_state');
-
-  const openCreate = () => {
-    setEditInv(null);
-    reset({
-      invoice_number: '',
-      party_id: '',
-      invoice_date: new Date().toISOString().split('T')[0],
-      due_date: '',
-      is_inter_state: false,
-      notes: '',
-      lines: [{ item_id: '', godown_id: defaultGodownId, quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
-    });
-    setShowModal(true);
-  };
-
-  const openEdit = (inv: SalesInvoice) => {
-    if (inv.status !== 'draft') {
-      toast.error('Only draft invoices can be edited');
-      return;
-    }
-    setEditInv(inv);
-    reset({
-      invoice_number: inv.invoice_number ?? '',
-      party_id: inv.party_id,
-      invoice_date: inv.invoice_date,
-      due_date: inv.due_date ?? '',
-      is_inter_state: inv.is_inter_state,
-      notes: inv.notes ?? '',
-      lines: inv.lines?.map((l) => ({
-        item_id: l.item_id,
-        godown_id: (l as unknown as { godown_id?: string }).godown_id ?? defaultGodownId,
-        quantity: l.quantity,
-        rate: l.rate,
-        discount_percent: l.discount_percent,
-        gst_rate: l.gst_rate,
-      })) ?? [{ item_id: '', godown_id: defaultGodownId, quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
-    });
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setEditInv(null);
-    reset();
-  };
-
-  const onSubmit = (formData: InvoiceForm) => {
-    const payload = { ...formData } as Record<string, unknown>;
-    if (editInv) {
-      updateMutation.mutate({ id: editInv.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
-  };
-
-  const calcLineTotal = (line: InvoiceForm['lines'][number]) => {
-    const taxable = line.quantity * line.rate * (1 - (line.discount_percent ?? 0) / 100);
-    const gst = calcGST(taxable, line.gst_rate ?? 18, isInterState ?? false);
-    return taxable + gst.cgst + gst.sgst + gst.igst;
-  };
-
-  const calcLineTaxable = (line: InvoiceForm['lines'][number]) => {
-    return line.quantity * line.rate * (1 - (line.discount_percent ?? 0) / 100);
-  };
-
-  const totals = (watchedLines ?? []).reduce(
-    (acc, line) => {
-      const taxable = calcLineTaxable(line);
-      const gst = calcGST(taxable, line.gst_rate ?? 18, isInterState ?? false);
-      return {
-        taxable: acc.taxable + taxable,
-        cgst: acc.cgst + gst.cgst,
-        sgst: acc.sgst + gst.sgst,
-        igst: acc.igst + gst.igst,
-        grand: acc.grand + taxable + gst.cgst + gst.sgst + gst.igst,
-      };
-    },
-    { taxable: 0, cgst: 0, sgst: 0, igst: 0, grand: 0 }
-  );
-
-  const customerOptions = (customersData?.data ?? []).map((p) => ({ value: p.id, label: p.name }));
-  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? i.hsn_code ?? ''})` }));
-  const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: `${g.name}${g.is_default ? ' (Default)' : ''}` }));
 
   const columns: ColumnDef<SalesInvoice, unknown>[] = [
     { accessorKey: 'invoice_number', header: 'Invoice #' },
@@ -248,19 +100,23 @@ export default function SalesInvoices() {
       cell: ({ row }) => {
         const currentStatus = row.original.status ?? 'draft';
         const transitions = allowedTransitions[currentStatus] ?? [];
+
         if (transitions.length === 0) {
           return <Badge variant={statusVariant[currentStatus] ?? 'default'}>{statusLabels[currentStatus] ?? currentStatus}</Badge>;
         }
+
         return (
           <select
             value={currentStatus}
-            onChange={(e) => handleStatusChange(row.original, e.target.value)}
-            className="rounded-lg border border-gray-300 py-1 px-2 text-sm focus:border-primary-500 focus:outline-none"
+            onChange={(event) => handleStatusChange(row.original, event.target.value)}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
             disabled={statusMutation.isPending}
           >
             <option value={currentStatus}>{statusLabels[currentStatus] ?? currentStatus}</option>
-            {transitions.map((s) => (
-              <option key={s} value={s}>{statusLabels[s] ?? s}</option>
+            {transitions.map((status) => (
+              <option key={status} value={status}>
+                {statusLabels[status] ?? status}
+              </option>
             ))}
           </select>
         );
@@ -283,11 +139,18 @@ export default function SalesInvoices() {
             </button>
             {isDraft && (
               <>
-                <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <button
+                  onClick={() => navigate(`/sales/invoices/${row.original.id}/edit`)}
+                  className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
                   <Pencil className="h-4 w-4 text-gray-500" />
                 </button>
                 <button
-                  onClick={() => { if (confirm('Delete this invoice?')) deleteMutation.mutate(row.original.id); }}
+                  onClick={() => {
+                    if (confirm('Delete this invoice?')) {
+                      deleteMutation.mutate(row.original.id);
+                    }
+                  }}
                   className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -304,116 +167,36 @@ export default function SalesInvoices() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Sales Invoices</h1>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>
+        <Button onClick={() => navigate('/sales/invoices/new')}>
+          <Plus className="mr-2 h-4 w-4" /> New Invoice
+        </Button>
       </div>
+
       <Card>
         <CardHeader>
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Search invoice..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+            <input
+              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              placeholder="Search invoice..."
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+            />
           </div>
         </CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
-        {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}
+        {data && (
+          <Pagination
+            currentPage={data.current_page}
+            lastPage={data.last_page}
+            total={data.total}
+            onPageChange={setPage}
+          />
+        )}
       </Card>
-
-      <Modal open={showModal} onClose={closeModal} title={editInv ? 'Edit Sales Invoice' : 'New Sales Invoice'} size="xl">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input id="invoice_number" label="Invoice Number (optional)" placeholder="Auto-generated if empty" error={errors.invoice_number?.message} {...register('invoice_number')} />
-            <Select id="party_id" label="Customer" options={customerOptions} error={errors.party_id?.message} {...register('party_id')} />
-            <Input id="invoice_date" label="Invoice Date" type="date" error={errors.invoice_date?.message} {...register('invoice_date')} />
-            <Input id="due_date" label="Due Date" type="date" {...register('due_date')} />
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="is_inter_state" {...register('is_inter_state')} className="rounded" />
-            <label htmlFor="is_inter_state" className="text-sm text-gray-700">Inter-state sale (IGST instead of CGST+SGST)</label>
-          </div>
-
-          {/* Line Items */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">Line Items</h3>
-              <Button type="button" variant="secondary" size="sm" onClick={() => append({ item_id: '', godown_id: defaultGodownId, quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 })}>
-                <Plus className="mr-1 h-3 w-3" /> Add Line
-              </Button>
-            </div>
-            {errors.lines?.message && <p className="text-sm text-red-500 mb-2">{errors.lines.message}</p>}
-            <div className="space-y-3">
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
-                <div className="col-span-3">Item</div>
-                <div className="col-span-2">Godown</div>
-                <div className="col-span-1">Qty</div>
-                <div className="col-span-2">Rate (₹)</div>
-                <div className="col-span-1">Disc %</div>
-                <div className="col-span-1">GST %</div>
-                <div className="col-span-1 text-right">Total</div>
-                <div className="col-span-1"></div>
-              </div>
-              {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
-                  <div className="col-span-3">
-                    <select className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.item_id`)}>
-                      <option value="">Select item</option>
-                      {itemOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <select className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.godown_id`)}>
-                      <option value="">Select godown</option>
-                      {godownOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                  <div className="col-span-1">
-                    <input type="number" min="1" step="1" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.quantity`)} />
-                  </div>
-                  <div className="col-span-2">
-                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.rate`)} />
-                  </div>
-                  <div className="col-span-1">
-                    <input type="number" min="0" max="100" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.discount_percent`)} />
-                  </div>
-                  <div className="col-span-1">
-                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.gst_rate`)} />
-                  </div>
-                  <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
-                    {formatCurrency(calcLineTotal(watchedLines?.[index] ?? { item_id: '', godown_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
-                  </div>
-                  <div className="col-span-1 flex items-center justify-center">
-                    {fields.length > 1 && (
-                      <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50">
-                        <X className="h-4 w-4 text-red-500" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* GST Totals */}
-            <div className="mt-4 border-t pt-3 space-y-1 text-sm text-right">
-              <div><span className="text-gray-500">Taxable: </span><span className="font-medium">{formatCurrency(totals.taxable)}</span></div>
-              {isInterState ? (
-                <div><span className="text-gray-500">IGST: </span><span className="font-medium">{formatCurrency(totals.igst)}</span></div>
-              ) : (
-                <>
-                  <div><span className="text-gray-500">CGST: </span><span className="font-medium">{formatCurrency(totals.cgst)}</span></div>
-                  <div><span className="text-gray-500">SGST: </span><span className="font-medium">{formatCurrency(totals.sgst)}</span></div>
-                </>
-              )}
-              <div className="text-base"><span className="text-gray-500">Grand Total: </span><span className="text-lg font-bold text-gray-900">{formatCurrency(totals.grand)}</span></div>
-            </div>
-          </div>
-
-          <Input id="notes" label="Notes" {...register('notes')} />
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
-              {editInv ? 'Update' : 'Create'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

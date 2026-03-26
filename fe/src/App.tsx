@@ -17,6 +17,7 @@ import PurchaseOrders from '@/pages/purchase/PurchaseOrders';
 import PurchaseInvoices from '@/pages/purchase/PurchaseInvoices';
 import SalesOrders from '@/pages/sales/SalesOrders';
 import SalesInvoices from '@/pages/sales/SalesInvoices';
+import SalesInvoiceFormPage from '@/pages/sales/SalesInvoiceFormPage';
 import ChartOfAccounts from '@/pages/accounting/ChartOfAccounts';
 import JournalEntries from '@/pages/accounting/JournalEntries';
 import Payments from '@/pages/accounting/Payments';
@@ -107,6 +108,8 @@ export default function App() {
             {/* Sales */}
             <Route path="/sales/orders" element={<SalesOrders />} />
             <Route path="/sales/invoices" element={<SalesInvoices />} />
+            <Route path="/sales/invoices/new" element={<SalesInvoiceFormPage />} />
+            <Route path="/sales/invoices/:invoiceId/edit" element={<SalesInvoiceFormPage />} />
 
             {/* Accounting */}
             <Route path="/accounting/accounts" element={<ChartOfAccounts />} />

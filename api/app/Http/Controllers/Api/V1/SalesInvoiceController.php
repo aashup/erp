@@ -10,6 +10,7 @@ use App\Services\InvoicePdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class SalesInvoiceController extends Controller
@@ -121,11 +122,85 @@ class SalesInvoiceController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'sometimes|in:draft,confirmed,cancelled',
+            'party_id' => 'required|uuid|exists:parties,id',
+            'branch_id' => 'nullable|uuid|exists:branches,id',
+            'sales_order_id' => 'nullable|uuid|exists:sales_orders,id',
+            'invoice_number' => ['required', 'string', Rule::unique('sales_invoices', 'invoice_number')->ignore($salesInvoice->id)],
+            'invoice_date' => 'required|date',
+            'due_date' => 'nullable|date',
+            'is_inter_state' => 'boolean',
             'notes' => 'nullable|string',
+            'lines' => 'required|array|min:1',
+            'lines.*.item_id' => 'required|uuid|exists:items,id',
+            'lines.*.batch_id' => 'nullable|uuid|exists:batches,id',
+            'lines.*.quantity' => 'required|numeric|min:0.001',
+            'lines.*.rate' => 'required|numeric|min:0',
+            'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'lines.*.gst_rate' => 'required|numeric|min:0',
+            'lines.*.godown_id' => 'nullable|uuid|exists:godowns,id',
         ]);
 
-        $salesInvoice->update($validated);
+        $salesInvoice = DB::transaction(function () use ($validated, $salesInvoice, $request) {
+            $isInterState = $validated['is_inter_state'] ?? false;
+
+            $salesInvoice->update([
+                'party_id' => $validated['party_id'],
+                'branch_id' => $validated['branch_id'] ?? null,
+                'sales_order_id' => $validated['sales_order_id'] ?? null,
+                'invoice_number' => $validated['invoice_number'],
+                'invoice_date' => $validated['invoice_date'],
+                'due_date' => $validated['due_date'] ?? null,
+                'is_inter_state' => $isInterState,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            $salesInvoice->lines()->delete();
+            StockLedger::where('reference_type', SalesInvoice::class)
+                ->where('reference_id', $salesInvoice->id)
+                ->delete();
+
+            foreach ($validated['lines'] as $line) {
+                $taxable = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $gstAmt = $taxable * $line['gst_rate'] / 100;
+
+                $salesInvoice->lines()->create([
+                    ...$line,
+                    'taxable_amount' => $taxable,
+                    'cgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'sgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'igst' => $isInterState ? $gstAmt : 0,
+                    'line_total' => $taxable + $gstAmt,
+                ]);
+
+                StockLedger::create([
+                    'company_id' => $request->user()->company_id,
+                    'item_id' => $line['item_id'],
+                    'batch_id' => $line['batch_id'] ?? null,
+                    'godown_id' => $line['godown_id'] ?? null,
+                    'type' => 'sale',
+                    'reference_type' => SalesInvoice::class,
+                    'reference_id' => $salesInvoice->id,
+                    'quantity' => -$line['quantity'],
+                    'rate' => $line['rate'],
+                    'value' => $line['quantity'] * $line['rate'],
+                    'created_by' => $request->user()->id,
+                ]);
+            }
+
+            $salesInvoice->load('lines');
+
+            $salesInvoice->update([
+                'total_amount' => $salesInvoice->lines->sum('taxable_amount'),
+                'taxable_amount' => $salesInvoice->lines->sum('taxable_amount'),
+                'cgst_total' => $salesInvoice->lines->sum('cgst'),
+                'sgst_total' => $salesInvoice->lines->sum('sgst'),
+                'igst_total' => $salesInvoice->lines->sum('igst'),
+                'grand_total' => $salesInvoice->lines->sum('line_total'),
+                'balance_due' => $salesInvoice->lines->sum('line_total'),
+            ]);
+
+            return $salesInvoice->load('lines.item', 'party', 'branch');
+        });
 
         return response()->json(['data' => $salesInvoice]);
     }
