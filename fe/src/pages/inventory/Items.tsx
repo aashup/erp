@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { itemsApi } from '@/api/inventory';
-import type { Item } from '@/types';
+import { companySettingsApi } from '@/api/settings';
+import type { Item, UnitOption } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -46,6 +47,12 @@ export default function Items() {
     select: (res) => res.data,
   });
 
+  const { data: companySettings, isLoading: isUnitsLoading } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => companySettingsApi.get(),
+    select: (res) => res.data.data,
+  });
+
   const createMutation = useMutation({
     mutationFn: (data: ItemForm) => itemsApi.create(data),
     onSuccess: () => {
@@ -81,7 +88,15 @@ export default function Items() {
 
   const openCreate = () => {
     setEditItem(null);
-    reset({ name: '', sku: '', hsn_code: '', unit: 'PCS', category: '', gst_rate: 18, is_batch_tracked: false });
+    reset({
+      name: '',
+      sku: '',
+      hsn_code: '',
+      unit: unitOptions[0]?.value ?? '',
+      category: '',
+      gst_rate: 18,
+      is_batch_tracked: false,
+    });
     setShowModal(true);
   };
 
@@ -110,12 +125,22 @@ export default function Items() {
   };
 
   const onSubmit = (formData: ItemForm) => {
+    if (unitOptions.length === 0) {
+      return;
+    }
+
     if (editItem) {
       updateMutation.mutate({ id: editItem.id, data: formData });
     } else {
       createMutation.mutate(formData);
     }
   };
+
+  const unitOptions = (companySettings?.item_units ?? []) as UnitOption[];
+  const formUnitOptions =
+    editItem && !unitOptions.some((unit) => unit.value === editItem.unit)
+      ? [...unitOptions, { value: editItem.unit, label: `${editItem.unit} (current)` }]
+      : unitOptions;
 
   const columns: ColumnDef<Item, unknown>[] = [
     { accessorKey: 'name', header: 'Name' },
@@ -170,7 +195,7 @@ export default function Items() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Items</h1>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} disabled={isUnitsLoading || unitOptions.length === 0}>
           <Plus className="mr-2 h-4 w-4" /> Add Item
         </Button>
       </div>
@@ -203,6 +228,15 @@ export default function Items() {
 
       <Modal open={showModal} onClose={closeModal} title={editItem ? 'Edit Item' : 'New Item'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {isUnitsLoading ? (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              Loading item units...
+            </div>
+          ) : formUnitOptions.length === 0 ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Configure item units in Settings before creating or editing items.
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-4">
             <Input id="name" label="Name" error={errors.name?.message} {...register('name')} />
             <Input id="sku" label="SKU" error={errors.sku?.message} {...register('sku')} />
@@ -210,13 +244,9 @@ export default function Items() {
             <Select
               id="unit"
               label="Unit"
-              options={[
-                { value: 'PCS', label: 'Pieces' },
-                { value: 'KG', label: 'Kilograms' },
-                { value: 'BOX', label: 'Box' },
-                { value: 'STRIP', label: 'Strip' },
-              ]}
+              options={formUnitOptions}
               error={errors.unit?.message}
+              disabled={isUnitsLoading || formUnitOptions.length === 0}
               {...register('unit')}
             />
             <Input id="category" label="Category" {...register('category')} />
@@ -232,7 +262,11 @@ export default function Items() {
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              type="submit"
+              loading={createMutation.isPending || updateMutation.isPending}
+              disabled={isUnitsLoading || formUnitOptions.length === 0}
+            >
               {editItem ? 'Update' : 'Create'}
             </Button>
           </div>

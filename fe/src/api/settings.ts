@@ -7,6 +7,6 @@ export const invoiceTemplatesApi = {
 
 export const companySettingsApi = {
   get: () => api.get<ApiResponse<CompanySettings>>('/company-settings'),
-  update: (settings: Record<string, string>) =>
+  update: (settings: Record<string, unknown>) =>
     api.put<ApiResponse<CompanySettings>>('/company-settings', { settings }),
 };

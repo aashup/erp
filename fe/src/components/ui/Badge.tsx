@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/contexts/ThemeContext';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -16,7 +15,6 @@ const variants = {
 };
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
-  const { theme } = useTheme();
   return (
     <span
       className={cn(

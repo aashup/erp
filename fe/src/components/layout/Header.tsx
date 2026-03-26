@@ -11,7 +11,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
   const companyName = user?.company?.name?.trim() || 'ERP';
   const navigate = useNavigate();
   const { isOnline, isSyncing, pendingCount, doSync } = useSync();
-  const { theme, resolvedTheme, toggleTheme } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

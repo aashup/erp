@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils';
 import type { ButtonHTMLAttributes } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -17,7 +16,6 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const { theme } = useTheme();
   return (
     <button
       className={cn(

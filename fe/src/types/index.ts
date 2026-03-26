@@ -341,7 +341,16 @@ export interface InvoiceTemplate {
   description: string;
 }
 
-export type CompanySettings = Record<string, string | null>;
+export interface UnitOption {
+  value: string;
+  label: string;
+}
+
+export interface CompanySettings {
+  [key: string]: string | UnitOption[] | null | undefined;
+  default_invoice_template?: string | null;
+  item_units?: UnitOption[];
+}
 
 // API response types
 export interface PaginatedResponse<T> {
