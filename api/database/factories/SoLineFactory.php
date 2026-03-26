@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Item;
 use App\Models\SalesOrder;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class SoLineFactory extends Factory
@@ -32,6 +33,8 @@ class SoLineFactory extends Factory
             'igst' => $isInterState ? $gstAmount : 0,
             'line_total' => $taxableAmount + $gstAmount,
             'delivered_quantity' => fake()->randomFloat(3, 0, $quantity),
+            'created_by' => User::factory(),
+            'updated_by' => null,
             'sync_status' => 'synced',
             'device_id' => null,
             'synced_at' => now(),

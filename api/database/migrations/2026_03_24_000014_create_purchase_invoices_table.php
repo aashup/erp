@@ -33,6 +33,7 @@ return new class extends Migration
             $table->decimal('balance_due', 15, 2)->default(0);
             $table->text('notes')->nullable();
             $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUuid('updated_by')->nullable()->constrained('users')->nullOnDelete();
 
             // Sync columns
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
@@ -58,6 +59,8 @@ return new class extends Migration
             $table->decimal('igst', 15, 2)->default(0);
             $table->decimal('line_total', 15, 2)->default(0);
             $table->foreignUuid('godown_id')->nullable()->constrained('godowns')->nullOnDelete();
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUuid('updated_by')->nullable()->constrained('users')->nullOnDelete();
             // Sync columns
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
             $table->string('device_id', 255)->nullable();

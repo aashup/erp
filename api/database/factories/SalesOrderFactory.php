@@ -32,6 +32,7 @@ class SalesOrderFactory extends Factory
             'grand_total' => $totalAmount + $gstAmount,
             'notes' => fake()->optional()->sentence(),
             'created_by' => User::factory(),
+            'updated_by' => null,
             'sync_status' => 'synced',
             'device_id' => null,
             'synced_at' => now(),

@@ -55,6 +55,7 @@ class PurchaseInvoiceController extends Controller
             $invoice = PurchaseInvoice::create([
                 ...$validated,
                 'created_by' => $request->user()->id,
+                'updated_by' => null,
             ]);
 
             foreach ($validated['lines'] as $line) {
@@ -68,6 +69,8 @@ class PurchaseInvoiceController extends Controller
                     'sgst' => $isInterState ? 0 : $gstAmt / 2,
                     'igst' => $isInterState ? $gstAmt : 0,
                     'line_total' => $taxable + $gstAmt,
+                    'created_by' => $request->user()->id,
+                    'updated_by' => null,
                 ]);
 
                 // Stock ledger entry
@@ -124,7 +127,10 @@ class PurchaseInvoiceController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $purchaseInvoice->update($validated);
+        $purchaseInvoice->update([
+            ...$validated,
+            'updated_by' => $request->user()->id,
+        ]);
 
         return response()->json(['data' => $purchaseInvoice]);
     }

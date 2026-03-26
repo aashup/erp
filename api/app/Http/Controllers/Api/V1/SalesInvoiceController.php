@@ -57,6 +57,7 @@ class SalesInvoiceController extends Controller
             $invoice = SalesInvoice::create([
                 ...$validated,
                 'created_by' => $request->user()->id,
+                'updated_by' => null,
             ]);
 
             foreach ($validated['lines'] as $line) {
@@ -70,6 +71,8 @@ class SalesInvoiceController extends Controller
                     'sgst' => $isInterState ? 0 : $gstAmt / 2,
                     'igst' => $isInterState ? $gstAmt : 0,
                     'line_total' => $taxable + $gstAmt,
+                    'created_by' => $request->user()->id,
+                    'updated_by' => null,
                 ]);
 
                 // Stock ledger entry (stock out)
@@ -152,6 +155,7 @@ class SalesInvoiceController extends Controller
                 'due_date' => $validated['due_date'] ?? null,
                 'is_inter_state' => $isInterState,
                 'notes' => $validated['notes'] ?? null,
+                'updated_by' => $request->user()->id,
             ]);
 
             $salesInvoice->lines()->delete();
@@ -170,6 +174,8 @@ class SalesInvoiceController extends Controller
                     'sgst' => $isInterState ? 0 : $gstAmt / 2,
                     'igst' => $isInterState ? $gstAmt : 0,
                     'line_total' => $taxable + $gstAmt,
+                    'created_by' => $request->user()->id,
+                    'updated_by' => null,
                 ]);
 
                 StockLedger::create([
@@ -238,7 +244,10 @@ class SalesInvoiceController extends Controller
         }
 
         $result = DB::transaction(function () use ($salesInvoice, $newStatus, $request) {
-            $salesInvoice->update(['status' => $newStatus]);
+            $salesInvoice->update([
+                'status' => $newStatus,
+                'updated_by' => $request->user()->id,
+            ]);
 
             // On confirm → create stock ledger entries (stock out)
             if ($newStatus === 'confirmed') {

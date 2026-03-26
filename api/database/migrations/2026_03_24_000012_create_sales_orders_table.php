@@ -23,6 +23,7 @@ return new class extends Migration
             $table->decimal('grand_total', 15, 2)->default(0);
             $table->text('notes')->nullable();
             $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUuid('updated_by')->nullable()->constrained('users')->nullOnDelete();
 
             // Sync columns
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
@@ -47,6 +48,8 @@ return new class extends Migration
             $table->decimal('igst', 15, 2)->default(0);
             $table->decimal('line_total', 15, 2)->default(0);
             $table->decimal('delivered_quantity', 15, 3)->default(0);
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUuid('updated_by')->nullable()->constrained('users')->nullOnDelete();
 
             // Sync columns
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');

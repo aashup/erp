@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Item;
 use App\Models\PurchaseInvoice;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PurchaseInvoiceLineFactory extends Factory
@@ -35,6 +36,8 @@ class PurchaseInvoiceLineFactory extends Factory
             'sgst' => $sgst,
             'igst' => $igst,
             'line_total' => $taxableAmount + $gstAmount,
+            'created_by' => User::factory(),
+            'updated_by' => null,
             'sync_status' => 'synced',
             'device_id' => null,
             'synced_at' => now(),

@@ -60,6 +60,7 @@ class PurchaseOrderController extends Controller
             $po = PurchaseOrder::create([
                 ...$validated,
                 'created_by' => $request->user()->id,
+                'updated_by' => null,
             ]);
 
             foreach ($validated['lines'] as $line) {
@@ -73,6 +74,8 @@ class PurchaseOrderController extends Controller
                     'sgst' => $gstAmt / 2,
                     'igst' => 0,
                     'line_total' => $taxable + $gstAmt,
+                    'created_by' => $request->user()->id,
+                    'updated_by' => null,
                 ]);
             }
 
@@ -109,7 +112,10 @@ class PurchaseOrderController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $purchaseOrder->update($validated);
+        $purchaseOrder->update([
+            ...$validated,
+            'updated_by' => $request->user()->id,
+        ]);
 
         return response()->json(['data' => $purchaseOrder]);
     }
@@ -151,7 +157,10 @@ class PurchaseOrderController extends Controller
         }
 
         $result = DB::transaction(function () use ($purchaseOrder, $newStatus, $request) {
-            $purchaseOrder->update(['status' => $newStatus]);
+            $purchaseOrder->update([
+                'status' => $newStatus,
+                'updated_by' => $request->user()->id,
+            ]);
 
             // On confirm → auto-create purchase invoice from PO lines
             if ($newStatus === 'confirmed') {
@@ -203,6 +212,7 @@ class PurchaseOrderController extends Controller
             'is_inter_state' => $isInterState,
             'status' => 'confirmed',
             'created_by' => $request->user()->id,
+            'updated_by' => null,
         ]);
 
         foreach ($po->lines as $poLine) {
@@ -221,6 +231,8 @@ class PurchaseOrderController extends Controller
                 'sgst' => $isInterState ? 0 : $gstAmt / 2,
                 'igst' => $isInterState ? $gstAmt : 0,
                 'line_total' => $taxable + $gstAmt,
+                'created_by' => $request->user()->id,
+                'updated_by' => null,
             ]);
 
             // Stock ledger entry — stock IN

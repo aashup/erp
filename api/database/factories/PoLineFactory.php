@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Item;
 use App\Models\PoLine;
 use App\Models\PurchaseOrder;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -48,6 +49,8 @@ class PoLineFactory extends Factory
             'igst' => $igst,
             'line_total' => $lineTotal,
             'received_quantity' => fake()->randomFloat(3, 0, $quantity),
+            'created_by' => User::factory(),
+            'updated_by' => null,
             'sync_status' => 'synced',
             'device_id' => null,
             'synced_at' => now(),

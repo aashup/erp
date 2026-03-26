@@ -25,6 +25,8 @@ class PurchaseInvoiceLine extends Model
         'sgst',
         'igst',
         'line_total',
+        'created_by',
+        'updated_by',
     ];
 
     protected function casts(): array
@@ -60,5 +62,15 @@ class PurchaseInvoiceLine extends Model
     public function godown()
     {
         return $this->belongsTo(Godown::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

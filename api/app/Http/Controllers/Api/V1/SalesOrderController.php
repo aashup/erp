@@ -60,6 +60,7 @@ class SalesOrderController extends Controller
             $so = SalesOrder::create([
                 ...$validated,
                 'created_by' => $request->user()->id,
+                'updated_by' => null,
             ]);
 
             foreach ($validated['lines'] as $line) {
@@ -73,6 +74,8 @@ class SalesOrderController extends Controller
                     'sgst' => $gstAmt / 2,
                     'igst' => 0,
                     'line_total' => $taxable + $gstAmt,
+                    'created_by' => $request->user()->id,
+                    'updated_by' => null,
                 ]);
             }
 
@@ -109,7 +112,10 @@ class SalesOrderController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $salesOrder->update($validated);
+        $salesOrder->update([
+            ...$validated,
+            'updated_by' => $request->user()->id,
+        ]);
 
         return response()->json(['data' => $salesOrder]);
     }
@@ -150,7 +156,10 @@ class SalesOrderController extends Controller
         }
 
         $result = DB::transaction(function () use ($salesOrder, $newStatus, $request) {
-            $salesOrder->update(['status' => $newStatus]);
+            $salesOrder->update([
+                'status' => $newStatus,
+                'updated_by' => $request->user()->id,
+            ]);
 
             // On confirm → auto-create sales invoice from SO lines
             if ($newStatus === 'confirmed') {
@@ -202,6 +211,7 @@ class SalesOrderController extends Controller
             'is_inter_state' => $isInterState,
             'status' => 'confirmed',
             'created_by' => $request->user()->id,
+            'updated_by' => null,
         ]);
 
         foreach ($so->lines as $soLine) {
@@ -220,6 +230,8 @@ class SalesOrderController extends Controller
                 'sgst' => $isInterState ? 0 : $gstAmt / 2,
                 'igst' => $isInterState ? $gstAmt : 0,
                 'line_total' => $taxable + $gstAmt,
+                'created_by' => $request->user()->id,
+                'updated_by' => null,
             ]);
 
             // Stock ledger entry — stock OUT (negative quantity)

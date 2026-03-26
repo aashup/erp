@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Item;
 use App\Models\SalesInvoice;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class SalesInvoiceLineFactory extends Factory
@@ -32,6 +33,8 @@ class SalesInvoiceLineFactory extends Factory
             'sgst' => $isInterState ? 0 : $gstAmount / 2,
             'igst' => $isInterState ? $gstAmount : 0,
             'line_total' => $taxableAmount + $gstAmount,
+            'created_by' => User::factory(),
+            'updated_by' => null,
             'sync_status' => 'synced',
             'device_id' => null,
             'synced_at' => now(),

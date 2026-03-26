@@ -24,6 +24,8 @@ class PoLine extends Model
         'igst',
         'line_total',
         'received_quantity',
+        'created_by',
+        'updated_by',
     ];
 
     protected function casts(): array
@@ -50,5 +52,15 @@ class PoLine extends Model
     public function item()
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

@@ -48,6 +48,7 @@ class PurchaseInvoiceFactory extends Factory
             'balance_due' => $taxableAmount + $gstAmount,
             'notes' => fake()->optional()->sentence(),
             'created_by' => User::factory(),
+            'updated_by' => null,
             'sync_status' => 'synced',
             'device_id' => null,
             'synced_at' => now(),

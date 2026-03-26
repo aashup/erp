@@ -38,6 +38,7 @@ class PurchaseOrderFactory extends Factory
             'grand_total' => fn (array $attributes) => $attributes['total_amount'] + $attributes['gst_amount'],
             'notes' => fake()->sentence(),
             'created_by' => User::factory(),
+            'updated_by' => null,
             'sync_status' => 'synced',
             'device_id' => null,
             'synced_at' => now(),
