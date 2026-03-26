@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
 import {
   LayoutDashboard,
   Package,
@@ -11,9 +12,7 @@ import {
   Building2,
   Settings,
   X,
-  Menu,
 } from 'lucide-react';
-import { useState } from 'react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -58,6 +57,8 @@ interface SidebarProps {
 
 export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const location = useLocation();
+  const companyName = useAuthStore((state) => state.user?.company?.name?.trim() || 'ERP');
+  const companyInitial = companyName.charAt(0).toUpperCase();
 
   const isActive = (href: string) => {
     if (href === '/') return location.pathname === '/';
@@ -82,10 +83,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       >
         <div className="flex h-16 items-center gap-2 border-b px-6 border-gray-200 dark:border-gray-700">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-sm">
-            E
+            {companyInitial}
           </div>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            ERP
+          <span className="truncate text-lg font-bold text-gray-900 dark:text-white">
+            {companyName}
           </span>
           {mobileOpen && (
             <button

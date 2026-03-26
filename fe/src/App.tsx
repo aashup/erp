@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
+import { useAuthStore } from '@/store/authStore';
 
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
@@ -51,11 +52,13 @@ const PAGE_TITLES: Record<string, string> = {
 
 function DocumentTitleManager() {
   const location = useLocation();
+  const companyName = useAuthStore((state) => state.user?.company?.name?.trim() || null);
 
   useEffect(() => {
     const pageTitle = PAGE_TITLES[location.pathname] ?? 'ERP';
-    document.title = pageTitle === 'ERP' ? pageTitle : `${pageTitle} | ERP`;
-  }, [location.pathname]);
+    const appName = companyName || 'ERP';
+    document.title = pageTitle === appName ? pageTitle : `${pageTitle} | ${appName}`;
+  }, [companyName, location.pathname]);
 
   return null;
 }

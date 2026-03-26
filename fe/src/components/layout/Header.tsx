@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from 'react';
 
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const { user, logout } = useAuthStore();
+  const companyName = user?.company?.name?.trim() || 'ERP';
   const navigate = useNavigate();
   const { isOnline, isSyncing, pendingCount, doSync } = useSync();
   const { theme, resolvedTheme, toggleTheme } = useTheme();
@@ -56,7 +57,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
         </button>
         <div>
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            {user?.company?.name ?? 'ERP'}
+            {companyName}
           </h2>
         </div>
       </div>
