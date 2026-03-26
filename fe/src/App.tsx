@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -30,6 +31,35 @@ const queryClient = new QueryClient({
   },
 });
 
+const PAGE_TITLES: Record<string, string> = {
+  '/': 'Dashboard',
+  '/login': 'Login',
+  '/register': 'Register',
+  '/inventory/items': 'Items',
+  '/inventory/godowns': 'Godowns',
+  '/parties': 'Parties',
+  '/branches': 'Branches',
+  '/purchase/orders': 'Purchase Orders',
+  '/purchase/invoices': 'Purchase Invoices',
+  '/sales/orders': 'Sales Orders',
+  '/sales/invoices': 'Sales Invoices',
+  '/accounting/accounts': 'Chart of Accounts',
+  '/accounting/journals': 'Journal Entries',
+  '/accounting/payments': 'Payments',
+  '/settings': 'Settings',
+};
+
+function DocumentTitleManager() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const pageTitle = PAGE_TITLES[location.pathname] ?? 'ERP';
+    document.title = pageTitle === 'ERP' ? pageTitle : `${pageTitle} | ERP`;
+  }, [location.pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -45,6 +75,7 @@ export default function App() {
         }}
       />
       <BrowserRouter>
+        <DocumentTitleManager />
         <Routes>
           {/* Auth routes */}
           <Route element={<AuthLayout />}>
