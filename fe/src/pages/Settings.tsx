@@ -158,8 +158,8 @@ export default function Settings() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Company Info</h3>
-              <button onClick={openCompanyEdit} className="rounded p-1 hover:bg-gray-100">
-                <Pencil className="h-4 w-4 text-gray-500" />
+              <button onClick={openCompanyEdit} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
           </CardHeader>

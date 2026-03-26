@@ -42,7 +42,7 @@ function PeriodFilter({ value, onChange }: { value: Period; onChange: (p: Period
           className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
             value === p
               ? 'bg-primary-600 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
           }`}
         >
           {periodLabels[p]}
@@ -123,10 +123,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Welcome, {user?.name}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Here's what's happening with your business today.
         </p>
       </div>
@@ -140,8 +140,8 @@ export default function Dashboard() {
                 <stat.icon className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">{stat.name}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{stat.name}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
               </div>
             </CardContent>
           </Card>
@@ -158,7 +158,7 @@ export default function Dashboard() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500 text-white">
                   <TrendingUp className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Total Sales</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Sales</h3>
               </div>
             </div>
           </CardHeader>
@@ -166,13 +166,13 @@ export default function Dashboard() {
             <PeriodFilter value={salesPeriod} onChange={setSalesPeriod} />
             <div className="mt-4">
               {salesLoading ? (
-                <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
+                <div className="h-8 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
               ) : (
-                <p className="text-3xl font-bold text-green-600">
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
                   {formatCurrency(salesStats?.total_sales ?? 0)}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 {salesStats?.from} — {salesStats?.to}
               </p>
             </div>
@@ -187,7 +187,7 @@ export default function Dashboard() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500 text-white">
                   <ShoppingCart className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Total Purchase</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Purchase</h3>
               </div>
             </div>
           </CardHeader>
@@ -195,13 +195,13 @@ export default function Dashboard() {
             <PeriodFilter value={purchasePeriod} onChange={setPurchasePeriod} />
             <div className="mt-4">
               {purchaseLoading ? (
-                <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
+                <div className="h-8 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
               ) : (
-                <p className="text-3xl font-bold text-orange-600">
+                <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                   {formatCurrency(purchaseStats?.total_purchase ?? 0)}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 {purchaseStats?.from} — {purchaseStats?.to}
               </p>
             </div>
@@ -216,7 +216,7 @@ export default function Dashboard() {
                 <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${pnlIsPositive ? 'bg-emerald-500' : 'bg-red-500'} text-white`}>
                   <IndianRupee className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Profit & Loss</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Profit & Loss</h3>
               </div>
             </div>
           </CardHeader>
@@ -224,19 +224,19 @@ export default function Dashboard() {
             <PeriodFilter value={pnlPeriod} onChange={setPnlPeriod} />
             <div className="mt-4">
               {pnlLoading ? (
-                <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
+                <div className="h-8 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
               ) : (
                 <>
-                  <p className={`text-3xl font-bold ${pnlIsPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <p className={`text-3xl font-bold ${pnlIsPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                     {pnlIsPositive ? '+' : ''}{formatCurrency(pnlValue)}
                   </p>
-                  <div className="mt-2 flex gap-4 text-xs text-gray-500">
+                  <div className="mt-2 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
                     <span>Sales: {formatCurrency(pnlStats?.total_sales ?? 0)}</span>
                     <span>Purchase: {formatCurrency(pnlStats?.total_purchase ?? 0)}</span>
                   </div>
                 </>
               )}
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 {pnlStats?.from} — {pnlStats?.to}
               </p>
             </div>
@@ -248,7 +248,7 @@ export default function Dashboard() {
         {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Actions</h3>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
@@ -256,10 +256,10 @@ export default function Dashboard() {
                 <Link
                   key={action.name}
                   to={action.href}
-                  className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <action.icon className="h-5 w-5 text-primary-600" />
-                  <span className="text-sm font-medium text-gray-700">{action.name}</span>
+                  <action.icon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{action.name}</span>
                 </Link>
               ))}
             </div>
@@ -269,26 +269,26 @@ export default function Dashboard() {
         {/* Alerts & Sync */}
         <Card>
           <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900">Alerts & Sync</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Alerts & Sync</h3>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {pendingCount > 0 && (
-                <div className="flex items-center gap-3 rounded-lg bg-yellow-50 p-3">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                  <span className="text-sm text-yellow-700">{pendingCount} record(s) pending sync</span>
+                <div className="flex items-center gap-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 p-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  <span className="text-sm text-yellow-700 dark:text-yellow-300">{pendingCount} record(s) pending sync</span>
                 </div>
               )}
               {isSyncing && (
-                <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3">
-                  <RefreshCw className="h-5 w-5 text-blue-600 animate-spin" />
-                  <span className="text-sm text-blue-700">Syncing data...</span>
+                <div className="flex items-center gap-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 p-3">
+                  <RefreshCw className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
+                  <span className="text-sm text-blue-700 dark:text-blue-300">Syncing data...</span>
                 </div>
               )}
               {!isSyncing && pendingCount === 0 && (
-                <div className="flex items-center gap-3 rounded-lg bg-green-50 p-3">
-                  <Clock className="h-5 w-5 text-green-600" />
-                  <span className="text-sm text-green-700">
+                <div className="flex items-center gap-3 rounded-lg bg-green-50 dark:bg-green-900/30 p-3">
+                  <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm text-green-700 dark:text-green-300">
                     All data synced{lastSync ? ` — last sync ${lastSync.toLocaleTimeString('en-IN')}` : ''}
                   </span>
                 </div>
@@ -303,15 +303,15 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Sales Invoices</h3>
-              <Link to="/sales/invoices" className="text-sm text-primary-600 hover:underline">View all</Link>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Sales Invoices</h3>
+              <Link to="/sales/invoices" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">View all</Link>
             </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-gray-500">
+                  <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
                     <th className="pb-2 font-medium">Invoice #</th>
                     <th className="pb-2 font-medium">Customer</th>
                     <th className="pb-2 font-medium text-right">Amount</th>
@@ -321,7 +321,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody>
                   {recentInvoices.map((inv) => (
-                    <tr key={inv.id} className="border-b last:border-0">
+                    <tr key={inv.id} className="border-b last:border-0 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-200">
                       <td className="py-2 font-medium">{inv.invoice_number}</td>
                       <td className="py-2">{inv.party?.name ?? '—'}</td>
                       <td className="py-2 text-right">{formatCurrency(inv.grand_total)}</td>

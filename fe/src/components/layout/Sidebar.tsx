@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/contexts/ThemeContext';
 import {
   LayoutDashboard,
   Package,
@@ -58,7 +57,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
-  const { theme } = useTheme();
   const location = useLocation();
 
   const isActive = (href: string) => {
@@ -78,21 +76,15 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r transition-transform duration-300 ease-in-out',
-          theme === 'dark'
-            ? 'border-gray-700 bg-gray-900'
-            : 'border-gray-200 bg-white',
+          'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900',
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
-        <div
-          className={`flex h-16 items-center gap-2 border-b px-6 ${
-            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-          }`}
-        >
+        <div className="flex h-16 items-center gap-2 border-b px-6 border-gray-200 dark:border-gray-700">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-sm">
             E
           </div>
-          <span className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
             ERP
           </span>
           {mobileOpen && (
@@ -109,25 +101,19 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           {navigation.map((item) =>
             'children' in item ? (
               <div key={item.name} className="pt-3">
-                <p
-                  className={`px-3 pb-1 text-xs font-semibold uppercase tracking-wider ${
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                  }`}
-                >
+                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   {item.name}
                 </p>
                 {item.children?.map((child) => (
                   <NavLink
                     key={child.href}
                     to={child.href}
-                    className={({ isActive: active }) =>
+                    className={() =>
                       cn(
                         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                         isActive(child.href)
                           ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                          : theme === 'dark'
-                          ? 'text-gray-300 hover:bg-gray-800 hover:text-gray-100'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
                       )
                     }
                   >
@@ -140,14 +126,12 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
               <NavLink
                 key={item.href}
                 to={item.href}
-                className={({ isActive: active }) =>
+                className={() =>
                   cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     isActive(item.href)
                       ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                      : theme === 'dark'
-                      ? 'text-gray-300 hover:bg-gray-800 hover:text-gray-100'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
                   )
                 }
               >

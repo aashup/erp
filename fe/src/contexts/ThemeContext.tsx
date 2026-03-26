@@ -3,6 +3,7 @@ import { useThemeStore } from '@/store/themeStore';
 
 type ThemeContextType = {
   theme: 'light' | 'dark' | 'system';
+  resolvedTheme: 'light' | 'dark';
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
 };
@@ -14,13 +15,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    // Determine system preference if theme is 'system'
-    if (theme === 'system') {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setResolvedTheme(systemPrefersDark ? 'dark' : 'light');
-    } else {
+    if (theme !== 'system') {
       setResolvedTheme(theme);
+      return;
     }
+
+    // Set initial value from system preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setResolvedTheme(mediaQuery.matches ? 'dark' : 'light');
+
+    // Subscribe to system theme changes
+    const handleChange = (e: MediaQueryListEvent) => {
+      setResolvedTheme(e.matches ? 'dark' : 'light');
+    };
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
   }, [theme]);
 
   useEffect(() => {
@@ -33,7 +45,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [resolvedTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

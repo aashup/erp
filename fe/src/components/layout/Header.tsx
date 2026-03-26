@@ -10,7 +10,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { isOnline, isSyncing, pendingCount, doSync } = useSync();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -66,9 +66,9 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
         <button
           onClick={toggleTheme}
           className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-          title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+          title={resolvedTheme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
         >
-          {theme === 'light' ? (
+          {resolvedTheme === 'light' ? (
             <Moon className="h-4 w-4" />
           ) : (
             <Sun className="h-4 w-4" />
@@ -85,22 +85,22 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
           {!isOnline ? (
             <>
               <WifiOff className="h-3.5 w-3.5 text-red-500" />
-              <span className="text-red-600">Offline</span>
+              <span className="text-red-600 dark:text-red-400">Offline</span>
             </>
           ) : isSyncing ? (
             <>
               <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary-500" />
-              <span className="text-primary-600">Syncing...</span>
+              <span className="text-primary-600 dark:text-primary-400">Syncing...</span>
             </>
           ) : pendingCount > 0 ? (
             <>
               <CloudOff className="h-3.5 w-3.5 text-yellow-500" />
-              <span className="text-yellow-600">{pendingCount}</span>
+              <span className="text-yellow-600 dark:text-yellow-400">{pendingCount}</span>
             </>
           ) : (
             <>
               <Wifi className="h-3.5 w-3.5 text-green-500" />
-              <span className="text-green-600">Synced</span>
+              <span className="text-green-600 dark:text-green-400">Synced</span>
             </>
           )}
         </button>
