@@ -11,6 +11,7 @@ import {
   Warehouse,
   Building2,
   Settings,
+  Calendar,
   X,
   BarChart3,
   BookOpenCheck,
@@ -57,7 +58,13 @@ const navigation = [
     ],
   },
   { name: 'Branches', href: '/branches', icon: Building2 },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  {
+    name: 'Settings',
+    children: [
+      { name: 'Base Settings', href: '/settings/base', icon: Settings },
+      { name: 'Financial Years', href: '/settings/financial-years', icon: Calendar },
+    ],
+  },
 ];
 
 interface SidebarProps {

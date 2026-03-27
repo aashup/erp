@@ -9,15 +9,20 @@ use Illuminate\Http\Request;
 
 class PaymentReceiptController extends Controller
 {
+    use \App\Traits\FiltersByFinancialYear;
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', PaymentReceipt::class);
 
-        $receipts = PaymentReceipt::with('party')
+        $query = PaymentReceipt::with('party')
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))
             ->when($request->search, fn ($q, $s) => $q->where('receipt_number', 'like', "%{$s}%"))
-            ->latest('receipt_date')
-            ->paginate($request->per_page ?? 25);
+            ->latest('receipt_date');
+
+        $this->applyFYFilter($query, $request, 'receipt_date');
+
+        $receipts = $query->paginate($request->per_page ?? 25);
 
         return response()->json($receipts);
     }

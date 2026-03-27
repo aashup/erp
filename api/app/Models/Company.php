@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Observers\CompanyObserver;
 use App\Traits\HasSyncColumns;
 use App\Traits\HasUuid;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
+#[ObservedBy(CompanyObserver::class)]
 class Company extends Model
 {
     use HasFactory, HasSyncColumns, HasUuid, LogsActivity, SoftDeletes;

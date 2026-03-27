@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useFinancialYear } from '@/hooks/useFinancialYear';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useState } from 'react';
@@ -7,6 +8,9 @@ import { useState } from 'react';
 export function AppLayout() {
   const { isAuthenticated } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Initialize FY loading & auto-select
+  useFinancialYear();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

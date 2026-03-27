@@ -14,48 +14,35 @@ class FinancialYearSeeder extends Seeder
 
     /**
      * Run the database seeds.
+     *
+     * Note: The current FY is auto-created by CompanyObserver when the company is created.
+     * This seeder only adds the previous year for demo purposes.
      */
     public function run(): void
     {
-        // Get the first company
         $company = Company::first();
 
         if (! $company) {
-            $company = Company::factory()->create();
+            return;
         }
 
-        // Create current financial year (April to March)
-        $currentYear = Carbon::now()->year;
-        $startDate = Carbon::create($currentYear, 4, 1);
-        $endDate = Carbon::create($currentYear + 1, 3, 31);
+        $now = Carbon::now();
+        $fyStartYear = $now->month >= 4 ? $now->year : $now->year - 1;
 
-        FinancialYear::factory()->create([
-            'company_id' => $company->id,
-            'label' => $currentYear.'-'.($currentYear + 1),
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'is_current' => true,
-            'is_locked' => false,
-        ]);
+        // Previous financial year (locked)
+        $prevStartYear = $fyStartYear - 1;
 
-        // Create previous financial year
-        $prevStartDate = $startDate->copy()->subYear();
-        $prevEndDate = $endDate->copy()->subYear();
-
-        FinancialYear::factory()->create([
-            'company_id' => $company->id,
-            'label' => ($currentYear - 1).'-'.$currentYear,
-            'start_date' => $prevStartDate,
-            'end_date' => $prevEndDate,
-            'is_current' => false,
-            'is_locked' => true,
-        ]);
-
-        // Create additional financial years if needed
-        if (app()->environment('local', 'testing')) {
-            FinancialYear::factory()->count(3)->create([
+        FinancialYear::firstOrCreate(
+            [
                 'company_id' => $company->id,
-            ]);
-        }
+                'label' => $prevStartYear . '-' . substr($prevStartYear + 1, -2),
+            ],
+            [
+                'start_date' => Carbon::create($prevStartYear, 4, 1),
+                'end_date' => Carbon::create($prevStartYear + 1, 3, 31),
+                'is_current' => false,
+                'is_locked' => true,
+            ]
+        );
     }
 }

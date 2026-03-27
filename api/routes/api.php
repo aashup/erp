@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\ChartOfAccountController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\CompanySettingController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\FinancialYearController;
 use App\Http\Controllers\Api\V1\GodownController;
 use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\ItemController;
@@ -95,6 +96,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('invoice-templates', [InvoiceTemplateController::class, 'index']);
     Route::get('company-settings', [CompanySettingController::class, 'index']);
     Route::put('company-settings', [CompanySettingController::class, 'update']);
+
+    // Financial Years
+    Route::patch('financial-years/{financial_year}/set-current', [FinancialYearController::class, 'setCurrent']);
+    Route::apiResource('financial-years', FinancialYearController::class);
 
     // Accounting
     Route::post('chart-of-accounts/load-defaults', [ChartOfAccountController::class, 'loadDefaults']);

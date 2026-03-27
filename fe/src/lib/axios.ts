@@ -14,6 +14,22 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Auto-attach financial_year_id to all GET requests
+  if (config.method === 'get' || !config.method) {
+    const storedFY = localStorage.getItem('selectedFY');
+    if (storedFY) {
+      try {
+        const fy = JSON.parse(storedFY);
+        if (fy?.id) {
+          config.params = { ...config.params, financial_year_id: fy.id };
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }
+
   return config;
 });
 

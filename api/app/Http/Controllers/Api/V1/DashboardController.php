@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\FinancialYear;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use Carbon\Carbon;
@@ -17,6 +18,22 @@ class DashboardController extends Controller
         $period = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
         $range = $this->getDateRange($period);
+
+        // If financial_year_id is provided, clamp the range to the FY boundaries
+        if ($request->financial_year_id) {
+            $fy = FinancialYear::find($request->financial_year_id);
+            if ($fy) {
+                $fyStart = Carbon::parse($fy->start_date)->startOfDay();
+                $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
+                // Clamp: only show data within both the period AND the FY
+                if ($range['from']->lt($fyStart)) {
+                    $range['from'] = $fyStart;
+                }
+                if ($range['to']->gt($fyEnd)) {
+                    $range['to'] = $fyEnd;
+                }
+            }
+        }
 
         $salesTotal = SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')

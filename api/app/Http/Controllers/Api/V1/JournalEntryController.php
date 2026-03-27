@@ -10,15 +10,20 @@ use Illuminate\Support\Facades\DB;
 
 class JournalEntryController extends Controller
 {
+    use \App\Traits\FiltersByFinancialYear;
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', JournalEntry::class);
 
-        $entries = JournalEntry::with('lines.account')
+        $query = JournalEntry::with('lines.account')
             ->when($request->voucher_type, fn ($q, $t) => $q->where('voucher_type', $t))
             ->when($request->search, fn ($q, $s) => $q->where('voucher_number', 'like', "%{$s}%"))
-            ->latest('voucher_date')
-            ->paginate($request->per_page ?? 25);
+            ->latest('voucher_date');
+
+        $this->applyFYFilter($query, $request, 'voucher_date');
+
+        $entries = $query->paginate($request->per_page ?? 25);
 
         return response()->json($entries);
     }

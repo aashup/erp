@@ -15,15 +15,20 @@ use Illuminate\Validation\ValidationException;
 
 class SalesInvoiceController extends Controller
 {
+    use \App\Traits\FiltersByFinancialYear;
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', SalesInvoice::class);
 
-        $invoices = SalesInvoice::with('party', 'branch')
+        $query = SalesInvoice::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"))
-            ->latest('invoice_date')
-            ->paginate($request->per_page ?? 25);
+            ->latest('invoice_date');
+
+        $this->applyFYFilter($query, $request, 'invoice_date');
+
+        $invoices = $query->paginate($request->per_page ?? 25);
 
         return response()->json($invoices);
     }

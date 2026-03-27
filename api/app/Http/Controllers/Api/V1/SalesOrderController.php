@@ -14,15 +14,20 @@ use Illuminate\Validation\ValidationException;
 
 class SalesOrderController extends Controller
 {
+    use \App\Traits\FiltersByFinancialYear;
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', SalesOrder::class);
 
-        $orders = SalesOrder::with('party', 'branch')
+        $query = SalesOrder::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->when($request->search, fn ($q, $s) => $q->where('so_number', 'like', "%{$s}%"))
-            ->latest('so_date')
-            ->paginate($request->per_page ?? 25);
+            ->latest('so_date');
+
+        $this->applyFYFilter($query, $request, 'so_date');
+
+        $orders = $query->paginate($request->per_page ?? 25);
 
         return response()->json($orders);
     }

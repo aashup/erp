@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class StockLedgerController extends Controller
 {
+    use \App\Traits\FiltersByFinancialYear;
+
     /**
      * Paginated stock movement history with filters.
      */
@@ -19,14 +21,17 @@ class StockLedgerController extends Controller
     {
         $this->authorize('viewAny', Item::class);
 
-        $entries = StockLedger::with(['item:id,name,sku,unit', 'godown:id,name', 'batch:id,batch_number'])
+        $query = StockLedger::with(['item:id,name,sku,unit', 'godown:id,name', 'batch:id,batch_number'])
             ->when($request->item_id, fn ($q, $v) => $q->where('item_id', $v))
             ->when($request->godown_id, fn ($q, $v) => $q->where('godown_id', $v))
             ->when($request->type, fn ($q, $v) => $q->where('type', $v))
             ->when($request->from_date, fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->to_date, fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
-            ->orderByDesc('created_at')
-            ->paginate($request->per_page ?? 25);
+            ->orderByDesc('created_at');
+
+        $this->applyFYFilter($query, $request, 'created_at');
+
+        $entries = $query->paginate($request->per_page ?? 25);
 
         return response()->json($entries);
     }

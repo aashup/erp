@@ -28,6 +28,7 @@ import ChartOfAccounts from '@/pages/accounting/ChartOfAccounts';
 import JournalEntries from '@/pages/accounting/JournalEntries';
 import Payments from '@/pages/accounting/Payments';
 import Settings from '@/pages/Settings';
+import FinancialYears from '@/pages/settings/FinancialYears';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,7 +61,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/accounting/accounts': 'Chart of Accounts',
   '/accounting/journals': 'Journal Entries',
   '/accounting/payments': 'Payments',
-  '/settings': 'Settings',
+  '/settings/base': 'Settings',
+  '/settings/financial-years': 'Financial Years',
 };
 
 function DocumentTitleManager() {
@@ -139,7 +141,8 @@ export default function App() {
             <Route path="/accounting/payments" element={<Payments />} />
 
             {/* Settings */}
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/base" element={<Settings />} />
+            <Route path="/settings/financial-years" element={<FinancialYears />} />
           </Route>
         </Routes>
       </BrowserRouter>
