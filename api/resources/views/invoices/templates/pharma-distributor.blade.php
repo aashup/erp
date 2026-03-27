@@ -72,6 +72,28 @@
             text-align: right;
             width: 100px;
         }
+
+        /* Print styles for browser printing */
+        @media print {
+            @page {
+                size: A4;
+                margin: 8mm;
+            }
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        /* Screen styles — center content when viewed in browser */
+        @media screen {
+            body {
+                max-width: 210mm;
+                margin: 10px auto;
+                background: #f5f5f5;
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>

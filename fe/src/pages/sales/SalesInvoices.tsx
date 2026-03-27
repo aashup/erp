@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Search, Pencil, Trash2, Printer } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Printer, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
@@ -51,7 +51,7 @@ export default function SalesInvoices() {
     },
   });
 
-  const pdfMutation = useMutation({
+  const downloadPdfMutation = useMutation({
     mutationFn: (id: string) => salesInvoicesApi.downloadPdf(id),
     onSuccess: (response, id) => {
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -66,6 +66,27 @@ export default function SalesInvoices() {
     },
     onError: () => {
       toast.error('Failed to download PDF');
+    },
+  });
+
+  const printMutation = useMutation({
+    mutationFn: (id: string) => salesInvoicesApi.getHtml(id),
+    onSuccess: (response) => {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Pop-up blocked. Please allow pop-ups for printing.');
+        return;
+      }
+      printWindow.document.write(response.data);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+      };
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+    },
+    onError: () => {
+      toast.error('Failed to open print preview');
     },
   });
 
@@ -129,14 +150,32 @@ export default function SalesInvoices() {
         const isDraft = row.original.status === 'draft';
         return (
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => pdfMutation.mutate(row.original.id)}
-              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Download PDF"
-              disabled={pdfMutation.isPending}
-            >
-              <Printer className="h-4 w-4 text-primary-600 dark:text-primary-400" />
-            </button>
+            <div className="group relative">
+              <button
+                onClick={() => downloadPdfMutation.mutate(row.original.id)}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Download Invoice"
+                disabled={downloadPdfMutation.isPending}
+              >
+                <Download className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+              </button>
+              <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+                Download PDF
+              </span>
+            </div>
+            <div className="group relative">
+              <button
+                onClick={() => printMutation.mutate(row.original.id)}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Print Invoice"
+                disabled={printMutation.isPending}
+              >
+                <Printer className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+              </button>
+              <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+                Print Invoice
+              </span>
+            </div>
             {isDraft && (
               <>
                 <button

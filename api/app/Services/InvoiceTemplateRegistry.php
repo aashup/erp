@@ -11,6 +11,12 @@ class InvoiceTemplateRegistry
             'description' => 'Detailed invoice with batch, expiry, HSN, and per-line GST breakdown. Ideal for pharma and medical distributors.',
             'view' => 'invoices.templates.pharma-distributor',
         ],
+        [
+            'slug' => 'aidway-biotech',
+            'name' => 'Aidway Biotech Style',
+            'description' => 'GST invoice with MRP column, GST class-wise summary, bank details, and Marg ERP-style layout. Ideal for pharma wholesalers and distributors.',
+            'view' => 'invoices.templates.aidway-biotech',
+        ],
     ];
 
     /**

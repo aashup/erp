@@ -43,4 +43,10 @@ export const salesInvoicesApi = {
       params: template ? { template } : {},
       responseType: 'blob',
     }),
+
+  getHtml: (id: string, template?: string) =>
+    api.get<string>(`/sales-invoices/${id}/html`, {
+      params: template ? { template } : {},
+      responseType: 'text',
+    }),
 };

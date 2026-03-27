@@ -34,6 +34,9 @@ class DatabaseSeeder extends Seeder
             SalesOrderSeeder::class,
             SalesInvoiceSeeder::class,
 
+            // Sample Invoices
+            AidwayBiotechInvoiceSeeder::class,
+
             // Accounting
             PaymentReceiptSeeder::class,
             JournalEntrySeeder::class,

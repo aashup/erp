@@ -11,6 +11,19 @@
 
 ---
 
+## Login Details
+
+Role-wise login credentials for testing. **Password for all: `Aashu@123`**
+
+| Role       | Email                  |
+|------------|------------------------|
+| Admin      | admin@demo.com         |
+| Manager    | manager@demo.com       |
+| Accountant | accountant@demo.com    |
+| Salesman   | salesman@demo.com      |
+
+---
+
 ## Project Overview
 
 A GST-compliant, offline-first ERP application for Indian small businesses.

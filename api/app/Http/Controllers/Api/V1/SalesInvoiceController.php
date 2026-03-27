@@ -332,6 +332,28 @@ class SalesInvoiceController extends Controller
         return $pdf->download($filename);
     }
 
+    /**
+     * Return rendered HTML for a sales invoice (for browser print).
+     */
+    public function html(Request $request, SalesInvoice $salesInvoice)
+    {
+        $this->authorize('view', $salesInvoice);
+
+        $templateSlug = $request->query('template');
+
+        $service = app(InvoicePdfService::class);
+        $html = $service->generateHtml($salesInvoice, $templateSlug);
+
+        // Mark as printed on first view
+        if (! $salesInvoice->is_printed) {
+            $salesInvoice->update(['is_printed' => true]);
+        }
+
+        return response($html, 200, [
+            'Content-Type' => 'text/html; charset=utf-8',
+        ]);
+    }
+
     public function destroy(SalesInvoice $salesInvoice): JsonResponse
     {
         $this->authorize('delete', $salesInvoice);
