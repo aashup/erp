@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use App\Traits\HasUuid;
@@ -9,6 +10,6 @@ class Role extends SpatieRole
 {
     use HasFactory;
     use HasUuid;
+
     protected $primaryKey = 'uuid';
- 
 }

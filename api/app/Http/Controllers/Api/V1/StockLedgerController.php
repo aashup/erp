@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Godown;
 use App\Models\Item;
 use App\Models\StockLedger;
 use Illuminate\Http\JsonResponse;
@@ -61,11 +62,12 @@ class StockLedgerController extends Controller
         $godownIds = $results->pluck('godown_id')->unique();
 
         $items = Item::whereIn('id', $itemIds)->get()->keyBy('id');
-        $godowns = \App\Models\Godown::whereIn('id', $godownIds)->get()->keyBy('id');
+        $godowns = Godown::whereIn('id', $godownIds)->get()->keyBy('id');
 
         $results->getCollection()->transform(function ($row) use ($items, $godowns) {
             $row->item = $items[$row->item_id] ?? null;
             $row->godown = $godowns[$row->godown_id] ?? null;
+
             return $row;
         });
 

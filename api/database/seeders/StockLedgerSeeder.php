@@ -60,6 +60,6 @@ class StockLedgerSeeder extends Seeder
                 'created_by' => $user->id,
             ]);
         }
- 
+
     }
 }

@@ -10,7 +10,7 @@ use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
 {
-    use WithoutModelEvents;
+    // use WithoutModelEvents;
 
     /**
      * Run the database seeds.
@@ -36,7 +36,7 @@ class UserSeeder extends Seeder
             'email' => 'admin@demo.com',
             'role' => 'admin',
             'is_active' => true,
-        ]);
+        ])->refresh()->assignRole('admin');
 
         // Create manager user
         User::factory()->create([
@@ -46,7 +46,7 @@ class UserSeeder extends Seeder
             'email' => 'manager@demo.com',
             'role' => 'manager',
             'is_active' => true,
-        ]);
+        ])->assignRole('manager');
 
         // Create accountant user
         User::factory()->create([
@@ -56,7 +56,7 @@ class UserSeeder extends Seeder
             'email' => 'accountant@demo.com',
             'role' => 'accountant',
             'is_active' => true,
-        ]);
+        ])->assignRole('accountant');
 
         // Create salesman user
         User::factory()->create([
@@ -66,14 +66,19 @@ class UserSeeder extends Seeder
             'email' => 'salesman@demo.com',
             'role' => 'salesman',
             'is_active' => true,
-        ]);
+        ])->assignRole('salesman');
 
         // Create additional users if needed
         if (app()->environment('local', 'testing')) {
-            User::factory()->count(100)->create([
+            $users = User::factory()->count(100)->create([
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
             ]);
+
+            $users->each(function ($user) {
+                // 2. Assign the role (assuming 'role' is a column or property on your model)
+                $user->assignRole($user->role);
+            });
         }
     }
 }

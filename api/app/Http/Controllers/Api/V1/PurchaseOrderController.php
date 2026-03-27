@@ -49,7 +49,7 @@ class PurchaseOrderController extends Controller
         $po = DB::transaction(function () use ($validated, $request) {
             // Auto-generate PO number if not provided
             if (empty($validated['po_number'])) {
-                $validated['po_number'] = 'PO-' . str_pad(
+                $validated['po_number'] = 'PO-'.str_pad(
                     PurchaseOrder::withoutGlobalScopes()->count() + 1,
                     6,
                     '0',
@@ -194,7 +194,7 @@ class PurchaseOrderController extends Controller
             ->first();
 
         // Generate invoice number
-        $invoiceNumber = 'PI-' . str_pad(
+        $invoiceNumber = 'PI-'.str_pad(
             PurchaseInvoice::withoutGlobalScopes()->count() + 1,
             6,
             '0',

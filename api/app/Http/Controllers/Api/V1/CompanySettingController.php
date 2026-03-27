@@ -44,6 +44,7 @@ class CompanySettingController extends Controller
                 }
 
                 CompanySetting::setValue($companyId, $key, $normalizedUnits);
+
                 continue;
             }
 

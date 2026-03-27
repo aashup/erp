@@ -24,12 +24,12 @@ class NumberToWords
         $rupees = (int) floor(abs($amount));
         $paisa = (int) round((abs($amount) - $rupees) * 100);
 
-        $rupeesWords = $rupees > 0 ? self::numberToWords($rupees) . ' Rupees' : 'Zero Rupees';
-        $paisaWords = $paisa > 0 ? self::numberToWords($paisa) . ' Paisa' : 'Zero Paisa';
+        $rupeesWords = $rupees > 0 ? self::numberToWords($rupees).' Rupees' : 'Zero Rupees';
+        $paisaWords = $paisa > 0 ? self::numberToWords($paisa).' Paisa' : 'Zero Paisa';
 
         $prefix = $amount < 0 ? 'Minus ' : '';
 
-        return $prefix . $rupeesWords . ' And ' . $paisaWords . ' Only';
+        return $prefix.$rupeesWords.' And '.$paisaWords.' Only';
     }
 
     private static function numberToWords(int $number): string
@@ -39,32 +39,32 @@ class NumberToWords
         }
 
         if ($number < 0) {
-            return 'Minus ' . self::numberToWords(abs($number));
+            return 'Minus '.self::numberToWords(abs($number));
         }
 
         $words = '';
 
         // Crore (1,00,00,000)
         if ($number >= 10000000) {
-            $words .= self::numberToWords((int) floor($number / 10000000)) . ' Crore ';
+            $words .= self::numberToWords((int) floor($number / 10000000)).' Crore ';
             $number %= 10000000;
         }
 
         // Lakh (1,00,000)
         if ($number >= 100000) {
-            $words .= self::numberToWords((int) floor($number / 100000)) . ' Lakh ';
+            $words .= self::numberToWords((int) floor($number / 100000)).' Lakh ';
             $number %= 100000;
         }
 
         // Thousand (1,000)
         if ($number >= 1000) {
-            $words .= self::numberToWords((int) floor($number / 1000)) . ' Thousand ';
+            $words .= self::numberToWords((int) floor($number / 1000)).' Thousand ';
             $number %= 1000;
         }
 
         // Hundred (100)
         if ($number >= 100) {
-            $words .= self::$ones[(int) floor($number / 100)] . ' Hundred ';
+            $words .= self::$ones[(int) floor($number / 100)].' Hundred ';
             $number %= 100;
         }
 
@@ -74,7 +74,7 @@ class NumberToWords
             } else {
                 $words .= self::$tens[(int) floor($number / 10)];
                 if ($number % 10 > 0) {
-                    $words .= ' ' . self::$ones[$number % 10];
+                    $words .= ' '.self::$ones[$number % 10];
                 }
             }
         }

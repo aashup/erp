@@ -49,7 +49,7 @@ class SalesOrderController extends Controller
         $so = DB::transaction(function () use ($validated, $request) {
             // Auto-generate SO number if not provided
             if (empty($validated['so_number'])) {
-                $validated['so_number'] = 'SO-' . str_pad(
+                $validated['so_number'] = 'SO-'.str_pad(
                     SalesOrder::withoutGlobalScopes()->count() + 1,
                     6,
                     '0',
@@ -193,7 +193,7 @@ class SalesOrderController extends Controller
             ->first();
 
         // Generate invoice number
-        $invoiceNumber = 'SI-' . str_pad(
+        $invoiceNumber = 'SI-'.str_pad(
             SalesInvoice::withoutGlobalScopes()->count() + 1,
             6,
             '0',
