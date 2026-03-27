@@ -50,7 +50,7 @@ class BatchSeeder extends Seeder
 
             // Create additional batches if needed
             if (app()->environment('local', 'testing')) {
-                Batch::factory()->count(2)->create([
+                Batch::factory()->count(20)->create([
                     'item_id' => $item->id,
                 ]);
             }

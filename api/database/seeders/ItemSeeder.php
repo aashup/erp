@@ -91,7 +91,7 @@ class ItemSeeder extends Seeder
 
         // Create additional items if needed
         if (app()->environment('local', 'testing')) {
-            Item::factory()->count(20)->create([
+            Item::factory()->count(500)->create([
                 'company_id' => $company->id,
             ]);
         }

@@ -40,7 +40,7 @@ class GodownSeeder extends Seeder
 
         // Create additional godowns if needed
         if (app()->environment('local', 'testing')) {
-            Godown::factory()->count(3)->create([
+            Godown::factory()->count(30)->create([
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
             ]);

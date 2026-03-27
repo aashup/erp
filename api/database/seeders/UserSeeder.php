@@ -70,7 +70,7 @@ class UserSeeder extends Seeder
 
         // Create additional users if needed
         if (app()->environment('local', 'testing')) {
-            User::factory()->count(10)->create([
+            User::factory()->count(100)->create([
                 'company_id' => $company->id,
                 'branch_id' => $branch->id,
             ]);

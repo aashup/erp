@@ -33,7 +33,7 @@ class BranchSeeder extends Seeder
 
         // Create additional branches if needed
         if (app()->environment('local', 'testing')) {
-            Branch::factory()->count(3)->create([
+            Branch::factory()->count(20)->create([
                 'company_id' => $company->id,
             ]);
         }

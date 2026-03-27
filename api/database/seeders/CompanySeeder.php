@@ -25,7 +25,7 @@ class CompanySeeder extends Seeder
 
         // Create additional companies if needed
         if (app()->environment('local', 'testing')) {
-            Company::factory()->count(5)->create();
+            Company::factory()->count(50)->create();
         }
     }
 }
