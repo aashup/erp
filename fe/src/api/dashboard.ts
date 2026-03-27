@@ -7,6 +7,10 @@ export interface DashboardStats {
   total_sales: number;
   total_purchase: number;
   pnl: number;
+  net_revenue: number;
+  gst_output: number;
+  gst_input_credit: number;
+  payable_tax: number;
 }
 
 export const dashboardApi = {

@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   Clock,
   RefreshCw,
+  Receipt,
+  Landmark,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -34,12 +36,12 @@ const periodLabels: Record<Period, string> = {
 
 function PeriodFilter({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
   return (
-    <div className="flex gap-1">
+    <div className="flex flex-wrap gap-1">
       {(Object.keys(periodLabels) as Period[]).map((p) => (
         <button
           key={p}
           onClick={() => onChange(p)}
-          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+          className={`whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
             value === p
               ? 'bg-primary-600 text-white'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
@@ -100,6 +102,8 @@ export default function Dashboard() {
   const [salesPeriod, setSalesPeriod] = useState<Period>('this_month');
   const [purchasePeriod, setPurchasePeriod] = useState<Period>('this_month');
   const [pnlPeriod, setPnlPeriod] = useState<Period>('this_month');
+  const [netRevenuePeriod, setNetRevenuePeriod] = useState<Period>('this_month');
+  const [taxPeriod, setTaxPeriod] = useState<Period>('this_month');
 
   const { data: itemsData } = useQuery({
     queryKey: ['items', 1],
@@ -144,6 +148,18 @@ export default function Dashboard() {
     select: (res) => res.data.data,
   });
 
+  const { data: netRevenueStats, isLoading: netRevenueLoading } = useQuery({
+    queryKey: ['dashboard-stats-net-revenue', netRevenuePeriod],
+    queryFn: () => dashboardApi.stats(netRevenuePeriod),
+    select: (res) => res.data.data,
+  });
+
+  const { data: taxStats, isLoading: taxLoading } = useQuery({
+    queryKey: ['dashboard-stats-tax', taxPeriod],
+    queryFn: () => dashboardApi.stats(taxPeriod),
+    select: (res) => res.data.data,
+  });
+
   const countStats = [
     { name: 'Total Items', value: itemsData?.total?.toString() ?? '—', icon: Package, color: 'bg-blue-500' },
     { name: 'Parties', value: partiesData?.total?.toString() ?? '—', icon: Users, color: 'bg-green-500' },
@@ -161,6 +177,8 @@ export default function Dashboard() {
   const recentInvoices = invoicesData?.data ?? [];
   const pnlValue = pnlStats?.pnl ?? 0;
   const pnlIsPositive = pnlValue >= 0;
+  const payableTaxValue = taxStats?.payable_tax ?? 0;
+  const payableTaxPositive = payableTaxValue >= 0;
 
   return (
     <div className="space-y-6">
@@ -191,7 +209,7 @@ export default function Dashboard() {
       </div>
 
       {/* Sales / Purchase / P&L Widgets */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         {/* Total Sales */}
         <Card>
           <CardHeader>
@@ -216,6 +234,43 @@ export default function Dashboard() {
               )}
               <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 {salesStats?.from} — {salesStats?.to}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Net Revenue */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white">
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Net Revenue</h3>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <PeriodFilter value={netRevenuePeriod} onChange={setNetRevenuePeriod} />
+            <div className="mt-4">
+              {netRevenueLoading ? (
+                <div className="h-8 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(netRevenueStats?.net_revenue ?? 0)}
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Actual earnings after removing GST from sales
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    Sales {formatCurrency(netRevenueStats?.total_sales ?? 0)} - GST {formatCurrency(netRevenueStats?.gst_output ?? 0)}
+                  </p>
+                </>
+              )}
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                {netRevenueStats?.from} — {netRevenueStats?.to}
               </p>
             </div>
           </CardContent>
@@ -280,6 +335,48 @@ export default function Dashboard() {
               )}
               <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 {pnlStats?.from} — {pnlStats?.to}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payable Tax */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${payableTaxPositive ? 'bg-amber-500' : 'bg-sky-500'} text-white`}>
+                  <Landmark className="h-5 w-5" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Payable Tax</h3>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <PeriodFilter value={taxPeriod} onChange={setTaxPeriod} />
+            <div className="mt-4">
+              {taxLoading ? (
+                <div className="h-8 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+              ) : (
+                <>
+                  <p className={`text-3xl font-bold ${payableTaxPositive ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400'}`}>
+                    {formatCurrency(payableTaxValue)}
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    GST collected minus input tax credit
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    Output {formatCurrency(taxStats?.gst_output ?? 0)} - ITC {formatCurrency(taxStats?.gst_input_credit ?? 0)}
+                  </p>
+                  {!payableTaxPositive && (
+                    <p className="mt-1 text-xs text-sky-600 dark:text-sky-400">
+                      Input credit exceeds output GST
+                    </p>
+                  )}
+                </>
+              )}
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                {taxStats?.from} — {taxStats?.to}
               </p>
             </div>
           </CardContent>
