@@ -9,9 +9,10 @@ interface DataTableProps<T> {
   data: T[];
   columns: ColumnDef<T, unknown>[];
   loading?: boolean;
+  onRowClick?: (row: T) => void;
 }
 
-export function DataTable<T>({ data, columns, loading }: DataTableProps<T>) {
+export function DataTable<T>({ data, columns, loading, onRowClick }: DataTableProps<T>) {
   const table = useReactTable({
     data,
     columns,
@@ -57,7 +58,7 @@ export function DataTable<T>({ data, columns, loading }: DataTableProps<T>) {
             </tr>
           ) : (
             table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <tr key={row.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors${onRowClick ? ' cursor-pointer' : ''}`} onClick={() => onRowClick?.(row.original)}>
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

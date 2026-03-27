@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\V1\CompanySettingController;
 use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
+use App\Http\Controllers\Api\V1\StockLedgerController;
+use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\SyncController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +50,22 @@ Route::middleware('auth:sanctum')->group(function () {
     // Inventory
     Route::apiResource('items', ItemController::class);
     Route::apiResource('godowns', GodownController::class);
+
+    // Stock Ledger & Inventory Operations
+    Route::get('stock-ledger', [StockLedgerController::class, 'index']);
+    Route::get('stock-summary', [StockLedgerController::class, 'summary']);
+    Route::post('stock-ledger/opening', [StockLedgerController::class, 'opening']);
+    Route::post('stock-ledger/adjustment', [StockLedgerController::class, 'adjustment']);
+    Route::post('stock-ledger/transfer', [StockLedgerController::class, 'transfer']);
+    Route::get('stock-ledger/reorder-alerts', [StockLedgerController::class, 'reorderAlerts']);
+    Route::get('items/{item}/movements', [StockLedgerController::class, 'itemMovements']);
+
+    // Batches
+    Route::get('items/{item}/batches', [BatchController::class, 'index']);
+    Route::post('items/{item}/batches', [BatchController::class, 'store']);
+    Route::put('batches/{batch}', [BatchController::class, 'update']);
+    Route::delete('batches/{batch}', [BatchController::class, 'destroy']);
+    Route::get('batches/expiring', [BatchController::class, 'expiring']);
 
     // Parties
     Route::apiResource('parties', PartyController::class);

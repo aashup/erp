@@ -11,6 +11,12 @@ import Register from '@/pages/auth/Register';
 import Dashboard from '@/pages/dashboard/Dashboard';
 import Items from '@/pages/inventory/Items';
 import Godowns from '@/pages/inventory/Godowns';
+import StockSummary from '@/pages/inventory/StockSummary';
+import StockLedger from '@/pages/inventory/StockLedger';
+import StockTransfer from '@/pages/inventory/StockTransfer';
+import StockAdjustment from '@/pages/inventory/StockAdjustment';
+import OpeningStock from '@/pages/inventory/OpeningStock';
+import ItemMovements from '@/pages/inventory/ItemMovements';
 import Parties from '@/pages/Parties';
 import Branches from '@/pages/Branches';
 import PurchaseOrders from '@/pages/purchase/PurchaseOrders';
@@ -39,6 +45,12 @@ const PAGE_TITLES: Record<string, string> = {
   '/register': 'Register',
   '/inventory/items': 'Items',
   '/inventory/godowns': 'Godowns',
+  '/inventory/stock-summary': 'Stock Summary',
+  '/inventory/stock-ledger': 'Stock Ledger',
+  '/inventory/stock-transfer': 'Stock Transfer',
+  '/inventory/stock-adjustment': 'Stock Adjustment',
+  '/inventory/opening-stock': 'Opening Stock',
+  '/inventory/item-movements': 'Item Movements',
   '/parties': 'Parties',
   '/branches': 'Branches',
   '/purchase/orders': 'Purchase Orders',
@@ -97,6 +109,13 @@ export default function App() {
             {/* Inventory */}
             <Route path="/inventory/items" element={<Items />} />
             <Route path="/inventory/godowns" element={<Godowns />} />
+            <Route path="/inventory/stock-summary" element={<StockSummary />} />
+            <Route path="/inventory/stock-ledger" element={<StockLedger />} />
+            <Route path="/inventory/stock-transfer" element={<StockTransfer />} />
+            <Route path="/inventory/stock-adjustment" element={<StockAdjustment />} />
+            <Route path="/inventory/opening-stock" element={<OpeningStock />} />
+            <Route path="/inventory/items/:itemId/movements" element={<ItemMovements />} />
+            <Route path="/inventory/item-movements" element={<ItemMovements />} />
 
             {/* Parties */}
             <Route path="/parties" element={<Parties />} />

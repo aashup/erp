@@ -352,6 +352,46 @@ export interface CompanySettings {
   item_units?: UnitOption[];
 }
 
+// Stock / Inventory
+export interface StockLedgerEntry {
+  id: string;
+  company_id: string;
+  item_id: string;
+  batch_id: string | null;
+  godown_id: string;
+  type: 'purchase' | 'purchase_return' | 'sale' | 'sale_return' | 'transfer_in' | 'transfer_out' | 'adjustment' | 'opening';
+  reference_type: string | null;
+  reference_id: string | null;
+  quantity: number;
+  rate: number;
+  value: number;
+  narration: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  item?: Item;
+  batch?: Batch;
+  godown?: Godown;
+}
+
+export interface StockSummaryRow {
+  item_id: string;
+  godown_id: string;
+  current_stock: number;
+  item?: Item;
+  godown?: Godown;
+}
+
+export interface ReorderAlert {
+  item_id: string;
+  item_name: string;
+  sku: string | null;
+  unit: string;
+  reorder_level: number;
+  current_stock: number;
+  deficit: number;
+}
+
 // API response types
 export interface PaginatedResponse<T> {
   data: T[];

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useAuthStore } from '@/store/authStore';
 import { useSync } from '@/hooks/useSync';
-import { itemsApi } from '@/api/inventory';
+import { itemsApi, stockLedgerApi } from '@/api/inventory';
 import { partiesApi } from '@/api/parties';
 import { purchaseOrdersApi } from '@/api/purchase';
 import { salesInvoicesApi } from '@/api/sales';
@@ -49,6 +49,48 @@ function PeriodFilter({ value, onChange }: { value: Period; onChange: (p: Period
         </button>
       ))}
     </div>
+  );
+}
+
+function LowStockAlerts() {
+  const { data: alerts } = useQuery({
+    queryKey: ['reorder-alerts'],
+    queryFn: () => stockLedgerApi.reorderAlerts(),
+    select: (res) => res.data.data,
+  });
+
+  if (!alerts || alerts.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Low Stock Alerts</h3>
+          </div>
+          <Link to="/inventory/stock-summary" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">View all</Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {alerts.slice(0, 5).map((alert: { item_id: string; item_name: string; current_stock: number; reorder_level: number }) => (
+            <div key={alert.item_id} className="flex items-center justify-between rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{alert.item_name}</span>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-red-600 dark:text-red-400 font-semibold">Stock: {alert.current_stock}</span>
+                <span className="text-gray-500 dark:text-gray-400">Reorder: {alert.reorder_level}</span>
+              </div>
+            </div>
+          ))}
+          {alerts.length > 5 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center pt-1">
+              +{alerts.length - 5} more items below reorder level
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -297,6 +339,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Low Stock Alerts */}
+      <LowStockAlerts />
 
       {/* Recent Sales Invoices */}
       {recentInvoices.length > 0 && (

@@ -12,6 +12,11 @@ import {
   Building2,
   Settings,
   X,
+  BarChart3,
+  BookOpenCheck,
+  ArrowLeftRight,
+  ClipboardEdit,
+  PackageOpen,
 } from 'lucide-react';
 
 const navigation = [
@@ -19,8 +24,13 @@ const navigation = [
   {
     name: 'Inventory',
     children: [
+      { name: 'Stock Summary', href: '/inventory/stock-summary', icon: BarChart3 },
+      { name: 'Stock Ledger', href: '/inventory/stock-ledger', icon: BookOpenCheck },
       { name: 'Items', href: '/inventory/items', icon: Package },
       { name: 'Godowns', href: '/inventory/godowns', icon: Warehouse },
+      { name: 'Stock Transfer', href: '/inventory/stock-transfer', icon: ArrowLeftRight },
+      { name: 'Adjustment', href: '/inventory/stock-adjustment', icon: ClipboardEdit },
+      { name: 'Opening Stock', href: '/inventory/opening-stock', icon: PackageOpen },
     ],
   },
   { name: 'Parties', href: '/parties', icon: Users },

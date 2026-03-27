@@ -5,6 +5,12 @@
 
 ---
 
+## Development Rules
+
+- **Do NOT start dev servers, preview, or run the application** unless the user explicitly asks to check errors or run the application.
+
+---
+
 ## Project Overview
 
 A GST-compliant, offline-first ERP application for Indian small businesses.

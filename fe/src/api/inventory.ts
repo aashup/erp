@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import type { ApiResponse, Item, Godown, PaginatedResponse } from '@/types';
+import type { ApiResponse, Batch, Item, Godown, PaginatedResponse, StockLedgerEntry, StockSummaryRow, ReorderAlert } from '@/types';
 
 export const itemsApi = {
   list: (params?: Record<string, string>) =>
@@ -28,4 +28,44 @@ export const godownsApi = {
     api.put<ApiResponse<Godown>>(`/godowns/${id}`, data),
 
   delete: (id: string) => api.delete(`/godowns/${id}`),
+};
+
+export const stockLedgerApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<StockLedgerEntry>>('/stock-ledger', { params }),
+
+  summary: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<StockSummaryRow>>('/stock-summary', { params }),
+
+  createOpening: (data: { item_id: string; godown_id: string; batch_id?: string; quantity: number; rate: number; narration?: string }) =>
+    api.post<ApiResponse<StockLedgerEntry>>('/stock-ledger/opening', data),
+
+  createAdjustment: (data: { item_id: string; godown_id: string; batch_id?: string; quantity: number; rate: number; narration: string }) =>
+    api.post<ApiResponse<StockLedgerEntry>>('/stock-ledger/adjustment', data),
+
+  createTransfer: (data: { item_id: string; from_godown_id: string; to_godown_id: string; batch_id?: string; quantity: number; rate: number; narration?: string }) =>
+    api.post<ApiResponse<StockLedgerEntry[]>>('/stock-ledger/transfer', data),
+
+  reorderAlerts: () =>
+    api.get<ApiResponse<ReorderAlert[]>>('/stock-ledger/reorder-alerts'),
+
+  itemMovements: (itemId: string, params?: Record<string, string>) =>
+    api.get<PaginatedResponse<StockLedgerEntry>>(`/items/${itemId}/movements`, { params }),
+};
+
+export const batchesApi = {
+  list: (itemId: string) =>
+    api.get<ApiResponse<Batch[]>>(`/items/${itemId}/batches`),
+
+  create: (itemId: string, data: Partial<Batch>) =>
+    api.post<ApiResponse<Batch>>(`/items/${itemId}/batches`, data),
+
+  update: (batchId: string, data: Partial<Batch>) =>
+    api.put<ApiResponse<Batch>>(`/batches/${batchId}`, data),
+
+  delete: (batchId: string) =>
+    api.delete(`/batches/${batchId}`),
+
+  expiring: (params?: Record<string, string>) =>
+    api.get<ApiResponse<Batch[]>>('/batches/expiring', { params }),
 };
