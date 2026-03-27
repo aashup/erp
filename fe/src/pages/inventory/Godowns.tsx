@@ -78,8 +78,8 @@ export default function Godowns() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100"><Pencil className="h-4 w-4 text-gray-500" /></button>
-          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100"><Trash2 className="h-4 w-4 text-red-500" /></button>
+          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>
+          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>
         </div>
       ),
     },
@@ -88,11 +88,11 @@ export default function Godowns() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Godowns / Warehouses</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Godowns / Warehouses</h1>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Godown</Button>
       </div>
       <Card>
-        <CardHeader><p className="text-sm text-gray-500">Manage your warehouses and storage locations</p></CardHeader>
+        <CardHeader><p className="text-sm text-gray-500 dark:text-gray-400">Manage your warehouses and storage locations</p></CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
       </Card>
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editGodown ? 'Edit Godown' : 'New Godown'}>
@@ -102,9 +102,9 @@ export default function Godowns() {
           <Input id="address" label="Address" {...register('address')} />
           <div className="flex items-center gap-2">
             <input type="checkbox" id="is_default" {...register('is_default')} className="rounded" />
-            <label htmlFor="is_default" className="text-sm text-gray-700">Default godown</label>
+            <label htmlFor="is_default" className="text-sm text-gray-700 dark:text-gray-300">Default godown</label>
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>{editGodown ? 'Update' : 'Create'}</Button>
           </div>

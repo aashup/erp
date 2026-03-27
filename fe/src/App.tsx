@@ -70,11 +70,14 @@ export default function App() {
       <Toaster
         position="top-right"
         toastOptions={{
+          className: 'dark:!bg-gray-800 dark:!text-gray-200',
           error: {
             style: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' },
+            className: 'dark:!bg-red-900/50 dark:!text-red-200 dark:!border-red-800',
           },
           success: {
             style: { background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' },
+            className: 'dark:!bg-green-900/50 dark:!text-green-200 dark:!border-green-800',
           },
         }}
       />

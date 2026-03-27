@@ -117,8 +117,8 @@ export default function JournalEntries() {
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <button onClick={() => setShowDetail(row.original)} className="rounded p-1 hover:bg-gray-100">
-          <Eye className="h-4 w-4 text-gray-500" />
+        <button onClick={() => setShowDetail(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
         </button>
       ),
     },
@@ -127,14 +127,14 @@ export default function JournalEntries() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Journal Entries</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Journal Entries</h1>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Entry</Button>
       </div>
       <Card>
         <CardHeader>
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Search voucher..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+            <input className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Search voucher..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
         </CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
@@ -158,16 +158,16 @@ export default function JournalEntries() {
           <Input id="narration" label="Narration" {...register('narration')} />
 
           {/* Journal Lines */}
-          <div className="border-t pt-4">
+          <div className="border-t dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">Entries (Debit = Credit)</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Entries (Debit = Credit)</h3>
               <Button type="button" variant="secondary" size="sm" onClick={() => append({ account_id: '', debit: 0, credit: 0, narration: '' })}>
                 <Plus className="mr-1 h-3 w-3" /> Add Line
               </Button>
             </div>
             {typeof errors.lines?.message === 'string' && <p className="text-sm text-red-500 mb-2">{errors.lines.message}</p>}
             <div className="space-y-3">
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
+              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1">
                 <div className="col-span-5">Account</div>
                 <div className="col-span-2">Debit (₹)</div>
                 <div className="col-span-2">Credit (₹)</div>
@@ -177,23 +177,23 @@ export default function JournalEntries() {
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-5">
-                    <select className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.account_id`)}>
+                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.account_id`)}>
                       <option value="">Select account</option>
                       {accountOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.debit`)} />
+                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.debit`)} />
                   </div>
                   <div className="col-span-2">
-                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.credit`)} />
+                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.credit`)} />
                   </div>
                   <div className="col-span-2">
-                    <input className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" placeholder="Note" {...register(`lines.${index}.narration`)} />
+                    <input className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" placeholder="Note" {...register(`lines.${index}.narration`)} />
                   </div>
                   <div className="col-span-1 flex items-center justify-center">
                     {fields.length > 2 && (
-                      <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50">
+                      <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
                         <X className="h-4 w-4 text-red-500" />
                       </button>
                     )}
@@ -202,8 +202,8 @@ export default function JournalEntries() {
               ))}
             </div>
             {/* Totals */}
-            <div className="mt-4 border-t pt-3 grid grid-cols-12 gap-2 text-sm font-semibold">
-              <div className="col-span-5 text-right text-gray-500">Totals:</div>
+            <div className="mt-4 border-t dark:border-gray-700 pt-3 grid grid-cols-12 gap-2 text-sm font-semibold">
+              <div className="col-span-5 text-right text-gray-500 dark:text-gray-400">Totals:</div>
               <div className={`col-span-2 ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(totalDebit)}</div>
               <div className={`col-span-2 ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(totalCredit)}</div>
               <div className="col-span-3">
@@ -236,7 +236,7 @@ export default function JournalEntries() {
             {showDetail.lines && showDetail.lines.length > 0 && (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-gray-500">
+                  <tr className="border-b dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
                     <th className="py-2">Account</th>
                     <th className="py-2 text-right">Debit</th>
                     <th className="py-2 text-right">Credit</th>
@@ -244,7 +244,7 @@ export default function JournalEntries() {
                 </thead>
                 <tbody>
                   {showDetail.lines.map((line) => (
-                    <tr key={line.id} className="border-b">
+                    <tr key={line.id} className="border-b dark:border-gray-700">
                       <td className="py-2">{line.account?.name ?? line.account_id}</td>
                       <td className="py-2 text-right">{line.debit > 0 ? formatCurrency(line.debit) : '—'}</td>
                       <td className="py-2 text-right">{line.credit > 0 ? formatCurrency(line.credit) : '—'}</td>

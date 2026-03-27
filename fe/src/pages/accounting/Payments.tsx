@@ -111,12 +111,12 @@ export default function Payments() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
-            <Pencil className="h-4 w-4 text-gray-500" />
+          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+            <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </button>
           <button
             onClick={() => { if (confirm('Delete this record?')) deleteMutation.mutate(row.original.id); }}
-            className="rounded p-1 hover:bg-gray-100"
+            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             <Trash2 className="h-4 w-4 text-red-500" />
           </button>
@@ -128,7 +128,7 @@ export default function Payments() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Payments & Receipts</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payments & Receipts</h1>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" /> New Payment/Receipt
         </Button>
@@ -137,7 +137,7 @@ export default function Payments() {
         <CardHeader>
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Search..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+            <input className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="Search..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
         </CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
@@ -156,7 +156,7 @@ export default function Payments() {
             <Input id="bank_name" label="Bank Name" {...register('bank_name')} />
           </div>
           <Input id="notes" label="Notes" {...register('notes')} />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button type="submit" loading={createMutation.isPending}>
               {editRecord ? 'Update' : 'Create'}

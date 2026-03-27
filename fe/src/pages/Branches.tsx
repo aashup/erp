@@ -71,8 +71,8 @@ export default function Branches() {
       id: 'actions', header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100"><Pencil className="h-4 w-4 text-gray-500" /></button>
-          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100"><Trash2 className="h-4 w-4 text-red-500" /></button>
+          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>
+          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>
         </div>
       ),
     },
@@ -81,11 +81,11 @@ export default function Branches() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Branches</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Branches</h1>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Branch</Button>
       </div>
       <Card>
-        <CardHeader><p className="text-sm text-gray-500">Manage company branches</p></CardHeader>
+        <CardHeader><p className="text-sm text-gray-500 dark:text-gray-400">Manage company branches</p></CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
       </Card>
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editBranch ? 'Edit Branch' : 'New Branch'}>
@@ -98,7 +98,7 @@ export default function Branches() {
             <Input id="state" label="State" {...register('state')} />
           </div>
           <Input id="state_code" label="State Code" {...register('state_code')} />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>{editBranch ? 'Update' : 'Create'}</Button>
           </div>

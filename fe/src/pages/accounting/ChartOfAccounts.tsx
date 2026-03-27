@@ -105,12 +105,12 @@ export default function ChartOfAccounts() {
         if (row.original.is_system) return null;
         return (
           <div className="flex items-center gap-1">
-            <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
-              <Pencil className="h-4 w-4 text-gray-500" />
+            <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </button>
             <button
               onClick={() => { if (confirm('Delete this account?')) deleteMutation.mutate(row.original.id); }}
-              className="rounded p-1 hover:bg-gray-100"
+              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </button>
@@ -123,11 +123,11 @@ export default function ChartOfAccounts() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Chart of Accounts</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Chart of Accounts</h1>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
       </div>
       <Card>
-        <CardHeader><p className="text-sm text-gray-500">Double-entry accounting chart</p></CardHeader>
+        <CardHeader><p className="text-sm text-gray-500 dark:text-gray-400">Double-entry accounting chart</p></CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
       </Card>
       <Modal open={showModal} onClose={closeModal} title={editAccount ? 'Edit Account' : 'New Account'}>
@@ -137,7 +137,7 @@ export default function ChartOfAccounts() {
           <Select id="type" label="Type" options={[{ value: 'asset', label: 'Asset' }, { value: 'liability', label: 'Liability' }, { value: 'equity', label: 'Equity' }, { value: 'income', label: 'Income' }, { value: 'expense', label: 'Expense' }]} error={errors.type?.message} {...register('type')} />
           <Input id="group" label="Group" {...register('group')} />
           <Select id="parent_id" label="Parent Account (optional)" options={[{ value: '', label: 'None' }, ...parentOptions]} {...register('parent_id')} />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
               {editAccount ? 'Update' : 'Create'}

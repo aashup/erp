@@ -217,7 +217,7 @@ export default function PurchaseOrders() {
 
         return (
           <select
-            className="rounded-lg border border-gray-300 py-1 px-2 text-xs font-medium focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-1 px-2 text-xs font-medium focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             value={currentStatus}
             disabled={statusMutation.isPending}
             onChange={(e) => handleStatusChange(po, e.target.value)}
@@ -238,14 +238,14 @@ export default function PurchaseOrders() {
         return (
           <div className="flex items-center gap-1">
             {isDraft && (
-              <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100">
-                <Pencil className="h-4 w-4 text-gray-500" />
+              <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             )}
             {isDraft && (
               <button
                 onClick={() => { if (confirm('Delete this PO?')) deleteMutation.mutate(row.original.id); }}
-                className="rounded p-1 hover:bg-gray-100"
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <Trash2 className="h-4 w-4 text-red-500" />
               </button>
@@ -259,7 +259,7 @@ export default function PurchaseOrders() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Purchase Orders</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Purchase Orders</h1>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New PO</Button>
       </div>
       <Card>
@@ -267,7 +267,7 @@ export default function PurchaseOrders() {
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
-              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               placeholder="Search PO number..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -289,16 +289,16 @@ export default function PurchaseOrders() {
           </div>
 
           {/* Line Items */}
-          <div className="border-t pt-4">
+          <div className="border-t dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">Line Items</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Line Items</h3>
               <Button type="button" variant="secondary" size="sm" onClick={() => append({ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 })}>
                 <Plus className="mr-1 h-3 w-3" /> Add Line
               </Button>
             </div>
             {errors.lines?.message && <p className="text-sm text-red-500 mb-2">{errors.lines.message}</p>}
             <div className="space-y-3">
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
+              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1">
                 <div className="col-span-4">Item</div>
                 <div className="col-span-2">Qty</div>
                 <div className="col-span-2">Rate (₹)</div>
@@ -310,30 +310,30 @@ export default function PurchaseOrders() {
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-4">
-                    <select className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.item_id`)}>
+                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.item_id`)}>
                       <option value="">Select item</option>
                       {itemOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                     {errors.lines?.[index]?.item_id && <p className="text-xs text-red-500 mt-1">{errors.lines[index]?.item_id?.message}</p>}
                   </div>
                   <div className="col-span-2">
-                    <input type="number" min="1" step="1" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.quantity`)} />
+                    <input type="number" min="1" step="1" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.quantity`)} />
                   </div>
                   <div className="col-span-2">
-                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.rate`)} />
+                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.rate`)} />
                   </div>
                   <div className="col-span-1">
-                    <input type="number" min="0" max="100" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.discount_percent`)} />
+                    <input type="number" min="0" max="100" step="0.01" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.discount_percent`)} />
                   </div>
                   <div className="col-span-1">
-                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.gst_rate`)} />
+                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.gst_rate`)} />
                   </div>
                   <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
                     {formatCurrency(calcLineTotal(watchedLines?.[index] ?? { item_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
                   </div>
                   <div className="col-span-1 flex items-center justify-center">
                     {fields.length > 1 && (
-                      <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50">
+                      <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
                         <X className="h-4 w-4 text-red-500" />
                       </button>
                     )}
@@ -343,8 +343,8 @@ export default function PurchaseOrders() {
             </div>
             <div className="mt-4 flex justify-end">
               <div className="text-right">
-                <span className="text-sm text-gray-500">Grand Total: </span>
-                <span className="text-lg font-bold text-gray-900">{formatCurrency(grandTotal)}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Grand Total: </span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(grandTotal)}</span>
               </div>
             </div>
           </div>

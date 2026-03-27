@@ -226,12 +226,12 @@ export default function SalesInvoiceFormPage() {
           <button
             type="button"
             onClick={() => navigate('/sales/invoices')}
-            className="mb-2 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+            className="mb-2 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to invoices
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {isEditMode ? 'Edit Sales Invoice' : 'New Sales Invoice'}
           </h1>
         </div>
@@ -239,11 +239,11 @@ export default function SalesInvoiceFormPage() {
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold text-gray-900">Invoice Details</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Invoice Details</h2>
         </CardHeader>
         <CardContent>
           {isInvoiceLoading ? (
-            <div className="py-8 text-sm text-gray-500">Loading invoice...</div>
+            <div className="py-8 text-sm text-gray-500 dark:text-gray-400">Loading invoice...</div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -273,14 +273,14 @@ export default function SalesInvoiceFormPage() {
 
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="is_inter_state" {...register('is_inter_state')} className="rounded" />
-                <label htmlFor="is_inter_state" className="text-sm text-gray-700">
+                <label htmlFor="is_inter_state" className="text-sm text-gray-700 dark:text-gray-300">
                   Inter-state sale (IGST instead of CGST+SGST)
                 </label>
               </div>
 
-              <div className="border-t pt-4">
+              <div className="border-t dark:border-gray-700 pt-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700">Line Items</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Line Items</h3>
                   <Button
                     type="button"
                     variant="secondary"
@@ -294,7 +294,7 @@ export default function SalesInvoiceFormPage() {
                 {errors.lines?.message && <p className="mb-2 text-sm text-red-500">{errors.lines.message}</p>}
 
                 <div className="space-y-3">
-                  <div className="grid grid-cols-12 gap-2 px-1 text-xs font-medium text-gray-500">
+                  <div className="grid grid-cols-12 gap-2 px-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                     <div className="col-span-3">Item</div>
                     <div className="col-span-2">Godown</div>
                     <div className="col-span-1">Qty</div>
@@ -308,7 +308,7 @@ export default function SalesInvoiceFormPage() {
                     <div key={field.id} className="grid grid-cols-12 items-start gap-2">
                       <div className="col-span-3">
                         <select
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                           value={watchedLines?.[index]?.item_id ?? ''}
                           onChange={(event) => handleItemSelect(index, event.target.value)}
                         >
@@ -324,7 +324,7 @@ export default function SalesInvoiceFormPage() {
                       </div>
                       <div className="col-span-2">
                         <select
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                           {...register(`lines.${index}.godown_id`)}
                         >
                           <option value="">Select godown</option>
@@ -340,7 +340,7 @@ export default function SalesInvoiceFormPage() {
                           type="number"
                           min="1"
                           step="1"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                           {...register(`lines.${index}.quantity`)}
                         />
                       </div>
@@ -349,7 +349,7 @@ export default function SalesInvoiceFormPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                           {...register(`lines.${index}.rate`)}
                         />
                       </div>
@@ -359,7 +359,7 @@ export default function SalesInvoiceFormPage() {
                           min="0"
                           max="100"
                           step="0.01"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                           {...register(`lines.${index}.discount_percent`)}
                         />
                       </div>
@@ -375,7 +375,7 @@ export default function SalesInvoiceFormPage() {
                           <button
                             type="button"
                             onClick={() => remove(index)}
-                            className="rounded p-1 hover:bg-red-50"
+                            className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30"
                           >
                             <X className="h-4 w-4 text-red-500" />
                           </button>
@@ -385,7 +385,7 @@ export default function SalesInvoiceFormPage() {
                   ))}
                 </div>
 
-                <div className="mt-4 space-y-1 border-t pt-3 text-right text-sm">
+                <div className="mt-4 space-y-1 border-t dark:border-gray-700 pt-3 text-right text-sm">
                   <div><span className="text-gray-500">Taxable: </span><span className="font-medium">{formatCurrency(totals.taxable)}</span></div>
                   {isInterState ? (
                     <div><span className="text-gray-500">IGST: </span><span className="font-medium">{formatCurrency(totals.igst)}</span></div>
@@ -395,13 +395,13 @@ export default function SalesInvoiceFormPage() {
                       <div><span className="text-gray-500">SGST: </span><span className="font-medium">{formatCurrency(totals.sgst)}</span></div>
                     </>
                   )}
-                  <div className="text-base"><span className="text-gray-500">Grand Total: </span><span className="text-lg font-bold text-gray-900">{formatCurrency(totals.grand)}</span></div>
+                  <div className="text-base"><span className="text-gray-500 dark:text-gray-400">Grand Total: </span><span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totals.grand)}</span></div>
                 </div>
               </div>
 
               <Input id="notes" label="Notes" {...register('notes')} />
 
-              <div className="flex justify-end gap-3 border-t pt-4">
+              <div className="flex justify-end gap-3 border-t dark:border-gray-700 pt-4">
                 <Button type="button" variant="secondary" onClick={() => navigate('/sales/invoices')}>
                   Cancel
                 </Button>

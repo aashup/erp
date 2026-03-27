@@ -12,8 +12,8 @@ export function Pagination({ currentPage, lastPage, onPageChange, total }: Pagin
   if (lastPage <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-      <p className="text-sm text-gray-500">
+    <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
         Total: <span className="font-medium">{total}</span> records
       </p>
       <div className="flex items-center gap-2">
@@ -25,7 +25,7 @@ export function Pagination({ currentPage, lastPage, onPageChange, total }: Pagin
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="text-sm text-gray-700">
+        <span className="text-sm text-gray-700 dark:text-gray-300">
           {currentPage} / {lastPage}
         </span>
         <Button
