@@ -8,6 +8,7 @@
 ## Development Rules
 
 - **Do NOT start dev servers, preview, or run the application** unless the user explicitly asks to check errors or run the application.
+- **Do NOT create new migration files** for schema changes. This is the initial development phase — always modify the existing migration file directly. The database can be refreshed with `php artisan migrate:fresh --seed`.
 
 ---
 

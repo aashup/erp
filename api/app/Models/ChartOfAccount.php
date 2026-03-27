@@ -24,6 +24,8 @@ class ChartOfAccount extends Model
         'group',
         'is_system',
         'is_active',
+        'opening_balance',
+        'balance_type',
     ];
 
     protected function casts(): array
@@ -31,6 +33,7 @@ class ChartOfAccount extends Model
         return [
             'is_system' => 'boolean',
             'is_active' => 'boolean',
+            'opening_balance' => 'decimal:2',
         ];
     }
 

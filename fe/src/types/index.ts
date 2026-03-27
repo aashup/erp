@@ -292,6 +292,8 @@ export interface ChartOfAccount extends SyncColumns {
   group: string | null;
   is_system: boolean;
   is_active: boolean;
+  opening_balance: number;
+  balance_type: 'dr' | 'cr';
   children?: ChartOfAccount[];
   parent?: ChartOfAccount;
 }

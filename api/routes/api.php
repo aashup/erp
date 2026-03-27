@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\ChartOfAccountController;
+use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\CompanySettingController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\GodownController;
@@ -86,13 +87,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('sales-invoices/{sales_invoice}/status', [SalesInvoiceController::class, 'updateStatus']);
     Route::apiResource('sales-invoices', SalesInvoiceController::class);
 
+    // Company
+    Route::get('companies/{company}', [CompanyController::class, 'show']);
+    Route::put('companies/{company}', [CompanyController::class, 'update']);
+
     // Invoice Templates & Company Settings
     Route::get('invoice-templates', [InvoiceTemplateController::class, 'index']);
     Route::get('company-settings', [CompanySettingController::class, 'index']);
     Route::put('company-settings', [CompanySettingController::class, 'update']);
 
     // Accounting
-    Route::apiResource('chart-of-accounts', ChartOfAccountController::class);
+    Route::post('chart-of-accounts/load-defaults', [ChartOfAccountController::class, 'loadDefaults']);
+    Route::apiResource('chart-of-accounts', ChartOfAccountController::class)->except(['store']);
     Route::apiResource('journal-entries', JournalEntryController::class)->except(['update']);
     Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);
 });

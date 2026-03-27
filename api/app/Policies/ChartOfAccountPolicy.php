@@ -24,10 +24,6 @@ class ChartOfAccountPolicy
 
     public function update(User $user, ChartOfAccount $account): bool
     {
-        if ($account->is_system) {
-            return false;
-        }
-
         return $user->company_id === $account->company_id && $user->hasPermissionTo('accounting.edit');
     }
 

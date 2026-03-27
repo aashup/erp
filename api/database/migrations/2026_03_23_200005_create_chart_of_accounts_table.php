@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('group')->nullable();
             $table->boolean('is_system')->default(false);
             $table->boolean('is_active')->default(true);
+            $table->decimal('opening_balance', 15, 2)->default(0);
+            $table->enum('balance_type', ['dr', 'cr'])->default('dr');
 
             // Sync columns
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');

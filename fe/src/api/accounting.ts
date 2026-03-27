@@ -14,9 +14,6 @@ export const chartOfAccountsApi = {
   get: (id: string) =>
     api.get<ApiResponse<ChartOfAccount>>(`/chart-of-accounts/${id}`),
 
-  create: (data: Partial<ChartOfAccount>) =>
-    api.post<ApiResponse<ChartOfAccount>>('/chart-of-accounts', data),
-
   update: (id: string, data: Partial<ChartOfAccount>) =>
     api.put<ApiResponse<ChartOfAccount>>(`/chart-of-accounts/${id}`, data),
 

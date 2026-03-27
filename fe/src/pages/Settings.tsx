@@ -14,7 +14,7 @@ import { Modal } from '@/components/ui/Modal';
 import api from '@/lib/axios';
 import { invoiceTemplatesApi, companySettingsApi } from '@/api/settings';
 import type { UnitOption, User } from '@/types';
-import { Pencil, Sun, Moon, FileText, Check, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Sun, Moon, FileText, Check, Plus, Trash2, Database, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const INDIAN_STATES = [
@@ -112,6 +112,19 @@ export default function Settings() {
   });
 
   const currentTemplate = companySettings?.default_invoice_template ?? 'pharma-distributor';
+  const defaultGroupsLoaded = companySettings?.default_groups_loaded ?? null;
+
+  const loadDefaultsMutation = useMutation({
+    mutationFn: (preset: 'tally' | 'marg') => api.post('/chart-of-accounts/load-defaults', { preset }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['company-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['chart-of-accounts'] });
+      toast.success(res.data.message || 'Default groups loaded successfully');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to load default groups');
+    },
+  });
 
   useEffect(() => {
     const nextRows = (companySettings?.item_units ?? []).map((unit) => makeUnitRow(unit));
@@ -463,8 +476,75 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Default Account Groups */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold">Default Account Groups</h3>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+              Load a predefined chart of accounts group structure. This is a <strong>one-time</strong> operation — once loaded, it cannot be changed.
+            </p>
+
+            {defaultGroupsLoaded ? (
+              <div className="rounded-lg border-2 border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+                <div className="flex items-center gap-3">
+                  <Lock className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                      {defaultGroupsLoaded === 'tally' ? 'TallyPrime' : 'Marg ERP'} groups loaded
+                    </p>
+                    <p className="mt-0.5 text-xs text-green-600 dark:text-green-400">
+                      Default account groups have already been configured.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  onClick={() => {
+                    if (confirm('Load TallyPrime default groups? This action cannot be undone.')) {
+                      loadDefaultsMutation.mutate('tally');
+                    }
+                  }}
+                  disabled={loadDefaultsMutation.isPending}
+                  className="flex flex-col items-center gap-3 rounded-lg border-2 border-gray-200 p-5 transition-all hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                >
+                  <Database className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  <div className="text-center">
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">TallyPrime</span>
+                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">26 groups with hierarchy</span>
+                  </div>
+                  <Badge variant="info">Standard</Badge>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (confirm('Load Marg ERP default groups? This action cannot be undone.')) {
+                      loadDefaultsMutation.mutate('marg');
+                    }
+                  }}
+                  disabled={loadDefaultsMutation.isPending}
+                  className="flex flex-col items-center gap-3 rounded-lg border-2 border-gray-200 p-5 transition-all hover:border-orange-400 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:hover:border-orange-500 dark:hover:bg-orange-900/20"
+                >
+                  <Database className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+                  <div className="text-center">
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">Marg ERP</span>
+                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">13 groups · Pharma / FMCG</span>
+                  </div>
+                  <Badge variant="warning">Trade-specific</Badge>
+                </button>
+              </div>
+            )}
+
+            {loadDefaultsMutation.isPending && (
+              <p className="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">Loading groups…</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
-       
 
       {/* Company Edit Modal */}
       <Modal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} title="Edit Company" size="lg">
