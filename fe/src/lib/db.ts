@@ -9,9 +9,9 @@ import type {
   PurchaseInvoice,
   SalesOrder,
   SalesInvoice,
-  JournalEntry,
+  Voucher,
   PaymentReceipt,
-  ChartOfAccount,
+  AccountingGroup,
 } from '@/types';
 
 class ErpDatabase extends Dexie {
@@ -24,9 +24,9 @@ class ErpDatabase extends Dexie {
   purchaseInvoices!: EntityTable<PurchaseInvoice, 'id'>;
   salesOrders!: EntityTable<SalesOrder, 'id'>;
   salesInvoices!: EntityTable<SalesInvoice, 'id'>;
-  journalEntries!: EntityTable<JournalEntry, 'id'>;
+  vouchers!: EntityTable<Voucher, 'id'>;
   paymentReceipts!: EntityTable<PaymentReceipt, 'id'>;
-  chartOfAccounts!: EntityTable<ChartOfAccount, 'id'>;
+  accountingGroups!: EntityTable<AccountingGroup, 'id'>;
 
   constructor() {
     super('erpdb');
@@ -41,9 +41,9 @@ class ErpDatabase extends Dexie {
       purchaseInvoices: 'id, company_id, party_id, invoice_number, status, sync_status',
       salesOrders: 'id, company_id, party_id, so_number, status, sync_status',
       salesInvoices: 'id, company_id, party_id, invoice_number, status, sync_status',
-      journalEntries: 'id, company_id, voucher_number, voucher_type, sync_status',
+      vouchers: 'id, company_id, voucher_number, voucher_type, sync_status',
       paymentReceipts: 'id, company_id, party_id, receipt_number, sync_status',
-      chartOfAccounts: 'id, company_id, type, code, sync_status',
+      accountingGroups: 'id, company_id, type, code, sync_status',
     });
   }
 }

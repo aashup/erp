@@ -81,9 +81,9 @@ class Company extends Model
         return $this->hasMany(SalesInvoice::class);
     }
 
-    public function journalEntries()
+    public function vouchers()
     {
-        return $this->hasMany(JournalEntry::class);
+        return $this->hasMany(Voucher::class);
     }
 
     public function financialYears()
@@ -91,9 +91,9 @@ class Company extends Model
         return $this->hasMany(FinancialYear::class);
     }
 
-    public function chartOfAccounts()
+    public function accountingGroups()
     {
-        return $this->hasMany(ChartOfAccount::class);
+        return $this->hasMany(AccountingGroup::class);
     }
 
     public function paymentReceipts()

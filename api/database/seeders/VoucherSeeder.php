@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use App\Models\ChartOfAccount;
+use App\Models\AccountingGroup;
 use App\Models\Company;
 use App\Models\FinancialYear;
-use App\Models\JournalEntry;
-use App\Models\JournalLine;
+use App\Models\Voucher;
+use App\Models\VoucherLine;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-class JournalEntrySeeder extends Seeder
+class VoucherSeeder extends Seeder
 {
     public function run(): void
     {
@@ -21,7 +21,7 @@ class JournalEntrySeeder extends Seeder
 
         $fy = FinancialYear::where('company_id', $company->id)->where('is_current', true)->first();
         $user = User::where('company_id', $company->id)->first();
-        $accounts = ChartOfAccount::where('company_id', $company->id)->get();
+        $accounts = AccountingGroup::where('company_id', $company->id)->get();
 
         if (! $fy || ! $user || $accounts->count() < 4) {
             return;
@@ -36,7 +36,7 @@ class JournalEntrySeeder extends Seeder
             return;
         }
 
-        // Manual journal entries
+        // Manual voucher entries
         $entries = [
             [
                 'voucher_type' => 'journal',
@@ -65,7 +65,7 @@ class JournalEntrySeeder extends Seeder
         ];
 
         foreach ($entries as $idx => $entry) {
-            $je = JournalEntry::create([
+            $voucher = Voucher::create([
                 'company_id' => $company->id,
                 'financial_year_id' => $fy->id,
                 'voucher_number' => 'JV-'.str_pad($idx + 1, 6, '0', STR_PAD_LEFT),
@@ -81,8 +81,8 @@ class JournalEntrySeeder extends Seeder
             ]);
 
             foreach ($entry['lines'] as $line) {
-                JournalLine::create([
-                    'journal_entry_id' => $je->id,
+                VoucherLine::create([
+                    'voucher_id' => $voucher->id,
                     'account_id' => $line['account_id'],
                     'debit' => $line['debit'],
                     'credit' => $line['credit'],

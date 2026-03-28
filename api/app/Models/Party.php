@@ -55,7 +55,7 @@ class Party extends Model
 
     public function ledgerAccount()
     {
-        return $this->belongsTo(ChartOfAccount::class, 'ledger_account_id');
+        return $this->belongsTo(AccountingGroup::class, 'ledger_account_id');
     }
 
     public function purchaseOrders()

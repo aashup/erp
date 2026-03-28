@@ -7,7 +7,7 @@ use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Godown;
 use App\Models\Item;
-use App\Models\JournalEntry;
+use App\Models\Voucher;
 use App\Models\Party;
 use App\Models\PaymentReceipt;
 use App\Models\PurchaseInvoice;
@@ -30,7 +30,7 @@ class SyncController extends Controller
         'purchase_invoices' => PurchaseInvoice::class,
         'sales_orders' => SalesOrder::class,
         'sales_invoices' => SalesInvoice::class,
-        'journal_entries' => JournalEntry::class,
+        'vouchers' => Voucher::class,
         'payment_receipts' => PaymentReceipt::class,
     ];
 

@@ -2,36 +2,36 @@ import api from '@/lib/axios';
 import type {
   ApiResponse,
   PaginatedResponse,
-  ChartOfAccount,
-  JournalEntry,
+  AccountingGroup,
+  Voucher,
   PaymentReceipt,
   TrialBalanceResponse,
   ProfitAndLossResponse,
   PartyLedgerResponse,
 } from '@/types';
 
-export const chartOfAccountsApi = {
+export const accountingGroupsApi = {
   list: (params?: Record<string, string>) =>
-    api.get<PaginatedResponse<ChartOfAccount>>('/chart-of-accounts', { params }),
+    api.get<PaginatedResponse<AccountingGroup>>('/accounting-groups', { params }),
 
   get: (id: string) =>
-    api.get<ApiResponse<ChartOfAccount>>(`/chart-of-accounts/${id}`),
+    api.get<ApiResponse<AccountingGroup>>(`/accounting-groups/${id}`),
 
-  update: (id: string, data: Partial<ChartOfAccount>) =>
-    api.put<ApiResponse<ChartOfAccount>>(`/chart-of-accounts/${id}`, data),
+  update: (id: string, data: Partial<AccountingGroup>) =>
+    api.put<ApiResponse<AccountingGroup>>(`/accounting-groups/${id}`, data),
 
-  delete: (id: string) => api.delete(`/chart-of-accounts/${id}`),
+  delete: (id: string) => api.delete(`/accounting-groups/${id}`),
 };
 
-export const journalEntriesApi = {
+export const vouchersApi = {
   list: (params?: Record<string, string>) =>
-    api.get<PaginatedResponse<JournalEntry>>('/journal-entries', { params }),
+    api.get<PaginatedResponse<Voucher>>('/vouchers', { params }),
 
   get: (id: string) =>
-    api.get<ApiResponse<JournalEntry>>(`/journal-entries/${id}`),
+    api.get<ApiResponse<Voucher>>(`/vouchers/${id}`),
 
   create: (data: Record<string, unknown>) =>
-    api.post<ApiResponse<JournalEntry>>('/journal-entries', data),
+    api.post<ApiResponse<Voucher>>('/vouchers', data),
 };
 
 export const reportsApi = {

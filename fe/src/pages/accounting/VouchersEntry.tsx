@@ -4,9 +4,9 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
-import { journalEntriesApi, chartOfAccountsApi, paymentReceiptsApi } from '@/api/accounting';
+import { vouchersApi, accountingGroupsApi, paymentReceiptsApi } from '@/api/accounting';
 import { partiesApi } from '@/api/parties';
-import type { JournalEntry, PaymentReceipt } from '@/types';
+import type { Voucher, PaymentReceipt } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useSelectedFYId } from '@/hooks/useFinancialYear';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -195,25 +195,25 @@ export default function VouchersEntry() {
   // ─── Journal Entries State ──────────────────────────────────────────────
 
   const [showJournalModal, setShowJournalModal] = useState(false);
-  const [showJournalDetail, setShowJournalDetail] = useState<JournalEntry | null>(null);
+  const [showJournalDetail, setShowJournalDetail] = useState<Voucher | null>(null);
 
   const { data: journalData, isLoading: journalLoading } = useQuery({
-    queryKey: ['journal-entries', page, search, activeTab],
-    queryFn: () => journalEntriesApi.list({ page: String(page), search, voucher_type: activeTab }),
+    queryKey: ['vouchers', page, search, activeTab],
+    queryFn: () => vouchersApi.list({ page: String(page), search, voucher_type: activeTab }),
     select: (res) => res.data,
     enabled: !isPaymentTab,
   });
 
   const { data: accountsData } = useQuery({
-    queryKey: ['chart-of-accounts-all'],
-    queryFn: () => chartOfAccountsApi.list({ per_page: '500' }),
+    queryKey: ['accounting-groups-all'],
+    queryFn: () => accountingGroupsApi.list({ per_page: '500' }),
     select: (res) => res.data,
   });
 
   const journalCreateMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => journalEntriesApi.create(data),
+    mutationFn: (data: Record<string, unknown>) => vouchersApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['vouchers'] });
       closeJournalModal();
       toast.success('Voucher created');
     },
@@ -351,7 +351,7 @@ export default function VouchersEntry() {
 
   // ─── Column Definitions ─────────────────────────────────────────────────
 
-  const journalColumns: ColumnDef<JournalEntry, unknown>[] = [
+  const journalColumns: ColumnDef<Voucher, unknown>[] = [
     { accessorKey: 'voucher_number', header: 'Voucher #' },
     { accessorKey: 'voucher_date', header: 'Date', cell: ({ getValue }) => formatDate(getValue() as string) },
     { accessorKey: 'voucher_type', header: 'Type', cell: ({ getValue }) => <Badge>{getValue() as string}</Badge> },

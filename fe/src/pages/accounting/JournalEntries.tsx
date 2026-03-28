@@ -4,8 +4,8 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
-import { journalEntriesApi, chartOfAccountsApi } from '@/api/accounting';
-import type { JournalEntry } from '@/types';
+import { vouchersApi, accountingGroupsApi } from '@/api/accounting';
+import type { Voucher } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useSelectedFYId } from '@/hooks/useFinancialYear';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -46,23 +46,23 @@ export default function JournalEntries() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showDetail, setShowDetail] = useState<JournalEntry | null>(null);
+  const [showDetail, setShowDetail] = useState<Voucher | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['journal-entries', page, search],
-    queryFn: () => journalEntriesApi.list({ page: String(page), search }),
+    queryKey: ['vouchers', page, search],
+    queryFn: () => vouchersApi.list({ page: String(page), search }),
     select: (res) => res.data,
   });
 
   const { data: accountsData } = useQuery({
-    queryKey: ['chart-of-accounts-all'],
-    queryFn: () => chartOfAccountsApi.list({ per_page: '500' }),
+    queryKey: ['accounting-groups-all'],
+    queryFn: () => accountingGroupsApi.list({ per_page: '500' }),
     select: (res) => res.data,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => journalEntriesApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['journal-entries'] }); closeModal(); },
+    mutationFn: (data: Record<string, unknown>) => vouchersApi.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['vouchers'] }); closeModal(); },
   });
 
   const fyId = useSelectedFYId();
@@ -113,7 +113,7 @@ export default function JournalEntries() {
 
   const accountOptions = (accountsData?.data ?? []).map((a) => ({ value: a.id, label: `${a.code} - ${a.name}` }));
 
-  const columns: ColumnDef<JournalEntry, unknown>[] = [
+  const columns: ColumnDef<Voucher, unknown>[] = [
     { accessorKey: 'voucher_number', header: 'Voucher #' },
     { accessorKey: 'voucher_date', header: 'Date', cell: ({ getValue }) => formatDate(getValue() as string) },
     { accessorKey: 'voucher_type', header: 'Type', cell: ({ getValue }) => <Badge>{getValue() as string}</Badge> },

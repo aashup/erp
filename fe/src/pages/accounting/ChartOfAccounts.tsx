@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chartOfAccountsApi } from '@/api/accounting';
-import type { ChartOfAccount } from '@/types';
+import { accountingGroupsApi } from '@/api/accounting';
+import type { AccountingGroup } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import toast from 'react-hot-toast';
@@ -69,14 +69,14 @@ function fmt(amount: number) {
 // ---------------------------------------------------------------------------
 
 interface TreeNode {
-  account: ChartOfAccount;
+  account: AccountingGroup;
   children: TreeNode[];
   childCount: number; // total descendant ledger (non-group) count
 }
 
-function buildTree(accounts: ChartOfAccount[]): Map<string, TreeNode[]> {
+function buildTree(accounts: AccountingGroup[]): Map<string, TreeNode[]> {
   // Build adjacency: parent_id → children
-  const childrenOf = new Map<string | 'root', ChartOfAccount[]>();
+  const childrenOf = new Map<string | 'root', AccountingGroup[]>();
   accounts.forEach((a) => {
     const key = a.parent_id ?? 'root';
     if (!childrenOf.has(key)) childrenOf.set(key, []);
@@ -86,7 +86,7 @@ function buildTree(accounts: ChartOfAccount[]): Map<string, TreeNode[]> {
   // Determine which accounts are groups (have children)
   const parentIds = new Set(accounts.filter((a) => a.parent_id).map((a) => a.parent_id!));
 
-  function makeNode(account: ChartOfAccount): TreeNode {
+  function makeNode(account: AccountingGroup): TreeNode {
     const kids = (childrenOf.get(account.id) ?? []).map(makeNode);
     const isGroup = parentIds.has(account.id) || kids.length > 0;
     const childCount = isGroup
@@ -149,7 +149,7 @@ interface RowProps {
   hideZeroGroups: boolean;
   hideZeroLedgers: boolean;
   searchTerm: string;
-  onEdit: (account: ChartOfAccount) => void;
+  onEdit: (account: AccountingGroup) => void;
   onDelete: (id: string) => void;
 }
 
@@ -483,8 +483,8 @@ function FilterPanel({
 
 interface EditModalProps {
   open: boolean;
-  account: ChartOfAccount | null;
-  allAccounts: ChartOfAccount[];
+  account: AccountingGroup | null;
+  allAccounts: AccountingGroup[];
   onClose: () => void;
   onSave: (id: string, data: { name: string; opening_balance: number; balance_type: 'dr' | 'cr'; is_active: boolean }) => void;
   saving: boolean;
@@ -641,7 +641,7 @@ function EditModal({ open, account, allAccounts, onClose, onSave, saving }: Edit
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function ChartOfAccounts() {
+export default function AccountingGroups() {
   const queryClient = useQueryClient();
 
   // Filter state
@@ -656,7 +656,7 @@ export default function ChartOfAccounts() {
   const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
 
   // Edit modal state
-  const [editAccount, setEditAccount] = useState<ChartOfAccount | null>(null);
+  const [editAccount, setEditAccount] = useState<AccountingGroup | null>(null);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedSet((prev) => {
@@ -677,12 +677,12 @@ export default function ChartOfAccounts() {
 
   // Data fetching
   const { data, isLoading, error } = useQuery({
-    queryKey: ['chart-of-accounts'],
-    queryFn: () => chartOfAccountsApi.list({ per_page: '500' }),
+    queryKey: ['accounting-groups'],
+    queryFn: () => accountingGroupsApi.list({ per_page: '500' }),
     select: (res) => res.data,
   });
 
-  const allAccounts: ChartOfAccount[] = useMemo(() => {
+  const allAccounts: AccountingGroup[] = useMemo(() => {
     if (!data) return [];
     return Array.isArray(data) ? data : data.data || [];
   }, [data]);
@@ -696,9 +696,9 @@ export default function ChartOfAccounts() {
   // Mutations
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      chartOfAccountsApi.update(id, data as Partial<ChartOfAccount>),
+      accountingGroupsApi.update(id, data as Partial<AccountingGroup>),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chart-of-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-groups'] });
       setEditAccount(null);
       toast.success('Account updated');
     },
@@ -706,15 +706,15 @@ export default function ChartOfAccounts() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => chartOfAccountsApi.delete(id),
+    mutationFn: (id: string) => accountingGroupsApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chart-of-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-groups'] });
       toast.success('Account deleted');
     },
     onError: () => toast.error('Failed to delete account'),
   });
 
-  const handleEdit = (account: ChartOfAccount) => setEditAccount(account);
+  const handleEdit = (account: AccountingGroup) => setEditAccount(account);
   const handleDelete = (id: string) => deleteMutation.mutate(id);
   const handleSave = (id: string, data: { name: string; opening_balance: number; balance_type: 'dr' | 'cr'; is_active: boolean }) => {
     updateMutation.mutate({ id, data });

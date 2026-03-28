@@ -26,7 +26,7 @@ return new class extends Migration
             $table->decimal('credit_limit', 15, 2)->default(0);
             $table->decimal('opening_balance', 15, 2)->default(0);
             $table->enum('balance_type', ['dr', 'cr'])->default('dr');
-            $table->foreignUuid('ledger_account_id')->nullable()->constrained('chart_of_accounts')->nullOnDelete();
+            $table->foreignUuid('ledger_account_id')->nullable()->constrained('accounting_groups')->nullOnDelete();
             $table->boolean('is_active')->default(true);
 
             // Sync columns

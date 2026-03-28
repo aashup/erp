@@ -9,10 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('chart_of_accounts', function (Blueprint $table) {
+        Schema::create('accounting_groups', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
-            $table->foreignUuid('parent_id')->nullable()->constrained('chart_of_accounts')->nullOnDelete();
+            $table->foreignUuid('parent_id')->nullable()->constrained('accounting_groups')->nullOnDelete();
             $table->string('code')->nullable();
             $table->string('name');
             $table->enum('type', ['asset', 'liability', 'equity', 'income', 'expense']);
@@ -35,6 +35,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('chart_of_accounts');
+        Schema::dropIfExists('accounting_groups');
     }
 };

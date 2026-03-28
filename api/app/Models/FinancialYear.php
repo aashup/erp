@@ -38,8 +38,8 @@ class FinancialYear extends Model
         return LogOptions::defaults()->logFillable();
     }
 
-    public function journalEntries()
+    public function vouchers()
     {
-        return $this->hasMany(JournalEntry::class);
+        return $this->hasMany(Voucher::class);
     }
 }

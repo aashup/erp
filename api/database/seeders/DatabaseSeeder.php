@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             UserSeeder::class,
             FinancialYearSeeder::class,
-            ChartOfAccountSeeder::class,
+            AccountingGroupSeeder::class,
 
             // Inventory
             GodownSeeder::class,
@@ -39,7 +39,7 @@ class DatabaseSeeder extends Seeder
 
             // Accounting
             PaymentReceiptSeeder::class,
-            JournalEntrySeeder::class,
+            VoucherSeeder::class,
         ]);
     }
 }

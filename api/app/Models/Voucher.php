@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-class JournalEntry extends Model
+class Voucher extends Model
 {
     use BelongsToCompany, HasFactory, HasSyncColumns, HasUuid, LogsActivity;
 
@@ -53,7 +53,7 @@ class JournalEntry extends Model
 
     public function lines()
     {
-        return $this->hasMany(JournalLine::class);
+        return $this->hasMany(VoucherLine::class);
     }
 
     public function reference()

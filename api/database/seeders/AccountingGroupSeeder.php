@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\ChartOfAccount;
+use App\Models\AccountingGroup;
 use App\Models\Company;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class ChartOfAccountSeeder extends Seeder
+class AccountingGroupSeeder extends Seeder
 {
     use WithoutModelEvents;
 
@@ -87,7 +87,7 @@ class ChartOfAccountSeeder extends Seeder
 
         // Create standard root accounts
         foreach ($this->standardAccounts as $account) {
-            $created = ChartOfAccount::factory()->create([
+            $created = AccountingGroup::factory()->create([
                 'company_id' => $company->id,
                 'parent_id' => null,
                 'code' => $account['code'],
@@ -104,7 +104,7 @@ class ChartOfAccountSeeder extends Seeder
         // Create essential sub-accounts with system_keys
         foreach ($this->essentialAccounts as $account) {
             $parentId = $codeToId[$account['parent_code']] ?? null;
-            $created = ChartOfAccount::factory()->create([
+            $created = AccountingGroup::factory()->create([
                 'company_id' => $company->id,
                 'parent_id' => $parentId,
                 'code' => $account['code'],

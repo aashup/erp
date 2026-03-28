@@ -90,8 +90,8 @@ class FinancialYearController extends Controller
             return response()->json(['message' => 'Cannot delete the current financial year.'], 422);
         }
 
-        if ($financialYear->journalEntries()->exists()) {
-            return response()->json(['message' => 'Cannot delete — journal entries exist in this financial year.'], 422);
+        if ($financialYear->vouchers()->exists()) {
+            return response()->json(['message' => 'Cannot delete — vouchers exist in this financial year.'], 422);
         }
 
         $financialYear->delete();

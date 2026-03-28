@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\ChartOfAccount;
+use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
-use App\Models\JournalEntry;
+use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +21,7 @@ class ReportController extends Controller
      */
     public function trialBalance(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', JournalEntry::class);
+        $this->authorize('viewAny', Voucher::class);
 
         $companyId = $request->user()->company_id;
 
@@ -29,7 +29,7 @@ class ReportController extends Controller
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
 
         // Get ALL active accounts (frontend builds tree & filters zero-balance)
-        $accounts = ChartOfAccount::where('company_id', $companyId)
+        $accounts = AccountingGroup::where('company_id', $companyId)
             ->where('is_active', true)
             ->orderBy('code')
             ->get();
@@ -38,22 +38,22 @@ class ReportController extends Controller
         $parentIds = $accounts->whereNotNull('parent_id')->pluck('parent_id')->unique()->toArray();
 
         // Get journal line totals grouped by account_id
-        $query = DB::table('journal_lines')
-            ->join('journal_entries', 'journal_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entries.company_id', $companyId)
-            ->where('journal_entries.is_posted', true);
+        $query = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true);
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('journal_entries.voucher_date', '>=', $dateFrom)
-                ->whereDate('journal_entries.voucher_date', '<=', $dateTo);
+            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
+                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $totals = $query->select(
-            'journal_lines.account_id',
-            DB::raw('SUM(journal_lines.debit) as total_debit'),
-            DB::raw('SUM(journal_lines.credit) as total_credit')
+            'voucher_lines.account_id',
+            DB::raw('SUM(voucher_lines.debit) as total_debit'),
+            DB::raw('SUM(voucher_lines.credit) as total_credit')
         )
-            ->groupBy('journal_lines.account_id')
+            ->groupBy('voucher_lines.account_id')
             ->get()
             ->keyBy('account_id');
 
@@ -135,36 +135,36 @@ class ReportController extends Controller
      */
     public function profitAndLoss(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', JournalEntry::class);
+        $this->authorize('viewAny', Voucher::class);
 
         $companyId = $request->user()->company_id;
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
 
         // Get income and expense accounts
-        $accounts = ChartOfAccount::where('company_id', $companyId)
+        $accounts = AccountingGroup::where('company_id', $companyId)
             ->where('is_active', true)
             ->whereIn('type', ['income', 'expense'])
             ->orderBy('code')
             ->get();
 
         // Get journal line totals
-        $query = DB::table('journal_lines')
-            ->join('journal_entries', 'journal_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entries.company_id', $companyId)
-            ->where('journal_entries.is_posted', true)
-            ->whereIn('journal_lines.account_id', $accounts->pluck('id'));
+        $query = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true)
+            ->whereIn('voucher_lines.account_id', $accounts->pluck('id'));
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('journal_entries.voucher_date', '>=', $dateFrom)
-                ->whereDate('journal_entries.voucher_date', '<=', $dateTo);
+            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
+                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $totals = $query->select(
-            'journal_lines.account_id',
-            DB::raw('SUM(journal_lines.debit) as total_debit'),
-            DB::raw('SUM(journal_lines.credit) as total_credit')
+            'voucher_lines.account_id',
+            DB::raw('SUM(voucher_lines.debit) as total_debit'),
+            DB::raw('SUM(voucher_lines.credit) as total_credit')
         )
-            ->groupBy('journal_lines.account_id')
+            ->groupBy('voucher_lines.account_id')
             ->get()
             ->keyBy('account_id');
 
@@ -232,7 +232,7 @@ class ReportController extends Controller
      */
     public function partyLedger(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', JournalEntry::class);
+        $this->authorize('viewAny', Voucher::class);
 
         $request->validate([
             'party_id' => 'required|uuid|exists:parties,id',
@@ -257,32 +257,32 @@ class ReportController extends Controller
         }
 
         // Get all journal lines for this party's ledger account
-        $query = DB::table('journal_lines')
-            ->join('journal_entries', 'journal_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entries.company_id', $companyId)
-            ->where('journal_entries.is_posted', true)
-            ->where('journal_lines.account_id', $party->ledger_account_id);
+        $query = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true)
+            ->where('voucher_lines.account_id', $party->ledger_account_id);
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('journal_entries.voucher_date', '>=', $dateFrom)
-                ->whereDate('journal_entries.voucher_date', '<=', $dateTo);
+            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
+                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $entries = $query->select(
-            'journal_entries.voucher_number',
-            'journal_entries.voucher_date',
-            'journal_entries.voucher_type',
-            'journal_entries.narration as entry_narration',
-            'journal_lines.debit',
-            'journal_lines.credit',
-            'journal_lines.narration as line_narration'
+            'vouchers.voucher_number',
+            'vouchers.voucher_date',
+            'vouchers.voucher_type',
+            'vouchers.narration as entry_narration',
+            'voucher_lines.debit',
+            'voucher_lines.credit',
+            'voucher_lines.narration as line_narration'
         )
-            ->orderBy('journal_entries.voucher_date')
-            ->orderBy('journal_entries.created_at')
+            ->orderBy('vouchers.voucher_date')
+            ->orderBy('vouchers.created_at')
             ->get();
 
         // Calculate running balance
-        $ledgerAccount = ChartOfAccount::find($party->ledger_account_id);
+        $ledgerAccount = AccountingGroup::find($party->ledger_account_id);
         $openingBalance = $ledgerAccount
             ? ($ledgerAccount->balance_type === 'dr' ? (float) $ledgerAccount->opening_balance : -(float) $ledgerAccount->opening_balance)
             : 0;

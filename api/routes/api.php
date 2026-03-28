@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\BranchController;
-use App\Http\Controllers\Api\V1\ChartOfAccountController;
+use App\Http\Controllers\Api\V1\AccountingGroupController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\CompanySettingController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\V1\FinancialYearController;
 use App\Http\Controllers\Api\V1\GodownController;
 use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\ItemController;
-use App\Http\Controllers\Api\V1\JournalEntryController;
+use App\Http\Controllers\Api\V1\VoucherController;
 use App\Http\Controllers\Api\V1\PartyController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\PaymentReceiptController;
@@ -103,9 +103,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('financial-years', FinancialYearController::class);
 
     // Accounting
-    Route::post('chart-of-accounts/load-defaults', [ChartOfAccountController::class, 'loadDefaults']);
-    Route::apiResource('chart-of-accounts', ChartOfAccountController::class)->except(['store']);
-    Route::apiResource('journal-entries', JournalEntryController::class)->except(['update']);
+    Route::post('accounting-groups/load-defaults', [AccountingGroupController::class, 'loadDefaults']);
+    Route::apiResource('accounting-groups', AccountingGroupController::class)->except(['store']);
+    Route::apiResource('vouchers', VoucherController::class)->except(['update']);
     Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);
 
     // Reports

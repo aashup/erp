@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\ChartOfAccount;
+use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
-use App\Models\JournalEntry;
+use App\Models\Voucher;
 use App\Models\Party;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
@@ -21,7 +21,7 @@ class AccountingService
      *   Cr: Output SGST (sgst_total)
      *   Cr: Output IGST (igst_total)
      */
-    public function postSalesInvoice(SalesInvoice $invoice, string $userId): ?JournalEntry
+    public function postSalesInvoice(SalesInvoice $invoice, string $userId): ?Voucher
     {
         $companyId = $invoice->company_id;
         $party = Party::find($invoice->party_id);
@@ -30,7 +30,7 @@ class AccountingService
             return null;
         }
 
-        $salesAccount = ChartOfAccount::findBySystemKey($companyId, 'sales_account');
+        $salesAccount = AccountingGroup::findBySystemKey($companyId, 'sales_account');
         if (! $salesAccount) {
             return null;
         }
@@ -43,7 +43,7 @@ class AccountingService
         return DB::transaction(function () use ($invoice, $party, $salesAccount, $companyId, $userId, $fy) {
             $voucherNumber = $this->generateVoucherNumber('sales');
 
-            $entry = JournalEntry::create([
+            $entry = Voucher::create([
                 'company_id' => $companyId,
                 'financial_year_id' => $fy->id,
                 'voucher_number' => $voucherNumber,
@@ -87,7 +87,7 @@ class AccountingService
      * Dr: Input CGST / SGST / IGST
      *   Cr: Party Ledger (grand_total)
      */
-    public function postPurchaseInvoice(PurchaseInvoice $invoice, string $userId): ?JournalEntry
+    public function postPurchaseInvoice(PurchaseInvoice $invoice, string $userId): ?Voucher
     {
         $companyId = $invoice->company_id;
         $party = Party::find($invoice->party_id);
@@ -96,7 +96,7 @@ class AccountingService
             return null;
         }
 
-        $purchaseAccount = ChartOfAccount::findBySystemKey($companyId, 'purchase_account');
+        $purchaseAccount = AccountingGroup::findBySystemKey($companyId, 'purchase_account');
         if (! $purchaseAccount) {
             return null;
         }
@@ -109,7 +109,7 @@ class AccountingService
         return DB::transaction(function () use ($invoice, $party, $purchaseAccount, $companyId, $userId, $fy) {
             $voucherNumber = $this->generateVoucherNumber('purchase');
 
-            $entry = JournalEntry::create([
+            $entry = Voucher::create([
                 'company_id' => $companyId,
                 'financial_year_id' => $fy->id,
                 'voucher_number' => $voucherNumber,
@@ -152,7 +152,7 @@ class AccountingService
      * Dr: Party Ledger (amount)
      *   Cr: Cash/Bank (amount)
      */
-    public function postPayment(string $companyId, Party $party, float $amount, string $paymentMode, string $receiptDate, string $narration, string $userId, ?string $referenceType = null, ?string $referenceId = null): ?JournalEntry
+    public function postPayment(string $companyId, Party $party, float $amount, string $paymentMode, string $receiptDate, string $narration, string $userId, ?string $referenceType = null, ?string $referenceId = null): ?Voucher
     {
         if (! $party->ledger_account_id) {
             return null;
@@ -171,7 +171,7 @@ class AccountingService
         return DB::transaction(function () use ($companyId, $party, $amount, $cashOrBank, $receiptDate, $narration, $userId, $fy, $referenceType, $referenceId) {
             $voucherNumber = $this->generateVoucherNumber('payment');
 
-            $entry = JournalEntry::create([
+            $entry = Voucher::create([
                 'company_id' => $companyId,
                 'financial_year_id' => $fy->id,
                 'voucher_number' => $voucherNumber,
@@ -211,7 +211,7 @@ class AccountingService
      * Dr: Cash/Bank (amount)
      *   Cr: Party Ledger (amount)
      */
-    public function postReceipt(string $companyId, Party $party, float $amount, string $paymentMode, string $receiptDate, string $narration, string $userId, ?string $referenceType = null, ?string $referenceId = null): ?JournalEntry
+    public function postReceipt(string $companyId, Party $party, float $amount, string $paymentMode, string $receiptDate, string $narration, string $userId, ?string $referenceType = null, ?string $referenceId = null): ?Voucher
     {
         if (! $party->ledger_account_id) {
             return null;
@@ -230,7 +230,7 @@ class AccountingService
         return DB::transaction(function () use ($companyId, $party, $amount, $cashOrBank, $receiptDate, $narration, $userId, $fy, $referenceType, $referenceId) {
             $voucherNumber = $this->generateVoucherNumber('receipt');
 
-            $entry = JournalEntry::create([
+            $entry = Voucher::create([
                 'company_id' => $companyId,
                 'financial_year_id' => $fy->id,
                 'voucher_number' => $voucherNumber,
@@ -267,10 +267,10 @@ class AccountingService
     /**
      * Add GST credit lines (for sales — output GST).
      */
-    private function addGstCreditLines(JournalEntry $entry, string $companyId, float $cgst, float $sgst, float $igst, string $prefix): void
+    private function addGstCreditLines(Voucher $entry, string $companyId, float $cgst, float $sgst, float $igst, string $prefix): void
     {
         if ($cgst > 0) {
-            $account = ChartOfAccount::findBySystemKey($companyId, "{$prefix}_cgst");
+            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_cgst");
             if ($account) {
                 $entry->lines()->create([
                     'account_id' => $account->id,
@@ -282,7 +282,7 @@ class AccountingService
         }
 
         if ($sgst > 0) {
-            $account = ChartOfAccount::findBySystemKey($companyId, "{$prefix}_sgst");
+            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_sgst");
             if ($account) {
                 $entry->lines()->create([
                     'account_id' => $account->id,
@@ -294,7 +294,7 @@ class AccountingService
         }
 
         if ($igst > 0) {
-            $account = ChartOfAccount::findBySystemKey($companyId, "{$prefix}_igst");
+            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_igst");
             if ($account) {
                 $entry->lines()->create([
                     'account_id' => $account->id,
@@ -309,10 +309,10 @@ class AccountingService
     /**
      * Add GST debit lines (for purchases — input GST).
      */
-    private function addGstDebitLines(JournalEntry $entry, string $companyId, float $cgst, float $sgst, float $igst, string $prefix): void
+    private function addGstDebitLines(Voucher $entry, string $companyId, float $cgst, float $sgst, float $igst, string $prefix): void
     {
         if ($cgst > 0) {
-            $account = ChartOfAccount::findBySystemKey($companyId, "{$prefix}_cgst");
+            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_cgst");
             if ($account) {
                 $entry->lines()->create([
                     'account_id' => $account->id,
@@ -324,7 +324,7 @@ class AccountingService
         }
 
         if ($sgst > 0) {
-            $account = ChartOfAccount::findBySystemKey($companyId, "{$prefix}_sgst");
+            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_sgst");
             if ($account) {
                 $entry->lines()->create([
                     'account_id' => $account->id,
@@ -336,7 +336,7 @@ class AccountingService
         }
 
         if ($igst > 0) {
-            $account = ChartOfAccount::findBySystemKey($companyId, "{$prefix}_igst");
+            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_igst");
             if ($account) {
                 $entry->lines()->create([
                     'account_id' => $account->id,
@@ -351,15 +351,15 @@ class AccountingService
     /**
      * Get Cash or Bank account based on payment mode.
      */
-    private function getCashOrBankAccount(string $companyId, string $paymentMode): ?ChartOfAccount
+    private function getCashOrBankAccount(string $companyId, string $paymentMode): ?AccountingGroup
     {
         if ($paymentMode === 'cash') {
-            return ChartOfAccount::findBySystemKey($companyId, 'cash_account');
+            return AccountingGroup::findBySystemKey($companyId, 'cash_account');
         }
 
         // bank, cheque, upi, other → all go to bank account
-        return ChartOfAccount::findBySystemKey($companyId, 'bank_account')
-            ?? ChartOfAccount::findBySystemKey($companyId, 'cash_account');
+        return AccountingGroup::findBySystemKey($companyId, 'bank_account')
+            ?? AccountingGroup::findBySystemKey($companyId, 'cash_account');
     }
 
     /**
@@ -389,7 +389,7 @@ class AccountingService
             default => 'JV',
         };
 
-        $count = JournalEntry::withoutGlobalScopes()->count() + 1;
+        $count = Voucher::withoutGlobalScopes()->count() + 1;
 
         return $prefix . '-' . str_pad($count, 6, '0', STR_PAD_LEFT);
     }

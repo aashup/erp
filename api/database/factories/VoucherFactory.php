@@ -7,7 +7,7 @@ use App\Models\FinancialYear;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class JournalEntryFactory extends Factory
+class VoucherFactory extends Factory
 {
     public function definition(): array
     {

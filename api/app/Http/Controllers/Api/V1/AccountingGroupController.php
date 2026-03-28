@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\ChartOfAccount;
+use App\Models\AccountingGroup;
 use App\Models\CompanySetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class ChartOfAccountController extends Controller
+class AccountingGroupController extends Controller
 {
     /**
      * Tally Prime default groups (28 groups with hierarchy).
@@ -100,9 +100,9 @@ class ChartOfAccountController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', ChartOfAccount::class);
+        $this->authorize('viewAny', AccountingGroup::class);
 
-        $accounts = ChartOfAccount::with('children')
+        $accounts = AccountingGroup::with('children')
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))
             ->when($request->boolean('root_only'), fn ($q) => $q->whereNull('parent_id'))
             ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
@@ -112,16 +112,16 @@ class ChartOfAccountController extends Controller
         return response()->json($accounts);
     }
 
-    public function show(ChartOfAccount $chartOfAccount): JsonResponse
+    public function show(AccountingGroup $accountingGroup): JsonResponse
     {
-        $this->authorize('view', $chartOfAccount);
+        $this->authorize('view', $accountingGroup);
 
-        return response()->json(['data' => $chartOfAccount->load('children', 'parent')]);
+        return response()->json(['data' => $accountingGroup->load('children', 'parent')]);
     }
 
-    public function update(Request $request, ChartOfAccount $chartOfAccount): JsonResponse
+    public function update(Request $request, AccountingGroup $accountingGroup): JsonResponse
     {
-        $this->authorize('update', $chartOfAccount);
+        $this->authorize('update', $accountingGroup);
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -131,16 +131,16 @@ class ChartOfAccountController extends Controller
             'balance_type' => 'nullable|in:dr,cr',
         ]);
 
-        $chartOfAccount->update($validated);
+        $accountingGroup->update($validated);
 
-        return response()->json(['data' => $chartOfAccount]);
+        return response()->json(['data' => $accountingGroup]);
     }
 
-    public function destroy(ChartOfAccount $chartOfAccount): JsonResponse
+    public function destroy(AccountingGroup $accountingGroup): JsonResponse
     {
-        $this->authorize('delete', $chartOfAccount);
+        $this->authorize('delete', $accountingGroup);
 
-        $chartOfAccount->delete();
+        $accountingGroup->delete();
 
         return response()->json(['message' => 'Account deleted']);
     }
@@ -168,23 +168,23 @@ class ChartOfAccountController extends Controller
         $groups = $preset === 'tally' ? $this->tallyGroups : $this->margGroups;
 
         DB::transaction(function () use ($groups, $companyId) {
-            // Soft-delete existing system accounts that are NOT referenced by journal lines
-            $referencedIds = DB::table('journal_lines')
-                ->join('chart_of_accounts', 'journal_lines.account_id', '=', 'chart_of_accounts.id')
-                ->where('chart_of_accounts.company_id', $companyId)
-                ->where('chart_of_accounts.is_system', true)
-                ->pluck('journal_lines.account_id')
+            // Soft-delete existing system accounts that are NOT referenced by voucher lines
+            $referencedIds = DB::table('voucher_lines')
+                ->join('accounting_groups', 'voucher_lines.account_id', '=', 'accounting_groups.id')
+                ->where('accounting_groups.company_id', $companyId)
+                ->where('accounting_groups.is_system', true)
+                ->pluck('voucher_lines.account_id')
                 ->unique();
 
             // Soft-delete unreferenced system accounts
-            ChartOfAccount::where('company_id', $companyId)
+            AccountingGroup::where('company_id', $companyId)
                 ->where('is_system', true)
                 ->whereNotIn('id', $referencedIds)
                 ->delete();
 
             // Deactivate referenced system accounts (can't delete, but hide them)
             if ($referencedIds->isNotEmpty()) {
-                ChartOfAccount::where('company_id', $companyId)
+                AccountingGroup::where('company_id', $companyId)
                     ->where('is_system', true)
                     ->whereIn('id', $referencedIds)
                     ->update(['is_active' => false]);
@@ -194,7 +194,7 @@ class ChartOfAccountController extends Controller
             $codeToId = [];
             foreach ($groups as $group) {
                 if ($group['parent_code'] === null) {
-                    $account = ChartOfAccount::create([
+                    $account = AccountingGroup::create([
                         'company_id' => $companyId,
                         'parent_id' => null,
                         'code' => $group['code'],
@@ -213,7 +213,7 @@ class ChartOfAccountController extends Controller
             foreach ($groups as $group) {
                 if ($group['parent_code'] !== null) {
                     $parentId = $codeToId[$group['parent_code']] ?? null;
-                    $account = ChartOfAccount::create([
+                    $account = AccountingGroup::create([
                         'company_id' => $companyId,
                         'parent_id' => $parentId,
                         'code' => $group['code'],
@@ -232,7 +232,7 @@ class ChartOfAccountController extends Controller
         // Mark as loaded — prevents future loads
         CompanySetting::setValue($companyId, 'default_groups_loaded', $preset);
 
-        $accounts = ChartOfAccount::where('company_id', $companyId)
+        $accounts = AccountingGroup::where('company_id', $companyId)
             ->where('is_system', true)
             ->with('children')
             ->whereNull('parent_id')

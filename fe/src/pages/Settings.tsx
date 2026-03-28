@@ -115,10 +115,10 @@ export default function Settings() {
   const defaultGroupsLoaded = companySettings?.default_groups_loaded ?? null;
 
   const loadDefaultsMutation = useMutation({
-    mutationFn: (preset: 'tally' | 'marg') => api.post('/chart-of-accounts/load-defaults', { preset }),
+    mutationFn: (preset: 'tally' | 'marg') => api.post('/accounting-groups/load-defaults', { preset }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['company-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['chart-of-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-groups'] });
       toast.success(res.data.message || 'Default groups loaded successfully');
     },
     onError: (err: any) => {

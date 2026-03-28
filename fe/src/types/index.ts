@@ -283,7 +283,7 @@ export interface SalesInvoiceLine extends SyncColumns {
 }
 
 // Accounting
-export interface ChartOfAccount extends SyncColumns {
+export interface AccountingGroup extends SyncColumns {
   id: string;
   company_id: string;
   parent_id: string | null;
@@ -295,11 +295,11 @@ export interface ChartOfAccount extends SyncColumns {
   is_active: boolean;
   opening_balance: number;
   balance_type: 'dr' | 'cr';
-  children?: ChartOfAccount[];
-  parent?: ChartOfAccount;
+  children?: AccountingGroup[];
+  parent?: AccountingGroup;
 }
 
-export interface JournalEntry extends SyncColumns {
+export interface Voucher extends SyncColumns {
   id: string;
   company_id: string;
   financial_year_id: string;
@@ -309,17 +309,17 @@ export interface JournalEntry extends SyncColumns {
   narration: string | null;
   source: string | null;
   is_posted: boolean;
-  lines?: JournalLine[];
+  lines?: VoucherLine[];
 }
 
-export interface JournalLine extends SyncColumns {
+export interface VoucherLine extends SyncColumns {
   id: string;
-  journal_entry_id: string;
+  voucher_id: string;
   account_id: string;
   debit: number;
   credit: number;
   narration: string | null;
-  account?: ChartOfAccount;
+  account?: AccountingGroup;
 }
 
 export interface PaymentReceipt extends SyncColumns {

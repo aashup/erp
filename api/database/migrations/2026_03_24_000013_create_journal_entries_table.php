@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('journal_entries', function (Blueprint $table) {
+        Schema::create('vouchers', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignUuid('financial_year_id')->constrained('financial_years');
@@ -33,10 +33,10 @@ return new class extends Migration
             $table->index(['reference_type', 'reference_id']);
         });
 
-        Schema::create('journal_lines', function (Blueprint $table) {
+        Schema::create('voucher_lines', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
-            $table->foreignUuid('journal_entry_id')->constrained('journal_entries')->cascadeOnDelete();
-            $table->foreignUuid('account_id')->constrained('chart_of_accounts');
+            $table->foreignUuid('voucher_id')->constrained('vouchers')->cascadeOnDelete();
+            $table->foreignUuid('account_id')->constrained('accounting_groups');
             $table->decimal('debit', 15, 2)->default(0);
             $table->decimal('credit', 15, 2)->default(0);
             $table->text('narration')->nullable();
@@ -52,7 +52,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('journal_lines');
-        Schema::dropIfExists('journal_entries');
+        Schema::dropIfExists('voucher_lines');
+        Schema::dropIfExists('vouchers');
     }
 };

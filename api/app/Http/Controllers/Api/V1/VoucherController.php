@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\JournalEntry;
+use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class JournalEntryController extends Controller
+class VoucherController extends Controller
 {
     use \App\Traits\FiltersByFinancialYear;
 
     public function index(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', JournalEntry::class);
+        $this->authorize('viewAny', Voucher::class);
 
-        $query = JournalEntry::with('lines.account')
+        $query = Voucher::with('lines.account')
             ->when($request->voucher_type, fn ($q, $t) => $q->where('voucher_type', $t))
             ->when($request->search, fn ($q, $s) => $q->where('voucher_number', 'like', "%{$s}%"))
             ->latest('voucher_date');
@@ -30,16 +30,16 @@ class JournalEntryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $this->authorize('create', JournalEntry::class);
+        $this->authorize('create', Voucher::class);
 
         $validated = $request->validate([
             'financial_year_id' => 'required|uuid|exists:financial_years,id',
-            'voucher_number' => 'nullable|string|unique:journal_entries',
+            'voucher_number' => 'nullable|string|unique:vouchers',
             'voucher_date' => 'required|date',
             'voucher_type' => 'required|in:purchase,sales,payment,receipt,journal,contra',
             'narration' => 'nullable|string',
             'lines' => 'required|array|min:2',
-            'lines.*.account_id' => 'required|uuid|exists:chart_of_accounts,id',
+            'lines.*.account_id' => 'required|uuid|exists:accounting_groups,id',
             'lines.*.debit' => 'required|numeric|min:0',
             'lines.*.credit' => 'required|numeric|min:0',
             'lines.*.narration' => 'nullable|string',
@@ -56,14 +56,14 @@ class JournalEntryController extends Controller
         // Auto-generate voucher number if not provided
         if (empty($validated['voucher_number'])) {
             $prefix = strtoupper(substr($validated['voucher_type'], 0, 3));
-            $count = JournalEntry::where('company_id', $request->user()->company_id)
+            $count = Voucher::where('company_id', $request->user()->company_id)
                 ->where('voucher_type', $validated['voucher_type'])
                 ->count() + 1;
             $validated['voucher_number'] = $prefix . '-' . str_pad($count, 5, '0', STR_PAD_LEFT);
         }
 
         $entry = DB::transaction(function () use ($validated, $request) {
-            $entry = JournalEntry::create([
+            $entry = Voucher::create([
                 ...$validated,
                 'source' => 'manual',
                 'is_posted' => true,
@@ -80,17 +80,17 @@ class JournalEntryController extends Controller
         return response()->json(['data' => $entry], 201);
     }
 
-    public function show(JournalEntry $journalEntry): JsonResponse
+    public function show(Voucher $voucher): JsonResponse
     {
-        $this->authorize('view', $journalEntry);
+        $this->authorize('view', $voucher);
 
-        return response()->json(['data' => $journalEntry->load('lines.account', 'financialYear')]);
+        return response()->json(['data' => $voucher->load('lines.account', 'financialYear')]);
     }
 
-    public function destroy(JournalEntry $journalEntry): JsonResponse
+    public function destroy(Voucher $voucher): JsonResponse
     {
-        $this->authorize('delete', $journalEntry);
+        $this->authorize('delete', $voucher);
 
-        return response()->json(['message' => 'Journal entries are append-only. Create a reversal entry instead.'], 422);
+        return response()->json(['message' => 'Vouchers are append-only. Create a reversal entry instead.'], 422);
     }
 }

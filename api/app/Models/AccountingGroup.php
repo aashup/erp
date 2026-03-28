@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-class ChartOfAccount extends Model
+class AccountingGroup extends Model
 {
     use BelongsToCompany, HasFactory, HasSyncColumns, HasUuid, LogsActivity, SoftDeletes;
 
@@ -55,16 +55,16 @@ class ChartOfAccount extends Model
 
     public function parent()
     {
-        return $this->belongsTo(ChartOfAccount::class, 'parent_id');
+        return $this->belongsTo(AccountingGroup::class, 'parent_id');
     }
 
     public function children()
     {
-        return $this->hasMany(ChartOfAccount::class, 'parent_id');
+        return $this->hasMany(AccountingGroup::class, 'parent_id');
     }
 
-    public function journalLines()
+    public function voucherLines()
     {
-        return $this->hasMany(JournalLine::class, 'account_id');
+        return $this->hasMany(VoucherLine::class, 'account_id');
     }
 }

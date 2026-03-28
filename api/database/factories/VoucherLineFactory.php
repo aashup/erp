@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Models\ChartOfAccount;
-use App\Models\JournalEntry;
+use App\Models\AccountingGroup;
+use App\Models\Voucher;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class JournalLineFactory extends Factory
+class VoucherLineFactory extends Factory
 {
     public function definition(): array
     {
@@ -14,8 +14,8 @@ class JournalLineFactory extends Factory
         $amount = fake()->randomFloat(2, 100, 50000);
 
         return [
-            'journal_entry_id' => JournalEntry::factory(),
-            'account_id' => ChartOfAccount::factory(),
+            'voucher_id' => Voucher::factory(),
+            'account_id' => AccountingGroup::factory(),
             'debit' => $isDebit ? $amount : 0,
             'credit' => $isDebit ? 0 : $amount,
             'narration' => fake()->optional()->sentence(),

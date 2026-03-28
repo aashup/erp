@@ -7,12 +7,12 @@ use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class JournalLine extends Model
+class VoucherLine extends Model
 {
     use HasFactory, HasSyncColumns, HasUuid;
 
     protected $fillable = [
-        'journal_entry_id',
+        'voucher_id',
         'account_id',
         'debit',
         'credit',
@@ -27,13 +27,13 @@ class JournalLine extends Model
         ];
     }
 
-    public function journalEntry()
+    public function voucher()
     {
-        return $this->belongsTo(JournalEntry::class);
+        return $this->belongsTo(Voucher::class);
     }
 
     public function account()
     {
-        return $this->belongsTo(ChartOfAccount::class, 'account_id');
+        return $this->belongsTo(AccountingGroup::class, 'account_id');
     }
 }

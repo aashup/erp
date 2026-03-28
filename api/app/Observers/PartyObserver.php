@@ -2,7 +2,7 @@
 
 namespace App\Observers;
 
-use App\Models\ChartOfAccount;
+use App\Models\AccountingGroup;
 use App\Models\Party;
 
 class PartyObserver
@@ -25,7 +25,7 @@ class PartyObserver
             $type = 'asset';
         }
 
-        $parentAccount = ChartOfAccount::findBySystemKey($companyId, $parentKey);
+        $parentAccount = AccountingGroup::findBySystemKey($companyId, $parentKey);
 
         if (! $parentAccount) {
             // If system accounts not yet set up, skip silently
@@ -33,7 +33,7 @@ class PartyObserver
         }
 
         // Generate a unique code for this party ledger
-        $lastCode = ChartOfAccount::where('company_id', $companyId)
+        $lastCode = AccountingGroup::where('company_id', $companyId)
             ->where('parent_id', $parentAccount->id)
             ->orderByDesc('code')
             ->value('code');
@@ -48,7 +48,7 @@ class PartyObserver
             $balanceType = 'cr';
         }
 
-        $ledgerAccount = ChartOfAccount::create([
+        $ledgerAccount = AccountingGroup::create([
             'company_id' => $companyId,
             'parent_id' => $parentAccount->id,
             'code' => $nextCode,
