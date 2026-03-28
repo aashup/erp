@@ -1,6 +1,8 @@
 ollama run qwen3-coder-next
 ollama pull qwen3-coder-next:latest
 
+export ANTHROPIC_AUTH_TOKEN=ollama               
+export ANTHROPIC_BASE_URL=http://localhost:11434
 
  https://www.youtube.com/watch?v=GHGGkIMYDxo
 
