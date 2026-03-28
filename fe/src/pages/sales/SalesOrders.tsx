@@ -123,8 +123,11 @@ export default function SalesOrders() {
     }
   };
 
+  // Build a lookup map: item_id → Item for auto-populating rate & GST
+  const itemMap = new Map((itemsData?.data ?? []).map((i) => [i.id, i]));
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<SoForm>({
+  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<SoForm>({
     resolver: zodResolver(soSchema) as any,
     defaultValues: { lines: [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }] },
   });
@@ -190,6 +193,15 @@ export default function SalesOrders() {
   };
 
   const grandTotal = (watchedLines ?? []).reduce((sum, line) => sum + calcLineTotal(line), 0);
+
+  const handleItemChange = (index: number, itemId: string) => {
+    setValue(`lines.${index}.item_id`, itemId);
+    const item = itemMap.get(itemId);
+    if (item) {
+      setValue(`lines.${index}.rate`, item.selling_price ?? 0);
+      setValue(`lines.${index}.gst_rate`, item.gst_rate ?? 18);
+    }
+  };
 
   const customerOptions = (customersData?.data ?? []).map((p) => ({ value: p.id, label: p.name }));
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? i.hsn_code ?? ''})` }));
@@ -298,7 +310,11 @@ export default function SalesOrders() {
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-4">
-                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.item_id`)}>
+                    <select
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                      {...register(`lines.${index}.item_id`)}
+                      onChange={(e) => handleItemChange(index, e.target.value)}
+                    >
                       <option value="">Select item</option>
                       {itemOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>

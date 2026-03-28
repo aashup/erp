@@ -34,7 +34,7 @@ class JournalEntryController extends Controller
 
         $validated = $request->validate([
             'financial_year_id' => 'required|uuid|exists:financial_years,id',
-            'voucher_number' => 'required|string|unique:journal_entries',
+            'voucher_number' => 'nullable|string|unique:journal_entries',
             'voucher_date' => 'required|date',
             'voucher_type' => 'required|in:purchase,sales,payment,receipt,journal,contra',
             'narration' => 'nullable|string',
@@ -51,6 +51,15 @@ class JournalEntryController extends Controller
 
         if (round($totalDebit, 2) !== round($totalCredit, 2)) {
             return response()->json(['message' => 'Total debit must equal total credit'], 422);
+        }
+
+        // Auto-generate voucher number if not provided
+        if (empty($validated['voucher_number'])) {
+            $prefix = strtoupper(substr($validated['voucher_type'], 0, 3));
+            $count = JournalEntry::where('company_id', $request->user()->company_id)
+                ->where('voucher_type', $validated['voucher_type'])
+                ->count() + 1;
+            $validated['voucher_number'] = $prefix . '-' . str_pad($count, 5, '0', STR_PAD_LEFT);
         }
 
         $entry = DB::transaction(function () use ($validated, $request) {

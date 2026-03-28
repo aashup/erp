@@ -7,6 +7,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { journalEntriesApi, chartOfAccountsApi } from '@/api/accounting';
 import type { JournalEntry } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useSelectedFYId } from '@/hooks/useFinancialYear';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,8 +20,8 @@ import { Plus, Search, Eye, X } from 'lucide-react';
 
 const journalLineSchema = z.object({
   account_id: z.string().min(1, 'Account required'),
-  debit: z.coerce.number().min(0).optional().default(0),
-  credit: z.coerce.number().min(0).optional().default(0),
+  debit: z.preprocess((v) => (v === '' || v === undefined ? 0 : Number(v)), z.number().min(0)),
+  credit: z.preprocess((v) => (v === '' || v === undefined ? 0 : Number(v)), z.number().min(0)),
   narration: z.string().optional(),
 });
 
@@ -31,8 +32,8 @@ const journalSchema = z.object({
   lines: z.array(journalLineSchema).min(2, 'At least 2 lines required'),
 }).refine(
   (data) => {
-    const totalDebit = data.lines.reduce((sum, l) => sum + (l.debit ?? 0), 0);
-    const totalCredit = data.lines.reduce((sum, l) => sum + (l.credit ?? 0), 0);
+    const totalDebit = data.lines.reduce((sum1, l1) => sum1 + (Number(l1.debit) || 0), 0);
+    const totalCredit = data.lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
     return Math.abs(totalDebit - totalCredit) < 0.01;
   },
   { message: 'Total debits must equal total credits', path: ['lines'] }
@@ -64,14 +65,16 @@ export default function JournalEntries() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['journal-entries'] }); closeModal(); },
   });
 
+  const fyId = useSelectedFYId();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<JournalForm>({
     resolver: zodResolver(journalSchema) as any,
     defaultValues: {
       voucher_type: 'journal',
       lines: [
-        { account_id: '', debit: 0, credit: 0, narration: '' },
-        { account_id: '', debit: 0, credit: 0, narration: '' },
+        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
+        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
       ],
     },
   });
@@ -79,8 +82,8 @@ export default function JournalEntries() {
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
   const watchedLines = watch('lines');
 
-  const totalDebit = (watchedLines ?? []).reduce((sum, l) => sum + (l.debit ?? 0), 0);
-  const totalCredit = (watchedLines ?? []).reduce((sum, l) => sum + (l.credit ?? 0), 0);
+  const totalDebit = (watchedLines ?? []).reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
+  const totalCredit = (watchedLines ?? []).reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
   const openCreate = () => {
@@ -89,8 +92,8 @@ export default function JournalEntries() {
       voucher_type: 'journal',
       narration: '',
       lines: [
-        { account_id: '', debit: 0, credit: 0, narration: '' },
-        { account_id: '', debit: 0, credit: 0, narration: '' },
+        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
+        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
       ],
     });
     setShowModal(true);
@@ -102,7 +105,10 @@ export default function JournalEntries() {
   };
 
   const onSubmit = (formData: JournalForm) => {
-    createMutation.mutate(formData as unknown as Record<string, unknown>);
+    createMutation.mutate({
+      ...formData,
+      financial_year_id: fyId,
+    } as unknown as Record<string, unknown>);
   };
 
   const accountOptions = (accountsData?.data ?? []).map((a) => ({ value: a.id, label: `${a.code} - ${a.name}` }));
@@ -161,7 +167,7 @@ export default function JournalEntries() {
           <div className="border-t dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Entries (Debit = Credit)</h3>
-              <Button type="button" variant="secondary" size="sm" onClick={() => append({ account_id: '', debit: 0, credit: 0, narration: '' })}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => append({ account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' })}>
                 <Plus className="mr-1 h-3 w-3" /> Add Line
               </Button>
             </div>
