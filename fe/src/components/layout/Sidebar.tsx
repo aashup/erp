@@ -55,6 +55,7 @@ const navigation = [
     name: 'Accounting',
     children: [
       { name: 'Accounting Groups', href: '/accounting/accounts', icon: BookOpen },
+      { name: 'Ledgers', href: '/accounting/ledgers', icon: BookOpen },
       { name: 'Vouchers Entry', href: '/accounting/vouchers', icon: BookOpen },
       { name: 'Trial Balance', href: '/accounting/trial-balance', icon: Scale },
       { name: 'Profit & Loss', href: '/accounting/profit-and-loss', icon: TrendingUp },

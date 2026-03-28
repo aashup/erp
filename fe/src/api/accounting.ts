@@ -4,6 +4,7 @@ import type {
   PaginatedResponse,
   AccountingGroup,
   Voucher,
+  Ledger,
   PaymentReceipt,
   TrialBalanceResponse,
   ProfitAndLossResponse,
@@ -32,6 +33,22 @@ export const vouchersApi = {
 
   create: (data: Record<string, unknown>) =>
     api.post<ApiResponse<Voucher>>('/vouchers', data),
+};
+
+export const ledgersApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<Ledger>>('/ledgers', { params }),
+
+  get: (id: string) =>
+    api.get<ApiResponse<Ledger>>(`/ledgers/${id}`),
+
+  create: (data: Partial<Ledger>) =>
+    api.post<ApiResponse<Ledger>>('/ledgers', data),
+
+  update: (id: string, data: Partial<Ledger>) =>
+    api.put<ApiResponse<Ledger>>(`/ledgers/${id}`, data),
+
+  delete: (id: string) => api.delete(`/ledgers/${id}`),
 };
 
 export const reportsApi = {

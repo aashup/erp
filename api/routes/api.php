@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\FinancialYearController;
 use App\Http\Controllers\Api\V1\GodownController;
 use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\ItemController;
+use App\Http\Controllers\Api\V1\LedgerController;
 use App\Http\Controllers\Api\V1\VoucherController;
 use App\Http\Controllers\Api\V1\PartyController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -105,6 +106,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Accounting
     Route::post('accounting-groups/load-defaults', [AccountingGroupController::class, 'loadDefaults']);
     Route::apiResource('accounting-groups', AccountingGroupController::class)->except(['store']);
+    Route::apiResource('ledgers', LedgerController::class);
     Route::apiResource('vouchers', VoucherController::class)->except(['update']);
     Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);
 

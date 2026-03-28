@@ -322,6 +322,26 @@ export interface VoucherLine extends SyncColumns {
   account?: AccountingGroup;
 }
 
+export interface Ledger extends SyncColumns {
+  id: string;
+  company_id: string;
+  name: string;
+  alias: string | null;
+  group_id: string;
+  opening_balance: number;
+  opening_type: 'dr' | 'cr';
+  opening_date: string | null;
+  is_bill_wise: boolean;
+  is_cost_center_applicable: boolean;
+  allow_manual_entry: boolean;
+  is_system: boolean;
+  ledgerable_type: string | null;
+  ledgerable_id: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  group?: AccountingGroup;
+}
+
 export interface PaymentReceipt extends SyncColumns {
   id: string;
   company_id: string;

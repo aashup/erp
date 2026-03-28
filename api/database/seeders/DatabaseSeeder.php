@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             AidwayBiotechInvoiceSeeder::class,
 
             // Accounting
+            LedgerSeeder::class,
             PaymentReceiptSeeder::class,
             VoucherSeeder::class,
         ]);

@@ -25,6 +25,7 @@ import SalesOrders from '@/pages/sales/SalesOrders';
 import SalesInvoices from '@/pages/sales/SalesInvoices';
 import SalesInvoiceFormPage from '@/pages/sales/SalesInvoiceFormPage';
 import ChartOfAccounts from '@/pages/accounting/ChartOfAccounts';
+import Ledgers from '@/pages/accounting/Ledgers';
 import JournalEntries from '@/pages/accounting/JournalEntries';
 import Payments from '@/pages/accounting/Payments';
 import VouchersEntry from '@/pages/accounting/VouchersEntry';
@@ -143,6 +144,7 @@ export default function App() {
 
             {/* Accounting */}
             <Route path="/accounting/accounts" element={<ChartOfAccounts />} />
+            <Route path="/accounting/ledgers" element={<Ledgers />} />
             <Route path="/accounting/vouchers" element={<VouchersEntry />} />
             <Route path="/accounting/journals" element={<JournalEntries />} />
             <Route path="/accounting/payments" element={<Payments />} />

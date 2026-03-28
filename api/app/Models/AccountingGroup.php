@@ -63,6 +63,11 @@ class AccountingGroup extends Model
         return $this->hasMany(AccountingGroup::class, 'parent_id');
     }
 
+    public function ledgers()
+    {
+        return $this->hasMany(Ledger::class, 'group_id');
+    }
+
     public function voucherLines()
     {
         return $this->hasMany(VoucherLine::class, 'account_id');
