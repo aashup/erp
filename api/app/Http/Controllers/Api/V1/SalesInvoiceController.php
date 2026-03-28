@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\StockLedger;
+use App\Services\AccountingService;
 use App\Services\InvoicePdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -105,6 +106,10 @@ class SalesInvoiceController extends Controller
                 'grand_total' => $invoice->lines->sum('line_total'),
                 'balance_due' => $invoice->lines->sum('line_total'),
             ]);
+
+            // Auto-post journal entry for sales
+            $invoice->refresh();
+            app(AccountingService::class)->postSalesInvoice($invoice, $request->user()->id);
 
             return $invoice->load('lines.item', 'party');
         });
@@ -254,7 +259,7 @@ class SalesInvoiceController extends Controller
                 'updated_by' => $request->user()->id,
             ]);
 
-            // On confirm → create stock ledger entries (stock out)
+            // On confirm → create stock ledger entries (stock out) + journal entry
             if ($newStatus === 'confirmed') {
                 $salesInvoice->loadMissing('lines');
 
@@ -278,6 +283,10 @@ class SalesInvoiceController extends Controller
                         'created_by' => $request->user()->id,
                     ]);
                 }
+
+                // Auto-post journal entry
+                $salesInvoice->refresh();
+                app(AccountingService::class)->postSalesInvoice($salesInvoice, $request->user()->id);
             }
 
             // On cancel → reverse stock if previously confirmed

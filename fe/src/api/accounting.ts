@@ -5,6 +5,9 @@ import type {
   ChartOfAccount,
   JournalEntry,
   PaymentReceipt,
+  TrialBalanceResponse,
+  ProfitAndLossResponse,
+  PartyLedgerResponse,
 } from '@/types';
 
 export const chartOfAccountsApi = {
@@ -29,6 +32,17 @@ export const journalEntriesApi = {
 
   create: (data: Record<string, unknown>) =>
     api.post<ApiResponse<JournalEntry>>('/journal-entries', data),
+};
+
+export const reportsApi = {
+  trialBalance: (params?: Record<string, string>) =>
+    api.get<TrialBalanceResponse>('/reports/trial-balance', { params }),
+
+  profitAndLoss: (params?: Record<string, string>) =>
+    api.get<ProfitAndLossResponse>('/reports/profit-and-loss', { params }),
+
+  partyLedger: (params: Record<string, string>) =>
+    api.get<PartyLedgerResponse>('/reports/party-ledger', { params }),
 };
 
 export const paymentReceiptsApi = {

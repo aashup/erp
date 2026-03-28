@@ -22,11 +22,22 @@ class ChartOfAccount extends Model
         'name',
         'type',
         'group',
+        'system_key',
         'is_system',
         'is_active',
         'opening_balance',
         'balance_type',
     ];
+
+    /**
+     * Find a system account by its well-known key for a given company.
+     */
+    public static function findBySystemKey(string $companyId, string $systemKey): ?self
+    {
+        return static::where('company_id', $companyId)
+            ->where('system_key', $systemKey)
+            ->first();
+    }
 
     protected function casts(): array
     {

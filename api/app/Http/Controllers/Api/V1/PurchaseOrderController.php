@@ -7,6 +7,7 @@ use App\Models\Godown;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseOrder;
 use App\Models\StockLedger;
+use App\Services\AccountingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -270,6 +271,9 @@ class PurchaseOrderController extends Controller
             'grand_total' => $invoice->lines->sum('line_total'),
             'balance_due' => $invoice->lines->sum('line_total'),
         ]);
+
+        // Auto-post journal entry for purchase
+        app(AccountingService::class)->postPurchaseInvoice($invoice, $request->user()->id);
 
         return $invoice;
     }

@@ -27,6 +27,8 @@ import SalesInvoiceFormPage from '@/pages/sales/SalesInvoiceFormPage';
 import ChartOfAccounts from '@/pages/accounting/ChartOfAccounts';
 import JournalEntries from '@/pages/accounting/JournalEntries';
 import Payments from '@/pages/accounting/Payments';
+import TrialBalance from '@/pages/accounting/TrialBalance';
+import ProfitAndLoss from '@/pages/accounting/ProfitAndLoss';
 import Settings from '@/pages/Settings';
 import FinancialYears from '@/pages/settings/FinancialYears';
 
@@ -61,6 +63,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/accounting/accounts': 'Chart of Accounts',
   '/accounting/journals': 'Journal Entries',
   '/accounting/payments': 'Payments',
+  '/accounting/trial-balance': 'Trial Balance',
+  '/accounting/profit-and-loss': 'Profit & Loss',
   '/settings/base': 'Settings',
   '/settings/financial-years': 'Financial Years',
 };
@@ -139,6 +143,8 @@ export default function App() {
             <Route path="/accounting/accounts" element={<ChartOfAccounts />} />
             <Route path="/accounting/journals" element={<JournalEntries />} />
             <Route path="/accounting/payments" element={<Payments />} />
+            <Route path="/accounting/trial-balance" element={<TrialBalance />} />
+            <Route path="/accounting/profit-and-loss" element={<ProfitAndLoss />} />
 
             {/* Settings */}
             <Route path="/settings/base" element={<Settings />} />

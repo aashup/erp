@@ -18,6 +18,8 @@ import {
   ArrowLeftRight,
   ClipboardEdit,
   PackageOpen,
+  Scale,
+  TrendingUp,
 } from 'lucide-react';
 
 const navigation = [
@@ -55,6 +57,8 @@ const navigation = [
       { name: 'Chart of Accounts', href: '/accounting/accounts', icon: BookOpen },
       { name: 'Journal Entries', href: '/accounting/journals', icon: BookOpen },
       { name: 'Payments & Receipts', href: '/accounting/payments', icon: IndianRupee },
+      { name: 'Trial Balance', href: '/accounting/trial-balance', icon: Scale },
+      { name: 'Profit & Loss', href: '/accounting/profit-and-loss', icon: TrendingUp },
     ],
   },
   { name: 'Branches', href: '/branches', icon: Building2 },

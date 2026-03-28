@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->enum('type', ['asset', 'liability', 'equity', 'income', 'expense']);
             $table->string('group')->nullable();
+            $table->string('system_key')->nullable()->comment('Programmatic identifier for system accounts');
             $table->boolean('is_system')->default(false);
             $table->boolean('is_active')->default(true);
             $table->decimal('opening_balance', 15, 2)->default(0);

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Party;
 use App\Models\PaymentReceipt;
+use App\Services\AccountingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -47,6 +49,39 @@ class PaymentReceiptController extends Controller
             ...$validated,
             'created_by' => $request->user()->id,
         ]);
+
+        // Auto-post journal entry
+        $party = Party::find($validated['party_id']);
+        if ($party) {
+            $accountingService = app(AccountingService::class);
+            $narration = "{$validated['type']} #{$receipt->receipt_number} — {$party->name}";
+
+            if ($validated['type'] === 'payment') {
+                $accountingService->postPayment(
+                    $request->user()->company_id,
+                    $party,
+                    (float) $validated['amount'],
+                    $validated['payment_mode'],
+                    $validated['receipt_date'],
+                    $narration,
+                    $request->user()->id,
+                    PaymentReceipt::class,
+                    $receipt->id,
+                );
+            } else {
+                $accountingService->postReceipt(
+                    $request->user()->company_id,
+                    $party,
+                    (float) $validated['amount'],
+                    $validated['payment_mode'],
+                    $validated['receipt_date'],
+                    $narration,
+                    $request->user()->id,
+                    PaymentReceipt::class,
+                    $receipt->id,
+                );
+            }
+        }
 
         return response()->json(['data' => $receipt], 201);
     }

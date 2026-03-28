@@ -116,6 +116,7 @@ export interface Party extends SyncColumns {
   credit_limit: number | null;
   opening_balance: number | null;
   balance_type: 'debit' | 'credit' | null;
+  ledger_account_id: string | null;
   is_active: boolean;
 }
 
@@ -392,6 +393,75 @@ export interface ReorderAlert {
   reorder_level: number;
   current_stock: number;
   deficit: number;
+}
+
+// Reports
+export interface TrialBalanceRow {
+  account_id: string;
+  code: string;
+  name: string;
+  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  parent_id: string | null;
+  is_group: boolean;
+  opening_debit: number;
+  opening_credit: number;
+  txn_debit: number;
+  txn_credit: number;
+  closing_debit: number;
+  closing_credit: number;
+}
+
+export interface TrialBalanceResponse {
+  data: TrialBalanceRow[];
+  summary: {
+    total_debit: number;
+    total_credit: number;
+    difference: number;
+  };
+}
+
+export interface PnlItem {
+  account_id: string;
+  code: string;
+  name: string;
+  parent_id: string | null;
+  amount: number;
+}
+
+export interface ProfitAndLossResponse {
+  data: {
+    income: {
+      items: PnlItem[];
+      total: number;
+    };
+    expense: {
+      items: PnlItem[];
+      total: number;
+    };
+    net_profit_loss: number;
+    is_profit: boolean;
+  };
+}
+
+export interface PartyLedgerRow {
+  voucher_number: string;
+  voucher_date: string;
+  voucher_type: string;
+  narration: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface PartyLedgerResponse {
+  data: PartyLedgerRow[];
+  party: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  opening_balance: number;
+  closing_balance: number;
 }
 
 // API response types

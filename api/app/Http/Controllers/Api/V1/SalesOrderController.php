@@ -7,6 +7,7 @@ use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Models\StockLedger;
+use App\Services\AccountingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -269,6 +270,9 @@ class SalesOrderController extends Controller
             'grand_total' => $invoice->lines->sum('line_total'),
             'balance_due' => $invoice->lines->sum('line_total'),
         ]);
+
+        // Auto-post journal entry for sales
+        app(AccountingService::class)->postSalesInvoice($invoice, $request->user()->id);
 
         return $invoice;
     }

@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\JournalEntryController;
 use App\Http\Controllers\Api\V1\PartyController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\PaymentReceiptController;
 use App\Http\Controllers\Api\V1\PurchaseInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
@@ -106,4 +107,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('chart-of-accounts', ChartOfAccountController::class)->except(['store']);
     Route::apiResource('journal-entries', JournalEntryController::class)->except(['update']);
     Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);
+
+    // Reports
+    Route::get('reports/trial-balance', [ReportController::class, 'trialBalance']);
+    Route::get('reports/profit-and-loss', [ReportController::class, 'profitAndLoss']);
+    Route::get('reports/party-ledger', [ReportController::class, 'partyLedger']);
 });
