@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\PurchaseInvoice;
 use App\Models\StockLedger;
 use App\Services\AccountingService;
+use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseInvoiceController extends Controller
 {
-    use \App\Traits\FiltersByFinancialYear;
+    use FiltersByFinancialYear;
 
     public function index(Request $request): JsonResponse
     {

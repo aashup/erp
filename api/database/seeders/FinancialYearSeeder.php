@@ -35,7 +35,7 @@ class FinancialYearSeeder extends Seeder
         FinancialYear::firstOrCreate(
             [
                 'company_id' => $company->id,
-                'label' => $prevStartYear . '-' . substr($prevStartYear + 1, -2),
+                'label' => $prevStartYear.'-'.substr($prevStartYear + 1, -2),
             ],
             [
                 'start_date' => Carbon::create($prevStartYear, 4, 1),

@@ -40,7 +40,7 @@ class PartyObserver
 
         $nextCode = $lastCode
             ? (string) ((int) $lastCode + 1)
-            : $parentAccount->code . '01';
+            : $parentAccount->code.'01';
 
         // Determine opening balance type
         $balanceType = 'dr';

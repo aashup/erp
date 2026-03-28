@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
+use App\Models\Party;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -239,7 +240,7 @@ class ReportController extends Controller
         ]);
 
         $companyId = $request->user()->company_id;
-        $party = \App\Models\Party::findOrFail($request->party_id);
+        $party = Party::findOrFail($request->party_id);
 
         if (! $party->ledger_account_id) {
             return response()->json(['data' => [], 'opening_balance' => 0, 'closing_balance' => 0]);

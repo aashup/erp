@@ -8,6 +8,7 @@ use App\Models\PurchaseInvoice;
 use App\Models\PurchaseOrder;
 use App\Models\StockLedger;
 use App\Services\AccountingService;
+use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
-    use \App\Traits\FiltersByFinancialYear;
+    use FiltersByFinancialYear;
 
     public function index(Request $request): JsonResponse
     {

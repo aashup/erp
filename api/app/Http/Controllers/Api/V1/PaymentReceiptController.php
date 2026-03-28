@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Party;
 use App\Models\PaymentReceipt;
 use App\Services\AccountingService;
+use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PaymentReceiptController extends Controller
 {
-    use \App\Traits\FiltersByFinancialYear;
+    use FiltersByFinancialYear;
 
     public function index(Request $request): JsonResponse
     {

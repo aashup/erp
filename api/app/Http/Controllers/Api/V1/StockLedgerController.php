@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Godown;
 use App\Models\Item;
 use App\Models\StockLedger;
+use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class StockLedgerController extends Controller
 {
-    use \App\Traits\FiltersByFinancialYear;
+    use FiltersByFinancialYear;
 
     /**
      * Paginated stock movement history with filters.

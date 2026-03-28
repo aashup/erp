@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
-use App\Models\Voucher;
 use App\Models\Party;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
+use App\Models\Voucher;
 use Illuminate\Support\Facades\DB;
 
 class AccountingService
@@ -276,7 +276,7 @@ class AccountingService
                     'account_id' => $account->id,
                     'debit' => 0,
                     'credit' => $cgst,
-                    'narration' => strtoupper($prefix) . ' CGST',
+                    'narration' => strtoupper($prefix).' CGST',
                 ]);
             }
         }
@@ -288,7 +288,7 @@ class AccountingService
                     'account_id' => $account->id,
                     'debit' => 0,
                     'credit' => $sgst,
-                    'narration' => strtoupper($prefix) . ' SGST',
+                    'narration' => strtoupper($prefix).' SGST',
                 ]);
             }
         }
@@ -300,7 +300,7 @@ class AccountingService
                     'account_id' => $account->id,
                     'debit' => 0,
                     'credit' => $igst,
-                    'narration' => strtoupper($prefix) . ' IGST',
+                    'narration' => strtoupper($prefix).' IGST',
                 ]);
             }
         }
@@ -318,7 +318,7 @@ class AccountingService
                     'account_id' => $account->id,
                     'debit' => $cgst,
                     'credit' => 0,
-                    'narration' => strtoupper($prefix) . ' CGST',
+                    'narration' => strtoupper($prefix).' CGST',
                 ]);
             }
         }
@@ -330,7 +330,7 @@ class AccountingService
                     'account_id' => $account->id,
                     'debit' => $sgst,
                     'credit' => 0,
-                    'narration' => strtoupper($prefix) . ' SGST',
+                    'narration' => strtoupper($prefix).' SGST',
                 ]);
             }
         }
@@ -342,7 +342,7 @@ class AccountingService
                     'account_id' => $account->id,
                     'debit' => $igst,
                     'credit' => 0,
-                    'narration' => strtoupper($prefix) . ' IGST',
+                    'narration' => strtoupper($prefix).' IGST',
                 ]);
             }
         }
@@ -391,6 +391,6 @@ class AccountingService
 
         $count = Voucher::withoutGlobalScopes()->count() + 1;
 
-        return $prefix . '-' . str_pad($count, 6, '0', STR_PAD_LEFT);
+        return $prefix.'-'.str_pad($count, 6, '0', STR_PAD_LEFT);
     }
 }

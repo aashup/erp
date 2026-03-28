@@ -19,7 +19,7 @@ class CompanyObserver
 
         FinancialYear::create([
             'company_id' => $company->id,
-            'label' => $fyStartYear . '-' . substr($fyStartYear + 1, -2),
+            'label' => $fyStartYear.'-'.substr($fyStartYear + 1, -2),
             'start_date' => Carbon::create($fyStartYear, 4, 1),
             'end_date' => Carbon::create($fyStartYear + 1, 3, 31),
             'is_current' => true,

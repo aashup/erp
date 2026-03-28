@@ -1,9 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AccountingGroupController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\BranchController;
-use App\Http\Controllers\Api\V1\AccountingGroupController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\CompanySettingController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -12,16 +12,16 @@ use App\Http\Controllers\Api\V1\GodownController;
 use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\LedgerController;
-use App\Http\Controllers\Api\V1\VoucherController;
 use App\Http\Controllers\Api\V1\PartyController;
-use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\PaymentReceiptController;
 use App\Http\Controllers\Api\V1\PurchaseInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
 use App\Http\Controllers\Api\V1\StockLedgerController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\VoucherController;
 use Illuminate\Support\Facades\Route;
 
 /*

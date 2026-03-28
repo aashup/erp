@@ -11,10 +11,9 @@ trait FiltersByFinancialYear
     /**
      * Apply financial year date range filter to a query.
      *
-     * @param  Builder  $query       The Eloquent query builder
-     * @param  Request  $request     The HTTP request (checks for 'financial_year_id' param)
-     * @param  string   $dateColumn  The date column to filter on (e.g. 'invoice_date', 'voucher_date')
-     * @return Builder
+     * @param  Builder  $query  The Eloquent query builder
+     * @param  Request  $request  The HTTP request (checks for 'financial_year_id' param)
+     * @param  string  $dateColumn  The date column to filter on (e.g. 'invoice_date', 'voucher_date')
      */
     protected function applyFYFilter(Builder $query, Request $request, string $dateColumn): Builder
     {

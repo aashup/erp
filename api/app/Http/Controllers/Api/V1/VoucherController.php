@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Voucher;
+use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class VoucherController extends Controller
 {
-    use \App\Traits\FiltersByFinancialYear;
+    use FiltersByFinancialYear;
 
     public function index(Request $request): JsonResponse
     {
@@ -59,7 +60,7 @@ class VoucherController extends Controller
             $count = Voucher::where('company_id', $request->user()->company_id)
                 ->where('voucher_type', $validated['voucher_type'])
                 ->count() + 1;
-            $validated['voucher_number'] = $prefix . '-' . str_pad($count, 5, '0', STR_PAD_LEFT);
+            $validated['voucher_number'] = $prefix.'-'.str_pad($count, 5, '0', STR_PAD_LEFT);
         }
 
         $entry = DB::transaction(function () use ($validated, $request) {

@@ -15,54 +15,105 @@ class AccountingGroupController extends Controller
      * Tally Prime default groups (28 groups with hierarchy).
      */
     private array $tallyGroups = [
-        // Primary groups (parent_id = null)
+        // Primary groups
         ['code' => '1000', 'name' => 'Fixed Assets', 'type' => 'asset', 'parent_code' => null, 'system_key' => null],
         ['code' => '1100', 'name' => 'Investments', 'type' => 'asset', 'parent_code' => null, 'system_key' => null],
         ['code' => '1200', 'name' => 'Current Assets', 'type' => 'asset', 'parent_code' => null, 'system_key' => null],
         ['code' => '2000', 'name' => 'Current Liabilities', 'type' => 'liability', 'parent_code' => null, 'system_key' => null],
         ['code' => '2100', 'name' => 'Loans (Liability)', 'type' => 'liability', 'parent_code' => null, 'system_key' => null],
         ['code' => '2200', 'name' => 'Suspense A/c', 'type' => 'liability', 'parent_code' => null, 'system_key' => null],
-        ['code' => '3000', 'name' => 'Capital Account', 'type' => 'equity', 'parent_code' => null, 'system_key' => null],
-        ['code' => '4000', 'name' => 'Sales Accounts', 'type' => 'income', 'parent_code' => null, 'system_key' => null],
+        ['code' => '3000', 'name' => 'Capital Account', 'type' => 'equity', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Capital Account', 'system_key' => 'capital_account'],
+            ],
+        ],
+
+        ['code' => '4000', 'name' => 'Sales Accounts', 'type' => 'income', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Sales', 'system_key' => 'sales_account'],
+            ],
+        ],
+
         ['code' => '4100', 'name' => 'Direct Income', 'type' => 'income', 'parent_code' => null, 'system_key' => null],
         ['code' => '4200', 'name' => 'Indirect Income', 'type' => 'income', 'parent_code' => null, 'system_key' => null],
-        ['code' => '5000', 'name' => 'Purchase Accounts', 'type' => 'expense', 'parent_code' => null, 'system_key' => null],
+
+        ['code' => '5000', 'name' => 'Purchase Accounts', 'type' => 'expense', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Purchase', 'system_key' => 'purchase_account'],
+            ],
+        ],
+
         ['code' => '5100', 'name' => 'Direct Expenses', 'type' => 'expense', 'parent_code' => null, 'system_key' => null],
         ['code' => '5200', 'name' => 'Indirect Expenses', 'type' => 'expense', 'parent_code' => null, 'system_key' => null],
-        // Sub-groups under Current Assets (1200)
+
+        // Current Assets sub-groups
         ['code' => '1210', 'name' => 'Bank Accounts', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'bank_account'],
-        ['code' => '1220', 'name' => 'Cash-in-hand', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'cash_account'],
+
+        ['code' => '1220', 'name' => 'Cash-in-hand', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'cash_account',
+            'ledgers' => [
+                ['name' => 'Cash', 'system_key' => 'cash'],
+            ],
+        ],
+
         ['code' => '1230', 'name' => 'Deposits (Asset)', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => null],
         ['code' => '1240', 'name' => 'Loans & Advances (Asset)', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => null],
-        ['code' => '1250', 'name' => 'Stock-in-hand', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => null],
+
+        ['code' => '1250', 'name' => 'Stock-in-hand', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Stock-in-Hand', 'system_key' => 'stock'],
+            ],
+        ],
+
         ['code' => '1260', 'name' => 'Sundry Debtors', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'sundry_debtors'],
-        // GST Input accounts under Current Assets
-        ['code' => '1270', 'name' => 'Input CGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_cgst'],
-        ['code' => '1280', 'name' => 'Input SGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_sgst'],
-        ['code' => '1290', 'name' => 'Input IGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_igst'],
-        // Sub-groups under Current Liabilities (2000)
+
+        // GST Input Ledgers
+        ['code' => '1270', 'name' => 'Input CGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_cgst',
+            'ledgers' => [
+                ['name' => 'Input CGST', 'system_key' => 'input_cgst'],
+            ],
+        ],
+        ['code' => '1280', 'name' => 'Input SGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_sgst',
+            'ledgers' => [
+                ['name' => 'Input SGST', 'system_key' => 'input_sgst'],
+            ],
+        ],
+        ['code' => '1290', 'name' => 'Input IGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_igst',
+            'ledgers' => [
+                ['name' => 'Input IGST', 'system_key' => 'input_igst'],
+            ],
+        ],
+
+        // Current Liabilities
         ['code' => '2010', 'name' => 'Duties & Taxes', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
         ['code' => '2020', 'name' => 'Provisions', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
         ['code' => '2030', 'name' => 'Sundry Creditors', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'sundry_creditors'],
-        // GST Output accounts under Current Liabilities
-        ['code' => '2040', 'name' => 'Output CGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_cgst'],
-        ['code' => '2050', 'name' => 'Output SGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_sgst'],
-        ['code' => '2060', 'name' => 'Output IGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_igst'],
-        // Sub-groups under Loans (Liability) (2100)
+        // GST Output Ledgers
+        ['code' => '2040', 'name' => 'Output CGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_cgst',
+            'ledgers' => [
+                ['name' => 'Output CGST', 'system_key' => 'output_cgst'],
+            ],
+        ],
+        ['code' => '2050', 'name' => 'Output SGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_sgst',
+            'ledgers' => [
+                ['name' => 'Output SGST', 'system_key' => 'output_sgst'],
+            ],
+        ],
+        ['code' => '2060', 'name' => 'Output IGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_igst',
+            'ledgers' => [
+                ['name' => 'Output IGST', 'system_key' => 'output_igst'],
+            ],
+        ],
+        // Loans
         ['code' => '2110', 'name' => 'Bank OD A/c', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
         ['code' => '2120', 'name' => 'Secured Loans', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
         ['code' => '2130', 'name' => 'Unsecured Loans', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
-        // Sub-group under Capital Account (3000)
         ['code' => '3010', 'name' => 'Reserves & Surplus', 'type' => 'equity', 'parent_code' => '3000', 'system_key' => null],
-        // Sales ledger under Sales Accounts (4000)
+
+        // Specific mapping groups (optional redundancy avoided)
         ['code' => '4010', 'name' => 'Sales Account', 'type' => 'income', 'parent_code' => '4000', 'system_key' => 'sales_account'],
-        // Purchase ledger under Purchase Accounts (5000)
         ['code' => '5010', 'name' => 'Purchase Account', 'type' => 'expense', 'parent_code' => '5000', 'system_key' => 'purchase_account'],
     ];
 
-    /**
-     * Marg ERP default groups (trade-specific for Pharma/FMCG).
-     */
     private array $margGroups = [
         // Primary groups (parent_id = null)
         ['code' => '1000', 'name' => 'Cash and Bank Book', 'type' => 'asset', 'parent_code' => null, 'system_key' => null],
@@ -240,7 +291,7 @@ class AccountingGroupController extends Controller
             ->get();
 
         return response()->json([
-            'message' => ucfirst($preset) . ' default groups loaded successfully.',
+            'message' => ucfirst($preset).' default groups loaded successfully.',
             'loaded_preset' => $preset,
             'data' => $accounts,
         ]);

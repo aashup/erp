@@ -405,7 +405,7 @@ class AidwayBiotechInvoiceSeeder extends Seeder
                     'quantity' => $qty,
                     'rate' => $rate,
                     'value' => $taxable,
-                    'narration' => "Purchase from Aidway Biotech (Inv: A000467)",
+                    'narration' => 'Purchase from Aidway Biotech (Inv: A000467)',
                     'created_by' => $user->id,
                     'sync_status' => 'synced',
                     'synced_at' => now(),

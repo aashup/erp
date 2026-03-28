@@ -5,9 +5,9 @@ namespace Database\Seeders;
 use App\Models\AccountingGroup;
 use App\Models\Company;
 use App\Models\FinancialYear;
+use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherLine;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class VoucherSeeder extends Seeder

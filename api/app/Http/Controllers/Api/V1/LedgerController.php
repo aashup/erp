@@ -17,7 +17,7 @@ class LedgerController extends Controller
             ->when($request->group_id, fn ($q, $g) => $q->where('group_id', $g))
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
-                  ->orWhere('alias', 'like', "%{$s}%");
+                    ->orWhere('alias', 'like', "%{$s}%");
             }))
             ->orderBy('name');
 
