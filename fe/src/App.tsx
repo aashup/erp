@@ -61,7 +61,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/purchase/invoices': 'Purchase Invoices',
   '/sales/orders': 'Sales Orders',
   '/sales/invoices': 'Sales Invoices',
-  '/accounting/accounts': 'Chart of Accounts',
+  '/accounting/accounts': 'Accounting Groups',
   '/accounting/vouchers': 'Vouchers Entry',
   '/accounting/journals': 'Journal Entries',
   '/accounting/payments': 'Payments',
