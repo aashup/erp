@@ -115,36 +115,76 @@ class AccountingGroupController extends Controller
     ];
 
     private array $margGroups = [
-        // Primary groups (parent_id = null)
+        // Primary groups
         ['code' => '1000', 'name' => 'Cash and Bank Book', 'type' => 'asset', 'parent_code' => null, 'system_key' => null],
         ['code' => '1100', 'name' => 'Sundry Debtors', 'type' => 'asset', 'parent_code' => null, 'system_key' => 'sundry_debtors'],
         ['code' => '2000', 'name' => 'Sundry Creditors', 'type' => 'liability', 'parent_code' => null, 'system_key' => 'sundry_creditors'],
-        ['code' => '3000', 'name' => 'Capital Account', 'type' => 'equity', 'parent_code' => null, 'system_key' => null],
-        ['code' => '4000', 'name' => 'Income Account', 'type' => 'income', 'parent_code' => null, 'system_key' => null],
-        ['code' => '5000', 'name' => 'Expenditure Account', 'type' => 'expense', 'parent_code' => null, 'system_key' => null],
-        // Sub-group under Cash and Bank Book (1000)
-        ['code' => '1010', 'name' => 'Cash Account', 'type' => 'asset', 'parent_code' => '1000', 'system_key' => 'cash_account'],
+        ['code' => '3000', 'name' => 'Capital Account', 'type' => 'equity', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Capital Account', 'system_key' => 'capital_account'],
+            ],
+        ],
+        ['code' => '4000', 'name' => 'Income Account', 'type' => 'income', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Sales', 'system_key' => 'sales_account'],
+            ],
+        ],
+        ['code' => '5000', 'name' => 'Expenditure Account', 'type' => 'expense', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Purchase', 'system_key' => 'purchase_account'],
+            ],
+        ],
+        // Cash & Bank
+        ['code' => '1010', 'name' => 'Cash Account', 'type' => 'asset', 'parent_code' => '1000', 'system_key' => 'cash_account',
+            'ledgers' => [
+                ['name' => 'Cash', 'system_key' => 'cash'],
+            ],
+        ],
         ['code' => '1020', 'name' => 'Bank Account', 'type' => 'asset', 'parent_code' => '1000', 'system_key' => 'bank_account'],
-        // Sub-group under Sundry Debtors (1100)
+        // Debtors
         ['code' => '1110', 'name' => 'Sundry Debtors (Field Staff)', 'type' => 'asset', 'parent_code' => '1100', 'system_key' => null],
-        // GST Input accounts under Sundry Debtors parent
-        ['code' => '1120', 'name' => 'Input CGST', 'type' => 'asset', 'parent_code' => '1100', 'system_key' => 'input_cgst'],
-        ['code' => '1130', 'name' => 'Input SGST', 'type' => 'asset', 'parent_code' => '1100', 'system_key' => 'input_sgst'],
-        ['code' => '1140', 'name' => 'Input IGST', 'type' => 'asset', 'parent_code' => '1100', 'system_key' => 'input_igst'],
-        // Sub-groups under Sundry Creditors (2000)
+        // GST Input
+        ['code' => '1120', 'name' => 'Input CGST', 'type' => 'asset', 'parent_code' => '1100', 'system_key' => 'input_cgst',
+            'ledgers' => [
+                ['name' => 'Input CGST', 'system_key' => 'input_cgst'],
+            ],
+        ],
+        ['code' => '1130', 'name' => 'Input SGST', 'type' => 'asset', 'parent_code' => '1100', 'system_key' => 'input_sgst',
+            'ledgers' => [
+                ['name' => 'Input SGST', 'system_key' => 'input_sgst'],
+            ],
+        ],
+        ['code' => '1140', 'name' => 'Input IGST', 'type' => 'asset', 'parent_code' => '1100', 'system_key' => 'input_igst',
+            'ledgers' => [
+                ['name' => 'Input IGST', 'system_key' => 'input_igst'],
+            ],
+        ],
+        // Creditors
         ['code' => '2010', 'name' => 'Creditors (Suppliers)', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
         ['code' => '2020', 'name' => 'Creditors (Manufacturers)', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
         ['code' => '2030', 'name' => 'Creditors (Expenses Payable)', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
-        // GST Output accounts under Sundry Creditors
-        ['code' => '2040', 'name' => 'Output CGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_cgst'],
-        ['code' => '2050', 'name' => 'Output SGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_sgst'],
-        ['code' => '2060', 'name' => 'Output IGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_igst'],
-        // Sub-group under Capital Account (3000)
+        // GST Output
+        ['code' => '2040', 'name' => 'Output CGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_cgst',
+            'ledgers' => [
+                ['name' => 'Output CGST', 'system_key' => 'output_cgst'],
+            ],
+        ],
+        ['code' => '2050', 'name' => 'Output SGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_sgst',
+            'ledgers' => [
+                ['name' => 'Output SGST', 'system_key' => 'output_sgst'],
+            ],
+        ],
+        ['code' => '2060', 'name' => 'Output IGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_igst',
+            'ledgers' => [
+                ['name' => 'Output IGST', 'system_key' => 'output_igst'],
+            ],
+        ],
+        // Capital sub-group
         ['code' => '3010', 'name' => 'Reserves & Surplus', 'type' => 'equity', 'parent_code' => '3000', 'system_key' => null],
-        // Sub-groups under Income Account (4000)
+        // Income
         ['code' => '4010', 'name' => 'Sales Account', 'type' => 'income', 'parent_code' => '4000', 'system_key' => 'sales_account'],
         ['code' => '4020', 'name' => 'Income (Indirect)', 'type' => 'income', 'parent_code' => '4000', 'system_key' => null],
-        // Sub-groups under Expenditure Account (5000)
+        // Expense
         ['code' => '5010', 'name' => 'Purchase Account', 'type' => 'expense', 'parent_code' => '5000', 'system_key' => 'purchase_account'],
         ['code' => '5020', 'name' => 'Expenses (Indirect)', 'type' => 'expense', 'parent_code' => '5000', 'system_key' => null],
     ];
@@ -176,9 +216,7 @@ class AccountingGroupController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'group' => 'nullable|string|max:100',
             'is_active' => 'boolean',
-            'opening_balance' => 'nullable|numeric|min:0',
             'balance_type' => 'nullable|in:dr,cr',
         ]);
 
@@ -251,7 +289,6 @@ class AccountingGroupController extends Controller
                         'code' => $group['code'],
                         'name' => $group['name'],
                         'type' => $group['type'],
-                        'group' => $group['type'],
                         'system_key' => $group['system_key'] ?? null,
                         'is_system' => true,
                         'is_active' => true,
@@ -270,12 +307,24 @@ class AccountingGroupController extends Controller
                         'code' => $group['code'],
                         'name' => $group['name'],
                         'type' => $group['type'],
-                        'group' => $group['type'],
                         'system_key' => $group['system_key'] ?? null,
                         'is_system' => true,
                         'is_active' => true,
                     ]);
                     $codeToId[$group['code']] = $account->id;
+                }
+            }
+
+            foreach ($groups as $group) {
+
+                if (! empty($group['ledgers'])) {
+                    foreach ($group['ledgers'] as $ledger) {
+                        Ledger::create([
+                            'name' => $ledger['name'],
+                            'group_id' => $codeToId[$group['parent_code']] ?? null,
+                            'is_system' => true,
+                        ]);
+                    }
                 }
             }
         });
