@@ -35,6 +35,7 @@ class LedgerSeeder extends Seeder
                 'group_id' => $cashGroup?->id,
                 'opening_balance' => 50000,
                 'opening_type' => 'dr',
+                'system_key' => 'cash',
             ],
             [
                 'name' => 'HDFC Bank',
@@ -42,6 +43,7 @@ class LedgerSeeder extends Seeder
                 'group_id' => $bankGroup?->id,
                 'opening_balance' => 250000,
                 'opening_type' => 'dr',
+                'system_key' => null,
             ],
             [
                 'name' => 'SBI Bank',
@@ -49,6 +51,7 @@ class LedgerSeeder extends Seeder
                 'group_id' => $bankGroup?->id,
                 'opening_balance' => 150000,
                 'opening_type' => 'dr',
+                'system_key' => null,
             ],
             [
                 'name' => 'Sales - General',
@@ -56,6 +59,7 @@ class LedgerSeeder extends Seeder
                 'group_id' => $salesGroup?->id,
                 'opening_balance' => 0,
                 'opening_type' => 'cr',
+                'system_key' => 'sales_account',
             ],
             [
                 'name' => 'Purchase - General',
@@ -63,12 +67,30 @@ class LedgerSeeder extends Seeder
                 'group_id' => $purchaseGroup?->id,
                 'opening_balance' => 0,
                 'opening_type' => 'dr',
+                'system_key' => 'purchase_account',
             ],
         ];
 
         foreach ($ledgers as $data) {
             if (! $data['group_id']) {
                 continue;
+            }
+
+            // Skip if system ledger with this key already exists (from loadDefaults)
+            if ($data['system_key']) {
+                $existing = Ledger::where('company_id', $company->id)
+                    ->where('system_key', $data['system_key'])
+                    ->first();
+                if ($existing) {
+                    // Update the existing ledger with opening balance
+                    $existing->update([
+                        'opening_balance' => $data['opening_balance'],
+                        'opening_type' => $data['opening_type'],
+                        'alias' => $data['alias'],
+                    ]);
+
+                    continue;
+                }
             }
 
             Ledger::create([

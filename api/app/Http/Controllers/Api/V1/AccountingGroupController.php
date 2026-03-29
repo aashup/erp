@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\AccountingGroup;
 use App\Models\CompanySetting;
+use App\Models\Ledger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -203,6 +204,28 @@ class AccountingGroupController extends Controller
         return response()->json($accounts);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $this->authorize('create', AccountingGroup::class);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:20',
+            'type' => 'required|in:asset,liability,equity,income,expense',
+            'parent_id' => 'nullable|uuid|exists:accounting_groups,id',
+            'balance_type' => 'nullable|in:dr,cr',
+        ]);
+
+        $group = AccountingGroup::create([
+            ...$validated,
+            'company_id' => $request->user()->company_id,
+            'is_system' => false,
+            'is_active' => true,
+        ]);
+
+        return response()->json(['data' => $group->load('parent', 'children')], 201);
+    }
+
     public function show(AccountingGroup $accountingGroup): JsonResponse
     {
         $this->authorize('view', $accountingGroup);
@@ -257,25 +280,31 @@ class AccountingGroupController extends Controller
         $groups = $preset === 'tally' ? $this->tallyGroups : $this->margGroups;
 
         DB::transaction(function () use ($groups, $companyId) {
-            // Soft-delete existing system accounts that are NOT referenced by voucher lines
-            $referencedIds = DB::table('voucher_lines')
-                ->join('accounting_groups', 'voucher_lines.account_id', '=', 'accounting_groups.id')
+            // Soft-delete existing system groups not referenced by ledgers with voucher lines
+            $referencedGroupIds = DB::table('voucher_lines')
+                ->join('ledgers', 'voucher_lines.ledger_id', '=', 'ledgers.id')
+                ->join('accounting_groups', 'ledgers.group_id', '=', 'accounting_groups.id')
                 ->where('accounting_groups.company_id', $companyId)
                 ->where('accounting_groups.is_system', true)
-                ->pluck('voucher_lines.account_id')
+                ->pluck('accounting_groups.id')
                 ->unique();
 
-            // Soft-delete unreferenced system accounts
-            AccountingGroup::where('company_id', $companyId)
+            // Soft-delete system ledgers first
+            Ledger::where('company_id', $companyId)
                 ->where('is_system', true)
-                ->whereNotIn('id', $referencedIds)
                 ->delete();
 
-            // Deactivate referenced system accounts (can't delete, but hide them)
-            if ($referencedIds->isNotEmpty()) {
+            // Soft-delete unreferenced system groups
+            AccountingGroup::where('company_id', $companyId)
+                ->where('is_system', true)
+                ->whereNotIn('id', $referencedGroupIds)
+                ->delete();
+
+            // Deactivate referenced system groups (can't delete, but hide them)
+            if ($referencedGroupIds->isNotEmpty()) {
                 AccountingGroup::where('company_id', $companyId)
                     ->where('is_system', true)
-                    ->whereIn('id', $referencedIds)
+                    ->whereIn('id', $referencedGroupIds)
                     ->update(['is_active' => false]);
             }
 
@@ -315,14 +344,18 @@ class AccountingGroupController extends Controller
                 }
             }
 
+            // Third pass: create ledgers under their own group (not parent)
             foreach ($groups as $group) {
-
                 if (! empty($group['ledgers'])) {
+                    $groupId = $codeToId[$group['code']] ?? null;
                     foreach ($group['ledgers'] as $ledger) {
                         Ledger::create([
+                            'company_id' => $companyId,
                             'name' => $ledger['name'],
-                            'group_id' => $codeToId[$group['parent_code']] ?? null,
+                            'group_id' => $groupId,
+                            'system_key' => $ledger['system_key'] ?? null,
                             'is_system' => true,
+                            'allow_manual_entry' => true,
                         ]);
                     }
                 }

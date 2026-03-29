@@ -35,7 +35,8 @@ class Party extends Model
         'credit_limit',
         'opening_balance',
         'balance_type',
-        'ledger_account_id',
+        'debtor_ledger_id',
+        'creditor_ledger_id',
         'is_active',
     ];
 
@@ -53,9 +54,26 @@ class Party extends Model
         return LogOptions::defaults()->logFillable();
     }
 
-    public function ledgerAccount()
+    public function debtorLedger()
     {
-        return $this->belongsTo(AccountingGroup::class, 'ledger_account_id');
+        return $this->belongsTo(Ledger::class, 'debtor_ledger_id');
+    }
+
+    public function creditorLedger()
+    {
+        return $this->belongsTo(Ledger::class, 'creditor_ledger_id');
+    }
+
+    /**
+     * Get the appropriate ledger for a given context.
+     */
+    public function getLedgerForContext(string $context): ?Ledger
+    {
+        return match ($context) {
+            'sales', 'receipt' => $this->debtorLedger,
+            'purchase', 'payment' => $this->creditorLedger,
+            default => $this->debtorLedger ?? $this->creditorLedger,
+        };
     }
 
     public function purchaseOrders()

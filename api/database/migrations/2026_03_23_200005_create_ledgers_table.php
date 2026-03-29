@@ -32,6 +32,7 @@ return new class extends Migration
             // Control Flags
             $table->boolean('allow_manual_entry')->default(true);
             $table->boolean('is_system')->default(false);
+            $table->string('system_key')->nullable();
 
             // Polymorphic Relation
             $table->string('ledgerable_type')->nullable();
@@ -50,6 +51,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['ledgerable_type', 'ledgerable_id']);
+            $table->unique(['company_id', 'system_key']);
         });
     }
 

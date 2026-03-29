@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
+use App\Models\Ledger;
 use App\Models\Party;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
@@ -15,23 +15,21 @@ class AccountingService
     /**
      * Create a journal entry for a confirmed Sales Invoice.
      *
-     * Dr: Party Ledger (grand_total)
-     *   Cr: Sales Account (taxable_amount)
-     *   Cr: Output CGST (cgst_total)
-     *   Cr: Output SGST (sgst_total)
-     *   Cr: Output IGST (igst_total)
+     * Dr: Party Debtor Ledger (grand_total)
+     *   Cr: Sales Ledger (taxable_amount)
+     *   Cr: Output CGST/SGST/IGST Ledgers
      */
     public function postSalesInvoice(SalesInvoice $invoice, string $userId): ?Voucher
     {
         $companyId = $invoice->company_id;
         $party = Party::find($invoice->party_id);
 
-        if (! $party || ! $party->ledger_account_id) {
+        if (! $party || ! $party->debtor_ledger_id) {
             return null;
         }
 
-        $salesAccount = AccountingGroup::findBySystemKey($companyId, 'sales_account');
-        if (! $salesAccount) {
+        $salesLedger = Ledger::findBySystemKey($companyId, 'sales_account');
+        if (! $salesLedger) {
             return null;
         }
 
@@ -40,7 +38,7 @@ class AccountingService
             return null;
         }
 
-        return DB::transaction(function () use ($invoice, $party, $salesAccount, $companyId, $userId, $fy) {
+        return DB::transaction(function () use ($invoice, $party, $salesLedger, $companyId, $userId, $fy) {
             $voucherNumber = $this->generateVoucherNumber('sales');
 
             $entry = Voucher::create([
@@ -57,23 +55,23 @@ class AccountingService
                 'created_by' => $userId,
             ]);
 
-            // Dr: Party Ledger (grand_total)
+            // Dr: Party Debtor Ledger (grand_total)
             $entry->lines()->create([
-                'account_id' => $party->ledger_account_id,
+                'ledger_id' => $party->debtor_ledger_id,
                 'debit' => $invoice->grand_total,
                 'credit' => 0,
                 'narration' => "Sale to {$party->name}",
             ]);
 
-            // Cr: Sales Account (taxable_amount)
+            // Cr: Sales Ledger (taxable_amount)
             $entry->lines()->create([
-                'account_id' => $salesAccount->id,
+                'ledger_id' => $salesLedger->id,
                 'debit' => 0,
                 'credit' => $invoice->taxable_amount,
                 'narration' => 'Sales revenue',
             ]);
 
-            // Cr: GST accounts
+            // Cr: GST output ledgers
             $this->addGstCreditLines($entry, $companyId, $invoice->cgst_total, $invoice->sgst_total, $invoice->igst_total, 'output');
 
             return $entry;
@@ -83,21 +81,21 @@ class AccountingService
     /**
      * Create a journal entry for a Purchase Invoice.
      *
-     * Dr: Purchase Account (taxable_amount)
-     * Dr: Input CGST / SGST / IGST
-     *   Cr: Party Ledger (grand_total)
+     * Dr: Purchase Ledger (taxable_amount)
+     * Dr: Input CGST/SGST/IGST Ledgers
+     *   Cr: Party Creditor Ledger (grand_total)
      */
     public function postPurchaseInvoice(PurchaseInvoice $invoice, string $userId): ?Voucher
     {
         $companyId = $invoice->company_id;
         $party = Party::find($invoice->party_id);
 
-        if (! $party || ! $party->ledger_account_id) {
+        if (! $party || ! $party->creditor_ledger_id) {
             return null;
         }
 
-        $purchaseAccount = AccountingGroup::findBySystemKey($companyId, 'purchase_account');
-        if (! $purchaseAccount) {
+        $purchaseLedger = Ledger::findBySystemKey($companyId, 'purchase_account');
+        if (! $purchaseLedger) {
             return null;
         }
 
@@ -106,7 +104,7 @@ class AccountingService
             return null;
         }
 
-        return DB::transaction(function () use ($invoice, $party, $purchaseAccount, $companyId, $userId, $fy) {
+        return DB::transaction(function () use ($invoice, $party, $purchaseLedger, $companyId, $userId, $fy) {
             $voucherNumber = $this->generateVoucherNumber('purchase');
 
             $entry = Voucher::create([
@@ -123,20 +121,20 @@ class AccountingService
                 'created_by' => $userId,
             ]);
 
-            // Dr: Purchase Account (taxable_amount)
+            // Dr: Purchase Ledger (taxable_amount)
             $entry->lines()->create([
-                'account_id' => $purchaseAccount->id,
+                'ledger_id' => $purchaseLedger->id,
                 'debit' => $invoice->taxable_amount,
                 'credit' => 0,
                 'narration' => 'Purchase expense',
             ]);
 
-            // Dr: GST input accounts
+            // Dr: GST input ledgers
             $this->addGstDebitLines($entry, $companyId, $invoice->cgst_total, $invoice->sgst_total, $invoice->igst_total, 'input');
 
-            // Cr: Party Ledger (grand_total)
+            // Cr: Party Creditor Ledger (grand_total)
             $entry->lines()->create([
-                'account_id' => $party->ledger_account_id,
+                'ledger_id' => $party->creditor_ledger_id,
                 'debit' => 0,
                 'credit' => $invoice->grand_total,
                 'narration' => "Purchase from {$party->name}",
@@ -149,16 +147,16 @@ class AccountingService
     /**
      * Create a journal entry for a Payment (paying a vendor).
      *
-     * Dr: Party Ledger (amount)
-     *   Cr: Cash/Bank (amount)
+     * Dr: Party Creditor Ledger (amount)
+     *   Cr: Cash/Bank Ledger (amount)
      */
     public function postPayment(string $companyId, Party $party, float $amount, string $paymentMode, string $receiptDate, string $narration, string $userId, ?string $referenceType = null, ?string $referenceId = null): ?Voucher
     {
-        if (! $party->ledger_account_id) {
+        if (! $party->creditor_ledger_id) {
             return null;
         }
 
-        $cashOrBank = $this->getCashOrBankAccount($companyId, $paymentMode);
+        $cashOrBank = $this->getCashOrBankLedger($companyId, $paymentMode);
         if (! $cashOrBank) {
             return null;
         }
@@ -185,17 +183,17 @@ class AccountingService
                 'created_by' => $userId,
             ]);
 
-            // Dr: Party Ledger (reduces creditor balance)
+            // Dr: Party Creditor Ledger (reduces creditor balance)
             $entry->lines()->create([
-                'account_id' => $party->ledger_account_id,
+                'ledger_id' => $party->creditor_ledger_id,
                 'debit' => $amount,
                 'credit' => 0,
                 'narration' => "Payment to {$party->name}",
             ]);
 
-            // Cr: Cash/Bank
+            // Cr: Cash/Bank Ledger
             $entry->lines()->create([
-                'account_id' => $cashOrBank->id,
+                'ledger_id' => $cashOrBank->id,
                 'debit' => 0,
                 'credit' => $amount,
                 'narration' => "Payment via {$cashOrBank->name}",
@@ -208,16 +206,16 @@ class AccountingService
     /**
      * Create a journal entry for a Receipt (receiving from customer).
      *
-     * Dr: Cash/Bank (amount)
-     *   Cr: Party Ledger (amount)
+     * Dr: Cash/Bank Ledger (amount)
+     *   Cr: Party Debtor Ledger (amount)
      */
     public function postReceipt(string $companyId, Party $party, float $amount, string $paymentMode, string $receiptDate, string $narration, string $userId, ?string $referenceType = null, ?string $referenceId = null): ?Voucher
     {
-        if (! $party->ledger_account_id) {
+        if (! $party->debtor_ledger_id) {
             return null;
         }
 
-        $cashOrBank = $this->getCashOrBankAccount($companyId, $paymentMode);
+        $cashOrBank = $this->getCashOrBankLedger($companyId, $paymentMode);
         if (! $cashOrBank) {
             return null;
         }
@@ -244,17 +242,17 @@ class AccountingService
                 'created_by' => $userId,
             ]);
 
-            // Dr: Cash/Bank
+            // Dr: Cash/Bank Ledger
             $entry->lines()->create([
-                'account_id' => $cashOrBank->id,
+                'ledger_id' => $cashOrBank->id,
                 'debit' => $amount,
                 'credit' => 0,
                 'narration' => "Receipt via {$cashOrBank->name}",
             ]);
 
-            // Cr: Party Ledger (reduces debtor balance)
+            // Cr: Party Debtor Ledger (reduces debtor balance)
             $entry->lines()->create([
-                'account_id' => $party->ledger_account_id,
+                'ledger_id' => $party->debtor_ledger_id,
                 'debit' => 0,
                 'credit' => $amount,
                 'narration' => "Receipt from {$party->name}",
@@ -270,10 +268,10 @@ class AccountingService
     private function addGstCreditLines(Voucher $entry, string $companyId, float $cgst, float $sgst, float $igst, string $prefix): void
     {
         if ($cgst > 0) {
-            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_cgst");
-            if ($account) {
+            $ledger = Ledger::findBySystemKey($companyId, "{$prefix}_cgst");
+            if ($ledger) {
                 $entry->lines()->create([
-                    'account_id' => $account->id,
+                    'ledger_id' => $ledger->id,
                     'debit' => 0,
                     'credit' => $cgst,
                     'narration' => strtoupper($prefix).' CGST',
@@ -282,10 +280,10 @@ class AccountingService
         }
 
         if ($sgst > 0) {
-            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_sgst");
-            if ($account) {
+            $ledger = Ledger::findBySystemKey($companyId, "{$prefix}_sgst");
+            if ($ledger) {
                 $entry->lines()->create([
-                    'account_id' => $account->id,
+                    'ledger_id' => $ledger->id,
                     'debit' => 0,
                     'credit' => $sgst,
                     'narration' => strtoupper($prefix).' SGST',
@@ -294,10 +292,10 @@ class AccountingService
         }
 
         if ($igst > 0) {
-            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_igst");
-            if ($account) {
+            $ledger = Ledger::findBySystemKey($companyId, "{$prefix}_igst");
+            if ($ledger) {
                 $entry->lines()->create([
-                    'account_id' => $account->id,
+                    'ledger_id' => $ledger->id,
                     'debit' => 0,
                     'credit' => $igst,
                     'narration' => strtoupper($prefix).' IGST',
@@ -312,10 +310,10 @@ class AccountingService
     private function addGstDebitLines(Voucher $entry, string $companyId, float $cgst, float $sgst, float $igst, string $prefix): void
     {
         if ($cgst > 0) {
-            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_cgst");
-            if ($account) {
+            $ledger = Ledger::findBySystemKey($companyId, "{$prefix}_cgst");
+            if ($ledger) {
                 $entry->lines()->create([
-                    'account_id' => $account->id,
+                    'ledger_id' => $ledger->id,
                     'debit' => $cgst,
                     'credit' => 0,
                     'narration' => strtoupper($prefix).' CGST',
@@ -324,10 +322,10 @@ class AccountingService
         }
 
         if ($sgst > 0) {
-            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_sgst");
-            if ($account) {
+            $ledger = Ledger::findBySystemKey($companyId, "{$prefix}_sgst");
+            if ($ledger) {
                 $entry->lines()->create([
-                    'account_id' => $account->id,
+                    'ledger_id' => $ledger->id,
                     'debit' => $sgst,
                     'credit' => 0,
                     'narration' => strtoupper($prefix).' SGST',
@@ -336,10 +334,10 @@ class AccountingService
         }
 
         if ($igst > 0) {
-            $account = AccountingGroup::findBySystemKey($companyId, "{$prefix}_igst");
-            if ($account) {
+            $ledger = Ledger::findBySystemKey($companyId, "{$prefix}_igst");
+            if ($ledger) {
                 $entry->lines()->create([
-                    'account_id' => $account->id,
+                    'ledger_id' => $ledger->id,
                     'debit' => $igst,
                     'credit' => 0,
                     'narration' => strtoupper($prefix).' IGST',
@@ -349,17 +347,27 @@ class AccountingService
     }
 
     /**
-     * Get Cash or Bank account based on payment mode.
+     * Get Cash or Bank ledger based on payment mode.
      */
-    private function getCashOrBankAccount(string $companyId, string $paymentMode): ?AccountingGroup
+    private function getCashOrBankLedger(string $companyId, string $paymentMode): ?Ledger
     {
         if ($paymentMode === 'cash') {
-            return AccountingGroup::findBySystemKey($companyId, 'cash_account');
+            return Ledger::findBySystemKey($companyId, 'cash');
         }
 
-        // bank, cheque, upi, other → all go to bank account
-        return AccountingGroup::findBySystemKey($companyId, 'bank_account')
-            ?? AccountingGroup::findBySystemKey($companyId, 'cash_account');
+        // bank, cheque, upi, other → all go to bank ledger
+        // Look for any ledger under the bank_account group
+        $bankGroup = \App\Models\AccountingGroup::findBySystemKey($companyId, 'bank_account');
+        if ($bankGroup) {
+            $bankLedger = Ledger::where('company_id', $companyId)
+                ->where('group_id', $bankGroup->id)
+                ->first();
+            if ($bankLedger) {
+                return $bankLedger;
+            }
+        }
+
+        return Ledger::findBySystemKey($companyId, 'cash');
     }
 
     /**

@@ -17,7 +17,7 @@ class VoucherController extends Controller
     {
         $this->authorize('viewAny', Voucher::class);
 
-        $query = Voucher::with('lines.account')
+        $query = Voucher::with('lines.ledger.group')
             ->when($request->voucher_type, fn ($q, $t) => $q->where('voucher_type', $t))
             ->when($request->search, fn ($q, $s) => $q->where('voucher_number', 'like', "%{$s}%"))
             ->latest('voucher_date');
@@ -40,7 +40,7 @@ class VoucherController extends Controller
             'voucher_type' => 'required|in:purchase,sales,payment,receipt,journal,contra',
             'narration' => 'nullable|string',
             'lines' => 'required|array|min:2',
-            'lines.*.account_id' => 'required|uuid|exists:accounting_groups,id',
+            'lines.*.ledger_id' => 'required|uuid|exists:ledgers,id',
             'lines.*.debit' => 'required|numeric|min:0',
             'lines.*.credit' => 'required|numeric|min:0',
             'lines.*.narration' => 'nullable|string',
@@ -75,7 +75,7 @@ class VoucherController extends Controller
                 $entry->lines()->create($line);
             }
 
-            return $entry->load('lines.account');
+            return $entry->load('lines.ledger.group');
         });
 
         return response()->json(['data' => $entry], 201);
@@ -85,7 +85,7 @@ class VoucherController extends Controller
     {
         $this->authorize('view', $voucher);
 
-        return response()->json(['data' => $voucher->load('lines.account', 'financialYear')]);
+        return response()->json(['data' => $voucher->load('lines.ledger.group', 'financialYear')]);
     }
 
     public function destroy(Voucher $voucher): JsonResponse

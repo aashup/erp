@@ -65,8 +65,11 @@ class AccountingGroup extends Model
         return $this->hasMany(Ledger::class, 'group_id');
     }
 
+    /**
+     * Get all voucher lines through ledgers in this group.
+     */
     public function voucherLines()
     {
-        return $this->hasMany(VoucherLine::class, 'account_id');
+        return $this->hasManyThrough(VoucherLine::class, Ledger::class, 'group_id', 'ledger_id');
     }
 }

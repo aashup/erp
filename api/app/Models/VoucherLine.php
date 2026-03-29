@@ -13,7 +13,7 @@ class VoucherLine extends Model
 
     protected $fillable = [
         'voucher_id',
-        'account_id',
+        'ledger_id',
         'debit',
         'credit',
         'narration',
@@ -32,8 +32,8 @@ class VoucherLine extends Model
         return $this->belongsTo(Voucher::class);
     }
 
-    public function account()
+    public function ledger()
     {
-        return $this->belongsTo(AccountingGroup::class, 'account_id');
+        return $this->belongsTo(Ledger::class, 'ledger_id');
     }
 }

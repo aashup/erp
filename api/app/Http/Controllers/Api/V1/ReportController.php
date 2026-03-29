@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
+use App\Models\Ledger;
 use App\Models\Party;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
@@ -14,11 +14,9 @@ use Illuminate\Support\Facades\DB;
 class ReportController extends Controller
 {
     /**
-     * Trial Balance — all accounts with their net balance.
+     * Trial Balance — all ledgers with their net balance.
      *
      * Balance = Opening Balance + Sum(Debits) - Sum(Credits)
-     * For liability/income/equity: natural credit balance
-     * For asset/expense: natural debit balance
      */
     public function trialBalance(Request $request): JsonResponse
     {
@@ -26,19 +24,16 @@ class ReportController extends Controller
 
         $companyId = $request->user()->company_id;
 
-        // Date range: explicit params override FY dates
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
 
-        // Get ALL active accounts (frontend builds tree & filters zero-balance)
-        $accounts = AccountingGroup::where('company_id', $companyId)
-            ->where('is_active', true)
-            ->orderBy('code')
+        // Get all ledgers with their group info
+        $ledgers = Ledger::with('group')
+            ->where('company_id', $companyId)
+            ->whereNull('deleted_at')
+            ->orderBy('name')
             ->get();
 
-        // Pre-compute which accounts are groups (have children) — avoids N+1
-        $parentIds = $accounts->whereNotNull('parent_id')->pluck('parent_id')->unique()->toArray();
-
-        // Get journal line totals grouped by account_id
+        // Get journal line totals grouped by ledger_id
         $query = DB::table('voucher_lines')
             ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
             ->where('vouchers.company_id', $companyId)
@@ -50,25 +45,26 @@ class ReportController extends Controller
         }
 
         $totals = $query->select(
-            'voucher_lines.account_id',
+            'voucher_lines.ledger_id',
             DB::raw('SUM(voucher_lines.debit) as total_debit'),
             DB::raw('SUM(voucher_lines.credit) as total_credit')
         )
-            ->groupBy('voucher_lines.account_id')
+            ->groupBy('voucher_lines.ledger_id')
             ->get()
-            ->keyBy('account_id');
+            ->keyBy('ledger_id');
 
         $trialBalanceRows = [];
         $grandTotalDebit = 0;
         $grandTotalCredit = 0;
 
-        foreach ($accounts as $account) {
-            $txn = $totals[$account->id] ?? null;
+        foreach ($ledgers as $ledger) {
+            $txn = $totals[$ledger->id] ?? null;
             $txnDebit = (float) ($txn->total_debit ?? 0);
             $txnCredit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit = 0;
-            $openingCredit = 0;
+            // Opening balance
+            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
 
             $totalDebit = $openingDebit + $txnDebit;
             $totalCredit = $openingCredit + $txnCredit;
@@ -81,12 +77,13 @@ class ReportController extends Controller
             $grandTotalCredit += $closingCredit;
 
             $trialBalanceRows[] = [
-                'account_id' => $account->id,
-                'code' => $account->code,
-                'name' => $account->name,
-                'type' => $account->type,
-                'parent_id' => $account->parent_id,
-                'is_group' => in_array($account->id, $parentIds),
+                'ledger_id' => $ledger->id,
+                'name' => $ledger->name,
+                'group_id' => $ledger->group_id,
+                'group_name' => $ledger->group?->name,
+                'group_type' => $ledger->group?->type,
+                'group_code' => $ledger->group?->code,
+                'parent_id' => $ledger->group?->parent_id,
                 'opening_debit' => round($openingDebit, 2),
                 'opening_credit' => round($openingCredit, 2),
                 'txn_debit' => round($txnDebit, 2),
@@ -111,12 +108,10 @@ class ReportController extends Controller
      */
     private function resolveDateRange(Request $request): array
     {
-        // Explicit date params take priority
         if ($request->date_from && $request->date_to) {
             return [$request->date_from, $request->date_to];
         }
 
-        // Fall back to FY dates (auto-attached by axios interceptor)
         $fyId = $request->financial_year_id;
         if ($fyId) {
             $fy = FinancialYear::find($fyId);
@@ -132,7 +127,6 @@ class ReportController extends Controller
      * Profit & Loss Statement.
      *
      * Income - Expenses = Net Profit/Loss
-     * Groups: Income (type=income), Expenses (type=expense)
      */
     public function profitAndLoss(Request $request): JsonResponse
     {
@@ -141,11 +135,12 @@ class ReportController extends Controller
         $companyId = $request->user()->company_id;
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
 
-        // Get income and expense accounts
-        $accounts = AccountingGroup::where('company_id', $companyId)
-            ->where('is_active', true)
-            ->whereIn('type', ['income', 'expense'])
-            ->orderBy('code')
+        // Get income and expense ledgers via their group type
+        $ledgers = Ledger::with('group')
+            ->where('company_id', $companyId)
+            ->whereHas('group', fn ($q) => $q->whereIn('type', ['income', 'expense']))
+            ->whereNull('deleted_at')
+            ->orderBy('name')
             ->get();
 
         // Get journal line totals
@@ -153,7 +148,7 @@ class ReportController extends Controller
             ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
             ->where('vouchers.company_id', $companyId)
             ->where('vouchers.is_posted', true)
-            ->whereIn('voucher_lines.account_id', $accounts->pluck('id'));
+            ->whereIn('voucher_lines.ledger_id', $ledgers->pluck('id'));
 
         if ($dateFrom && $dateTo) {
             $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
@@ -161,50 +156,51 @@ class ReportController extends Controller
         }
 
         $totals = $query->select(
-            'voucher_lines.account_id',
+            'voucher_lines.ledger_id',
             DB::raw('SUM(voucher_lines.debit) as total_debit'),
             DB::raw('SUM(voucher_lines.credit) as total_credit')
         )
-            ->groupBy('voucher_lines.account_id')
+            ->groupBy('voucher_lines.ledger_id')
             ->get()
-            ->keyBy('account_id');
+            ->keyBy('ledger_id');
 
         $incomeItems = [];
         $expenseItems = [];
         $totalIncome = 0;
         $totalExpense = 0;
 
-        foreach ($accounts as $account) {
-            $txn = $totals[$account->id] ?? null;
+        foreach ($ledgers as $ledger) {
+            $txn = $totals[$ledger->id] ?? null;
             $debit = (float) ($txn->total_debit ?? 0);
             $credit = (float) ($txn->total_credit ?? 0);
+            $groupType = $ledger->group?->type;
 
-            if ($account->type === 'income') {
-                // Income: natural credit balance. Amount = Credits - Debits
+            if ($groupType === 'income') {
                 $amount = $credit - $debit;
                 if ($amount == 0) {
                     continue;
                 }
                 $totalIncome += $amount;
                 $incomeItems[] = [
-                    'account_id' => $account->id,
-                    'code' => $account->code,
-                    'name' => $account->name,
-                    'parent_id' => $account->parent_id,
+                    'ledger_id' => $ledger->id,
+                    'name' => $ledger->name,
+                    'group_name' => $ledger->group?->name,
+                    'group_id' => $ledger->group_id,
+                    'parent_id' => $ledger->group?->parent_id,
                     'amount' => round($amount, 2),
                 ];
             } else {
-                // Expense: natural debit balance. Amount = Debits - Credits
                 $amount = $debit - $credit;
                 if ($amount == 0) {
                     continue;
                 }
                 $totalExpense += $amount;
                 $expenseItems[] = [
-                    'account_id' => $account->id,
-                    'code' => $account->code,
-                    'name' => $account->name,
-                    'parent_id' => $account->parent_id,
+                    'ledger_id' => $ledger->id,
+                    'name' => $ledger->name,
+                    'group_name' => $ledger->group?->name,
+                    'group_id' => $ledger->group_id,
+                    'parent_id' => $ledger->group?->parent_id,
                     'amount' => round($amount, 2),
                 ];
             }
@@ -242,7 +238,13 @@ class ReportController extends Controller
         $companyId = $request->user()->company_id;
         $party = Party::findOrFail($request->party_id);
 
-        if (! $party->ledger_account_id) {
+        // Collect all ledger IDs for this party
+        $ledgerIds = array_filter([
+            $party->debtor_ledger_id,
+            $party->creditor_ledger_id,
+        ]);
+
+        if (empty($ledgerIds)) {
             return response()->json(['data' => [], 'opening_balance' => 0, 'closing_balance' => 0]);
         }
 
@@ -257,12 +259,12 @@ class ReportController extends Controller
             }
         }
 
-        // Get all journal lines for this party's ledger account
+        // Get all journal lines for this party's ledger(s)
         $query = DB::table('voucher_lines')
             ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
             ->where('vouchers.company_id', $companyId)
             ->where('vouchers.is_posted', true)
-            ->where('voucher_lines.account_id', $party->ledger_account_id);
+            ->whereIn('voucher_lines.ledger_id', $ledgerIds);
 
         if ($dateFrom && $dateTo) {
             $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
@@ -283,7 +285,10 @@ class ReportController extends Controller
             ->get();
 
         // Calculate running balance
-        $openingBalance = 0;
+        $openingBalance = (float) $party->opening_balance;
+        if ($party->balance_type === 'cr') {
+            $openingBalance = -$openingBalance;
+        }
 
         $runningBalance = $openingBalance;
         $rows = [];

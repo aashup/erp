@@ -27,11 +27,22 @@ class Ledger extends Model
         'is_cost_center_applicable',
         'allow_manual_entry',
         'is_system',
+        'system_key',
         'ledgerable_type',
         'ledgerable_id',
         'created_by',
         'updated_by',
     ];
+
+    /**
+     * Find a system ledger by its well-known key for a given company.
+     */
+    public static function findBySystemKey(string $companyId, string $systemKey): ?self
+    {
+        return static::where('company_id', $companyId)
+            ->where('system_key', $systemKey)
+            ->first();
+    }
 
     protected function casts(): array
     {
@@ -68,5 +79,10 @@ class Ledger extends Model
     public function ledgerable()
     {
         return $this->morphTo();
+    }
+
+    public function voucherLines()
+    {
+        return $this->hasMany(VoucherLine::class, 'ledger_id');
     }
 }

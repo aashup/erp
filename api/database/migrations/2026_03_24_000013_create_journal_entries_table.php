@@ -36,7 +36,7 @@ return new class extends Migration
         Schema::create('voucher_lines', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('voucher_id')->constrained('vouchers')->cascadeOnDelete();
-            $table->foreignUuid('account_id')->constrained('accounting_groups');
+            $table->foreignUuid('ledger_id')->constrained('ledgers');
             $table->decimal('debit', 15, 2)->default(0);
             $table->decimal('credit', 15, 2)->default(0);
             $table->text('narration')->nullable();

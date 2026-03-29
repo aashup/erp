@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\AccountingGroup;
 use App\Models\Company;
 use App\Models\FinancialYear;
+use App\Models\Ledger;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherLine;
@@ -21,45 +21,34 @@ class VoucherSeeder extends Seeder
 
         $fy = FinancialYear::where('company_id', $company->id)->where('is_current', true)->first();
         $user = User::where('company_id', $company->id)->first();
-        $accounts = AccountingGroup::where('company_id', $company->id)->get();
 
-        if (! $fy || ! $user || $accounts->count() < 4) {
+        if (! $fy || ! $user) {
             return;
         }
 
-        $cashAccount = $accounts->where('code', '1300')->first();
-        $salesAccount = $accounts->where('code', '4000')->first();
-        $purchaseAccount = $accounts->where('code', '5000')->first();
-        $expenseAccount = $accounts->where('code', '5200')->first();
+        $cashLedger = Ledger::findBySystemKey($company->id, 'cash');
+        $salesLedger = Ledger::findBySystemKey($company->id, 'sales_account');
+        $purchaseLedger = Ledger::findBySystemKey($company->id, 'purchase_account');
 
-        if (! $cashAccount || ! $salesAccount || ! $purchaseAccount || ! $expenseAccount) {
+        if (! $cashLedger || ! $salesLedger || ! $purchaseLedger) {
             return;
         }
 
-        // Manual voucher entries
         $entries = [
-            [
-                'voucher_type' => 'journal',
-                'narration' => 'Office rent payment for the month',
-                'lines' => [
-                    ['account_id' => $expenseAccount->id, 'debit' => 15000, 'credit' => 0],
-                    ['account_id' => $cashAccount->id, 'debit' => 0, 'credit' => 15000],
-                ],
-            ],
             [
                 'voucher_type' => 'receipt',
                 'narration' => 'Cash sales collection',
                 'lines' => [
-                    ['account_id' => $cashAccount->id, 'debit' => 25000, 'credit' => 0],
-                    ['account_id' => $salesAccount->id, 'debit' => 0, 'credit' => 25000],
+                    ['ledger_id' => $cashLedger->id, 'debit' => 25000, 'credit' => 0],
+                    ['ledger_id' => $salesLedger->id, 'debit' => 0, 'credit' => 25000],
                 ],
             ],
             [
                 'voucher_type' => 'payment',
                 'narration' => 'Purchase payment via cash',
                 'lines' => [
-                    ['account_id' => $purchaseAccount->id, 'debit' => 35000, 'credit' => 0],
-                    ['account_id' => $cashAccount->id, 'debit' => 0, 'credit' => 35000],
+                    ['ledger_id' => $purchaseLedger->id, 'debit' => 35000, 'credit' => 0],
+                    ['ledger_id' => $cashLedger->id, 'debit' => 0, 'credit' => 35000],
                 ],
             ],
         ];
@@ -83,7 +72,7 @@ class VoucherSeeder extends Seeder
             foreach ($entry['lines'] as $line) {
                 VoucherLine::create([
                     'voucher_id' => $voucher->id,
-                    'account_id' => $line['account_id'],
+                    'ledger_id' => $line['ledger_id'],
                     'debit' => $line['debit'],
                     'credit' => $line['credit'],
                     'sync_status' => 'synced',

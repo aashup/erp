@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             FinancialYearSeeder::class,
             AccountingGroupSeeder::class,
+            LedgerSeeder::class,
 
             // Inventory
             GodownSeeder::class,
@@ -23,7 +24,7 @@ class DatabaseSeeder extends Seeder
             BatchSeeder::class,
             StockLedgerSeeder::class,
 
-            // Parties
+            // Parties (observer auto-creates ledgers)
             PartySeeder::class,
 
             // Purchase
@@ -38,7 +39,6 @@ class DatabaseSeeder extends Seeder
             AidwayBiotechInvoiceSeeder::class,
 
             // Accounting
-            LedgerSeeder::class,
             PaymentReceiptSeeder::class,
             VoucherSeeder::class,
         ]);
