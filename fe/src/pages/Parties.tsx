@@ -30,6 +30,8 @@ const schema = z.object({
   state_code: z.string().optional(),
   contact_person: z.string().optional(),
   credit_limit: z.coerce.number().min(0).optional(),
+  opening_balance: z.coerce.number().optional(),
+  balance_type: z.enum(['debit', 'credit']).optional(),
 });
 
 type PartyForm = z.infer<typeof schema>;
@@ -50,12 +52,12 @@ export default function Parties() {
 
   const createMutation = useMutation({
     mutationFn: (data: PartyForm) => partiesApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['parties'] }); setShowModal(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['parties'] }); queryClient.invalidateQueries({ queryKey: ['ledgers'] }); setShowModal(false); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<PartyForm> }) => partiesApi.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['parties'] }); setShowModal(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['parties'] }); queryClient.invalidateQueries({ queryKey: ['ledgers'] }); setShowModal(false); },
   });
 
   const deleteMutation = useMutation({
@@ -66,10 +68,10 @@ export default function Parties() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, formState: { errors } } = useForm<PartyForm>({ resolver: zodResolver(schema) as any });
 
-  const openCreate = () => { setEditParty(null); reset({ type: 'customer', name: '' }); setShowModal(true); };
+  const openCreate = () => { setEditParty(null); reset({ type: 'customer', name: '', opening_balance: undefined, balance_type: undefined }); setShowModal(true); };
   const openEdit = (p: Party) => {
     setEditParty(p);
-    reset({ type: p.type, name: p.name, gstin: p.gstin ?? '', pan: p.pan ?? '', phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', city: p.city ?? '', state: p.state ?? '', state_code: p.state_code ?? '', contact_person: p.contact_person ?? '', credit_limit: p.credit_limit ?? undefined });
+    reset({ type: p.type, name: p.name, gstin: p.gstin ?? '', pan: p.pan ?? '', phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', city: p.city ?? '', state: p.state ?? '', state_code: p.state_code ?? '', contact_person: p.contact_person ?? '', credit_limit: p.credit_limit ?? undefined, opening_balance: p.opening_balance ?? undefined, balance_type: p.balance_type ?? undefined });
     setShowModal(true);
   };
 
@@ -137,6 +139,12 @@ export default function Parties() {
             <Input id="state_code" label="State Code" {...register('state_code')} />
             <Input id="contact_person" label="Contact Person" {...register('contact_person')} />
             <Input id="credit_limit" label="Credit Limit" type="number" step="0.01" {...register('credit_limit')} />
+            {!editParty && (
+              <>
+                <Input id="opening_balance" label="Opening Balance" type="number" step="0.01" {...register('opening_balance')} />
+                <Select id="balance_type" label="Balance Type" options={[{ value: '', label: 'Select...' }, { value: 'debit', label: 'Debit' }, { value: 'credit', label: 'Credit' }]} {...register('balance_type')} />
+              </>
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>

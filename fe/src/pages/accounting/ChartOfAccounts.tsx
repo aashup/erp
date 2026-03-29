@@ -15,6 +15,7 @@ import {
   Pencil,
   Trash2,
   Search,
+  Plus,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -530,6 +531,146 @@ function EditModal({ open, account, allAccounts, onClose, onSave, saving }: Edit
 }
 
 // ---------------------------------------------------------------------------
+// Create Modal
+// ---------------------------------------------------------------------------
+
+interface CreateModalProps {
+  open: boolean;
+  allAccounts: AccountingGroup[];
+  onClose: () => void;
+  onSave: (data: { name: string; code: string; type: string; parent_id: string | null; balance_type: 'dr' | 'cr' }) => void;
+  saving: boolean;
+}
+
+function CreateModal({ open, allAccounts, onClose, onSave, saving }: CreateModalProps) {
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [type, setType] = useState('asset');
+  const [parentId, setParentId] = useState<string | null>(null);
+  const [balanceType, setBalanceType] = useState<'dr' | 'cr'>('dr');
+
+  const resetForm = () => {
+    setName('');
+    setCode('');
+    setType('asset');
+    setParentId(null);
+    setBalanceType('dr');
+  };
+
+  // Filter parent options by selected type
+  const parentOptions = allAccounts.filter((a) => a.type === type);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ name, code, type, parent_id: parentId || null, balance_type: balanceType });
+  };
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) resetForm();
+  }, [open]);
+
+  return (
+    <Modal open={open} onClose={onClose} title="Add Accounting Group">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            placeholder="e.g. Bank Accounts"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Code <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            required
+            maxLength={20}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-mono focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            placeholder="e.g. BANK_ACC"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Type <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={type}
+            onChange={(e) => { setType(e.target.value); setParentId(null); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="asset">Asset</option>
+            <option value="liability">Liability</option>
+            <option value="equity">Equity</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Parent Group
+          </label>
+          <select
+            value={parentId ?? ''}
+            onChange={(e) => setParentId(e.target.value || null)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">None (Root level)</option>
+            {parentOptions.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Nature
+          </label>
+          <select
+            value={balanceType}
+            onChange={(e) => setBalanceType(e.target.value as 'dr' | 'cr')}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="dr">Debit (Dr)</option>
+            <option value="cr">Credit (Cr)</option>
+          </select>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving || !name || !code}
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+          >
+            {saving ? 'Creating...' : 'Create Group'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -545,7 +686,8 @@ export default function AccountingGroups() {
   // Expand/collapse state
   const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
 
-  // Edit modal state
+  // Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [editAccount, setEditAccount] = useState<AccountingGroup | null>(null);
 
   const toggleExpand = useCallback((id: string) => {
@@ -593,6 +735,16 @@ export default function AccountingGroups() {
       toast.success('Account updated');
     },
     onError: () => toast.error('Failed to update account'),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<AccountingGroup>) => accountingGroupsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting-groups'] });
+      setShowCreateModal(false);
+      toast.success('Group created');
+    },
+    onError: () => toast.error('Failed to create group'),
   });
 
   const deleteMutation = useMutation({
@@ -667,6 +819,13 @@ export default function AccountingGroups() {
               className="w-48 rounded-lg border border-gray-300 bg-white py-1.5 pl-9 pr-3 text-xs text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
             />
           </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Group
+          </button>
           <button
             onClick={() => expandAll(treeByType)}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
@@ -818,6 +977,15 @@ export default function AccountingGroups() {
         hideInactive={hideInactive}
         setHideInactive={setHideInactive}
         onReset={handleReset}
+      />
+
+      {/* Create Modal */}
+      <CreateModal
+        open={showCreateModal}
+        allAccounts={allAccounts}
+        onClose={() => setShowCreateModal(false)}
+        onSave={(data) => createMutation.mutate(data as Partial<AccountingGroup>)}
+        saving={createMutation.isPending}
       />
 
       {/* Edit Modal */}

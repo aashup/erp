@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
-import { vouchersApi, accountingGroupsApi } from '@/api/accounting';
+import { vouchersApi, ledgersApi } from '@/api/accounting';
 import type { Voucher } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useSelectedFYId } from '@/hooks/useFinancialYear';
@@ -19,7 +19,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Search, Eye, X } from 'lucide-react';
 
 const journalLineSchema = z.object({
-  account_id: z.string().min(1, 'Account required'),
+  ledger_id: z.string().min(1, 'Ledger required'),
   debit: z.preprocess((v) => (v === '' || v === undefined ? 0 : Number(v)), z.number().min(0)),
   credit: z.preprocess((v) => (v === '' || v === undefined ? 0 : Number(v)), z.number().min(0)),
   narration: z.string().optional(),
@@ -54,9 +54,9 @@ export default function JournalEntries() {
     select: (res) => res.data,
   });
 
-  const { data: accountsData } = useQuery({
-    queryKey: ['accounting-groups-all'],
-    queryFn: () => accountingGroupsApi.list({ per_page: '500' }),
+  const { data: ledgersData } = useQuery({
+    queryKey: ['ledgers-all'],
+    queryFn: () => ledgersApi.list({ per_page: '500' }),
     select: (res) => res.data,
   });
 
@@ -73,8 +73,8 @@ export default function JournalEntries() {
     defaultValues: {
       voucher_type: 'journal',
       lines: [
-        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
-        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
+        { ledger_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
+        { ledger_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
       ],
     },
   });
@@ -92,8 +92,8 @@ export default function JournalEntries() {
       voucher_type: 'journal',
       narration: '',
       lines: [
-        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
-        { account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
+        { ledger_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
+        { ledger_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' },
       ],
     });
     setShowModal(true);
@@ -111,7 +111,7 @@ export default function JournalEntries() {
     } as unknown as Record<string, unknown>);
   };
 
-  const accountOptions = (accountsData?.data ?? []).map((a) => ({ value: a.id, label: `${a.code} - ${a.name}` }));
+  const ledgerOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: `${l.name}${l.group?.name ? ` (${l.group.name})` : ''}` }));
 
   const columns: ColumnDef<Voucher, unknown>[] = [
     { accessorKey: 'voucher_number', header: 'Voucher #' },
@@ -167,14 +167,14 @@ export default function JournalEntries() {
           <div className="border-t dark:border-gray-700 pt-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Entries (Debit = Credit)</h3>
-              <Button type="button" variant="secondary" size="sm" onClick={() => append({ account_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' })}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => append({ ledger_id: '', debit: '' as unknown as number, credit: '' as unknown as number, narration: '' })}>
                 <Plus className="mr-1 h-3 w-3" /> Add Line
               </Button>
             </div>
             {typeof errors.lines?.message === 'string' && <p className="text-sm text-red-500 mb-2">{errors.lines.message}</p>}
             <div className="space-y-3">
               <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1">
-                <div className="col-span-5">Account</div>
+                <div className="col-span-5">Ledger</div>
                 <div className="col-span-2">Debit (₹)</div>
                 <div className="col-span-2">Credit (₹)</div>
                 <div className="col-span-2">Narration</div>
@@ -183,9 +183,9 @@ export default function JournalEntries() {
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-5">
-                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.account_id`)}>
-                      <option value="">Select account</option>
-                      {accountOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.ledger_id`)}>
+                      <option value="">Select ledger</option>
+                      {ledgerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </div>
                   <div className="col-span-2">
@@ -243,7 +243,7 @@ export default function JournalEntries() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
-                    <th className="py-2">Account</th>
+                    <th className="py-2">Ledger</th>
                     <th className="py-2 text-right">Debit</th>
                     <th className="py-2 text-right">Credit</th>
                   </tr>
@@ -251,7 +251,7 @@ export default function JournalEntries() {
                 <tbody>
                   {showDetail.lines.map((line) => (
                     <tr key={line.id} className="border-b dark:border-gray-700">
-                      <td className="py-2">{line.account?.name ?? line.account_id}</td>
+                      <td className="py-2">{line.ledger?.name ?? line.ledger_id}</td>
                       <td className="py-2 text-right">{line.debit > 0 ? formatCurrency(line.debit) : '—'}</td>
                       <td className="py-2 text-right">{line.credit > 0 ? formatCurrency(line.credit) : '—'}</td>
                     </tr>

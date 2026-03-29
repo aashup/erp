@@ -313,11 +313,11 @@ export interface Voucher extends SyncColumns {
 export interface VoucherLine extends SyncColumns {
   id: string;
   voucher_id: string;
-  account_id: string;
+  ledger_id: string;
   debit: number;
   credit: number;
   narration: string | null;
-  account?: AccountingGroup;
+  ledger?: Ledger;
 }
 
 export interface Ledger extends SyncColumns {

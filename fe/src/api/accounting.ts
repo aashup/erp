@@ -18,6 +18,9 @@ export const accountingGroupsApi = {
   get: (id: string) =>
     api.get<ApiResponse<AccountingGroup>>(`/accounting-groups/${id}`),
 
+  create: (data: Partial<AccountingGroup>) =>
+    api.post<ApiResponse<AccountingGroup>>('/accounting-groups', data),
+
   update: (id: string, data: Partial<AccountingGroup>) =>
     api.put<ApiResponse<AccountingGroup>>(`/accounting-groups/${id}`, data),
 
