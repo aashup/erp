@@ -17,31 +17,31 @@ class AccountingGroupSeeder extends Seeder
      */
     protected array $standardAccounts = [
         // Assets
-        ['code' => '1000', 'name' => 'Fixed Assets', 'type' => 'asset', 'group' => 'fixed_asset', 'system_key' => null],
-        ['code' => '1100', 'name' => 'Current Assets', 'type' => 'asset', 'group' => 'current_asset', 'system_key' => null],
-        ['code' => '1200', 'name' => 'Investments', 'type' => 'asset', 'group' => 'investment', 'system_key' => null],
-        ['code' => '1300', 'name' => 'Cash and Bank', 'type' => 'asset', 'group' => 'current_asset', 'system_key' => null],
+        ['code' => '1000', 'name' => 'Fixed Assets', 'type' => 'asset', 'system_key' => null],
+        ['code' => '1100', 'name' => 'Current Assets', 'type' => 'asset', 'system_key' => null],
+        ['code' => '1200', 'name' => 'Investments', 'type' => 'asset', 'system_key' => null],
+        ['code' => '1300', 'name' => 'Cash and Bank', 'type' => 'asset', 'system_key' => null],
 
         // Liabilities
-        ['code' => '2000', 'name' => 'Current Liabilities', 'type' => 'liability', 'group' => 'current_liability', 'system_key' => null],
-        ['code' => '2100', 'name' => 'Long Term Liabilities', 'type' => 'liability', 'group' => 'long_term_liability', 'system_key' => null],
-        ['code' => '2200', 'name' => 'Provisions', 'type' => 'liability', 'group' => 'current_liability', 'system_key' => null],
+        ['code' => '2000', 'name' => 'Current Liabilities', 'type' => 'liability', 'system_key' => null],
+        ['code' => '2100', 'name' => 'Long Term Liabilities', 'type' => 'liability', 'system_key' => null],
+        ['code' => '2200', 'name' => 'Provisions', 'type' => 'liability', 'system_key' => null],
 
         // Equity
-        ['code' => '3000', 'name' => 'Equity', 'type' => 'equity', 'group' => 'equity', 'system_key' => null],
-        ['code' => '3100', 'name' => 'Reserves and Surplus', 'type' => 'equity', 'group' => 'equity', 'system_key' => null],
+        ['code' => '3000', 'name' => 'Equity', 'type' => 'equity', 'system_key' => null],
+        ['code' => '3100', 'name' => 'Reserves and Surplus', 'type' => 'equity', 'system_key' => null],
 
         // Income
-        ['code' => '4000', 'name' => 'Sales', 'type' => 'income', 'group' => 'sales', 'system_key' => null],
-        ['code' => '4100', 'name' => 'Other Income', 'type' => 'income', 'group' => 'other_income', 'system_key' => null],
-        ['code' => '4200', 'name' => 'Purchase Returns', 'type' => 'income', 'group' => 'other_income', 'system_key' => null],
+        ['code' => '4000', 'name' => 'Sales', 'type' => 'income', 'system_key' => null],
+        ['code' => '4100', 'name' => 'Other Income', 'type' => 'income', 'system_key' => null],
+        ['code' => '4200', 'name' => 'Purchase Returns', 'type' => 'income', 'system_key' => null],
 
         // Expenses
-        ['code' => '5000', 'name' => 'Purchases', 'type' => 'expense', 'group' => 'purchase', 'system_key' => null],
-        ['code' => '5100', 'name' => 'Direct Expenses', 'type' => 'expense', 'group' => 'direct_expense', 'system_key' => null],
-        ['code' => '5200', 'name' => 'Indirect Expenses', 'type' => 'expense', 'group' => 'indirect_expense', 'system_key' => null],
-        ['code' => '5300', 'name' => 'Financial Expenses', 'type' => 'expense', 'group' => 'financial_expense', 'system_key' => null],
-        ['code' => '5400', 'name' => 'Sales Returns', 'type' => 'expense', 'group' => 'direct_expense', 'system_key' => null],
+        ['code' => '5000', 'name' => 'Purchases', 'type' => 'expense', 'system_key' => null],
+        ['code' => '5100', 'name' => 'Direct Expenses', 'type' => 'expense', 'system_key' => null],
+        ['code' => '5200', 'name' => 'Indirect Expenses', 'type' => 'expense', 'system_key' => null],
+        ['code' => '5300', 'name' => 'Financial Expenses', 'type' => 'expense', 'system_key' => null],
+        ['code' => '5400', 'name' => 'Sales Returns', 'type' => 'expense', 'system_key' => null],
     ];
 
     /**
@@ -93,7 +93,6 @@ class AccountingGroupSeeder extends Seeder
                 'code' => $account['code'],
                 'name' => $account['name'],
                 'type' => $account['type'],
-                'group' => $account['group'],
                 'system_key' => $account['system_key'],
                 'is_system' => true,
                 'is_active' => true,
@@ -110,7 +109,6 @@ class AccountingGroupSeeder extends Seeder
                 'code' => $account['code'],
                 'name' => $account['name'],
                 'type' => $account['type'],
-                'group' => $account['type'],
                 'system_key' => $account['system_key'],
                 'is_system' => true,
                 'is_active' => true,

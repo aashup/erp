@@ -55,14 +55,6 @@ const typeColor: Record<string, 'info' | 'success' | 'warning' | 'danger' | 'def
   expense: 'warning',
 };
 
-function fmt(amount: number) {
-  if (!amount || amount === 0) return '-';
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
 
 // ---------------------------------------------------------------------------
 // Tree node type
@@ -121,11 +113,6 @@ function hasActiveAccounts(node: TreeNode): boolean {
   return node.children.some(hasActiveAccounts);
 }
 
-function hasNonZeroBalance(node: TreeNode): boolean {
-  if (node.account.opening_balance && Number(node.account.opening_balance) !== 0) return true;
-  return node.children.some(hasNonZeroBalance);
-}
-
 // Collect all group IDs in a tree
 function collectGroupIds(nodes: TreeNode[], ids: Set<string>) {
   for (const n of nodes) {
@@ -146,8 +133,6 @@ interface RowProps {
   expandedSet: Set<string>;
   toggleExpand: (id: string) => void;
   hideInactive: boolean;
-  hideZeroGroups: boolean;
-  hideZeroLedgers: boolean;
   searchTerm: string;
   onEdit: (account: AccountingGroup) => void;
   onDelete: (id: string) => void;
@@ -159,8 +144,6 @@ function CollapsibleRow({
   expandedSet,
   toggleExpand,
   hideInactive,
-  hideZeroGroups,
-  hideZeroLedgers,
   searchTerm,
   onEdit,
   onDelete,
@@ -168,19 +151,12 @@ function CollapsibleRow({
   const { account, children } = node;
   const isGroup = children.length > 0;
   const isExpanded = expandedSet.has(account.id);
-  const isZero = !account.opening_balance || Number(account.opening_balance) === 0;
 
   // Search filter
   if (searchTerm && !matchesSearch(node, searchTerm)) return null;
 
   // Hide inactive filter
   if (hideInactive && !account.is_active && !hasActiveAccounts(node)) return null;
-
-  // Hide zero groups
-  if (isGroup && hideZeroGroups && !hasNonZeroBalance(node)) return null;
-
-  // Hide zero ledgers
-  if (!isGroup && hideZeroLedgers && isZero) return null;
 
   const paddingLeft = 16 + depth * 24;
 
@@ -227,20 +203,6 @@ function CollapsibleRow({
               <span className="ml-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">(System)</span>
             )}
           </div>
-        </td>
-
-        {/* Opening Balance */}
-        <td className="px-4 py-2.5 text-right font-mono text-sm">
-          {account.opening_balance && Number(account.opening_balance) !== 0 ? (
-            <span className={account.balance_type === 'dr' ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}>
-              {fmt(Number(account.opening_balance))}
-              <span className="ml-1 text-[10px] font-medium">
-                {account.balance_type === 'dr' ? 'Dr' : 'Cr'}
-              </span>
-            </span>
-          ) : (
-            <span className="text-gray-300 dark:text-gray-600">-</span>
-          )}
         </td>
 
         {/* Balance Type */}
@@ -290,8 +252,6 @@ function CollapsibleRow({
             expandedSet={expandedSet}
             toggleExpand={toggleExpand}
             hideInactive={hideInactive}
-            hideZeroGroups={hideZeroGroups}
-            hideZeroLedgers={hideZeroLedgers}
             searchTerm={searchTerm}
             onEdit={onEdit}
             onDelete={onDelete}
@@ -314,10 +274,6 @@ interface FilterPanelProps {
   setFilterType: (v: string) => void;
   hideInactive: boolean;
   setHideInactive: (v: boolean) => void;
-  hideZeroGroups: boolean;
-  setHideZeroGroups: (v: boolean) => void;
-  hideZeroLedgers: boolean;
-  setHideZeroLedgers: (v: boolean) => void;
   onReset: () => void;
 }
 
@@ -330,10 +286,6 @@ function FilterPanel({
   setFilterType,
   hideInactive,
   setHideInactive,
-  hideZeroGroups,
-  setHideZeroGroups,
-  hideZeroLedgers,
-  setHideZeroLedgers,
   onReset,
 }: FilterPanelProps) {
   return (
@@ -420,38 +372,6 @@ function FilterPanel({
                     </p>
                   </div>
                 </label>
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={hideZeroGroups}
-                    onChange={(e) => setHideZeroGroups(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      Hide zero-balance groups
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      Hide groups where all children have zero opening balance
-                    </p>
-                  </div>
-                </label>
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={hideZeroLedgers}
-                    onChange={(e) => setHideZeroLedgers(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      Hide zero-balance ledgers
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      Hide individual accounts with no opening balance
-                    </p>
-                  </div>
-                </label>
               </div>
             </div>
           </div>
@@ -486,13 +406,12 @@ interface EditModalProps {
   account: AccountingGroup | null;
   allAccounts: AccountingGroup[];
   onClose: () => void;
-  onSave: (id: string, data: { name: string; opening_balance: number; balance_type: 'dr' | 'cr'; is_active: boolean }) => void;
+  onSave: (id: string, data: { name: string; balance_type: 'dr' | 'cr'; is_active: boolean }) => void;
   saving: boolean;
 }
 
 function EditModal({ open, account, allAccounts, onClose, onSave, saving }: EditModalProps) {
   const [name, setName] = useState('');
-  const [openingBalance, setOpeningBalance] = useState('');
   const [balanceType, setBalanceType] = useState<'dr' | 'cr'>('dr');
   const [isActive, setIsActive] = useState(true);
 
@@ -500,7 +419,6 @@ function EditModal({ open, account, allAccounts, onClose, onSave, saving }: Edit
   useEffect(() => {
     if (account) {
       setName(account.name);
-      setOpeningBalance(account.opening_balance ? String(account.opening_balance) : '');
       setBalanceType(account.balance_type);
       setIsActive(account.is_active);
     }
@@ -514,7 +432,6 @@ function EditModal({ open, account, allAccounts, onClose, onSave, saving }: Edit
     e.preventDefault();
     onSave(account.id, {
       name,
-      opening_balance: Number(openingBalance) || 0,
       balance_type: balanceType,
       is_active: isActive,
     });
@@ -576,43 +493,18 @@ function EditModal({ open, account, allAccounts, onClose, onSave, saving }: Edit
             </label>
           </div>
 
-          {/* Opening Balance Section */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
-            <h4 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Opening Balance
-            </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Amount
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={openingBalance}
-                  onChange={(e) => setOpeningBalance(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Dr / Cr
-                </label>
-                <select
-                  value={balanceType}
-                  onChange={(e) => setBalanceType(e.target.value as 'dr' | 'cr')}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                >
-                  <option value="dr">Debit (Dr)</option>
-                  <option value="cr">Credit (Cr)</option>
-                </select>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-              Enter the closing balance from the previous financial year as opening balance here.
-            </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Nature
+            </label>
+            <select
+              value={balanceType}
+              onChange={(e) => setBalanceType(e.target.value as 'dr' | 'cr')}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="dr">Debit (Dr)</option>
+              <option value="cr">Credit (Cr)</option>
+            </select>
           </div>
         </div>
 
@@ -649,8 +541,6 @@ export default function AccountingGroups() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [hideInactive, setHideInactive] = useState(false);
-  const [hideZeroGroups, setHideZeroGroups] = useState(false);
-  const [hideZeroLedgers, setHideZeroLedgers] = useState(false);
 
   // Expand/collapse state
   const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
@@ -716,19 +606,17 @@ export default function AccountingGroups() {
 
   const handleEdit = (account: AccountingGroup) => setEditAccount(account);
   const handleDelete = (id: string) => deleteMutation.mutate(id);
-  const handleSave = (id: string, data: { name: string; opening_balance: number; balance_type: 'dr' | 'cr'; is_active: boolean }) => {
+  const handleSave = (id: string, data: { name: string; balance_type: 'dr' | 'cr'; is_active: boolean }) => {
     updateMutation.mutate({ id, data });
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchTerm || filterType || hideInactive || hideZeroGroups || hideZeroLedgers;
+  const hasActiveFilters = searchTerm || filterType || hideInactive;
 
   const handleReset = () => {
     setSearchTerm('');
     setFilterType('');
     setHideInactive(false);
-    setHideZeroGroups(false);
-    setHideZeroLedgers(false);
   };
 
   // Compute stats
@@ -866,9 +754,6 @@ export default function AccountingGroups() {
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">
                     Account
                   </th>
-                  <th className="w-48 px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
-                    Opening Balance
-                  </th>
                   <th className="w-28 px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">
                     Nature
                   </th>
@@ -897,7 +782,7 @@ export default function AccountingGroups() {
                             ({typeCount} {typeCount === 1 ? 'account' : 'accounts'})
                           </span>
                         </td>
-                        <td className="px-4 py-2.5" colSpan={2} />
+                        <td className="px-4 py-2.5" colSpan={1} />
                       </tr>
                       {/* Tree rows */}
                       {nodes.map((node) => (
@@ -908,8 +793,6 @@ export default function AccountingGroups() {
                           expandedSet={expandedSet}
                           toggleExpand={toggleExpand}
                           hideInactive={hideInactive}
-                          hideZeroGroups={hideZeroGroups}
-                          hideZeroLedgers={hideZeroLedgers}
                           searchTerm={searchTerm}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
@@ -934,10 +817,6 @@ export default function AccountingGroups() {
         setFilterType={setFilterType}
         hideInactive={hideInactive}
         setHideInactive={setHideInactive}
-        hideZeroGroups={hideZeroGroups}
-        setHideZeroGroups={setHideZeroGroups}
-        hideZeroLedgers={hideZeroLedgers}
-        setHideZeroLedgers={setHideZeroLedgers}
         onReset={handleReset}
       />
 

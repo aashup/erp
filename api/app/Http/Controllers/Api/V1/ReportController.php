@@ -67,8 +67,8 @@ class ReportController extends Controller
             $txnDebit = (float) ($txn->total_debit ?? 0);
             $txnCredit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit = $account->balance_type === 'dr' ? (float) $account->opening_balance : 0;
-            $openingCredit = $account->balance_type === 'cr' ? (float) $account->opening_balance : 0;
+            $openingDebit = 0;
+            $openingCredit = 0;
 
             $totalDebit = $openingDebit + $txnDebit;
             $totalCredit = $openingCredit + $txnCredit;
@@ -283,10 +283,7 @@ class ReportController extends Controller
             ->get();
 
         // Calculate running balance
-        $ledgerAccount = AccountingGroup::find($party->ledger_account_id);
-        $openingBalance = $ledgerAccount
-            ? ($ledgerAccount->balance_type === 'dr' ? (float) $ledgerAccount->opening_balance : -(float) $ledgerAccount->opening_balance)
-            : 0;
+        $openingBalance = 0;
 
         $runningBalance = $openingBalance;
         $rows = [];

@@ -290,10 +290,8 @@ export interface AccountingGroup extends SyncColumns {
   code: string;
   name: string;
   type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
-  group: string | null;
   is_system: boolean;
   is_active: boolean;
-  opening_balance: number;
   balance_type: 'dr' | 'cr';
   children?: AccountingGroup[];
   parent?: AccountingGroup;

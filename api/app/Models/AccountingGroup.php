@@ -21,11 +21,9 @@ class AccountingGroup extends Model
         'code',
         'name',
         'type',
-        'group',
         'system_key',
         'is_system',
         'is_active',
-        'opening_balance',
         'balance_type',
     ];
 
@@ -44,7 +42,6 @@ class AccountingGroup extends Model
         return [
             'is_system' => 'boolean',
             'is_active' => 'boolean',
-            'opening_balance' => 'decimal:2',
         ];
     }
 

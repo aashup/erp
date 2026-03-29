@@ -54,10 +54,8 @@ class PartyObserver
             'code' => $nextCode,
             'name' => $party->name,
             'type' => $type,
-            'group' => $parentAccount->group,
             'is_system' => false,
             'is_active' => true,
-            'opening_balance' => $party->opening_balance ?? 0,
             'balance_type' => $balanceType,
         ]);
 
