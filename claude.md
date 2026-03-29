@@ -12,6 +12,47 @@
 
 ---
 
+## Accounting Reference (Tally / Marg ERP Style)
+
+> Always follow Tally / Marg ERP conventions for accounting logic. Ask the user before making any accounting-related changes.
+
+### Core Structure
+Groups → Ledgers → Vouchers → Double Entry
+
+### 1. Groups (Chart of Accounts Hierarchy)
+| Primary Group | Example Sub-groups |
+|---|---|
+| **Assets** | Current Assets → Bank Accounts → SBI, Cash-in-Hand |
+| **Liabilities** | Current Liabilities → Sundry Creditors, Duties & Taxes |
+| **Income** | Direct Income → Sales Account |
+| **Expenses** | Direct Expenses → Purchase Account, Indirect Expenses → Electricity |
+
+### 2. Ledgers (Accounts under Groups)
+Every ledger belongs to a group. Examples: Cash, SBI Bank, Sales Account, Purchase Account, Party (Customer/Vendor).
+
+### 3. Vouchers & Double Entry
+One voucher = multiple ledger entries. **Rule: SUM(Dr) must always equal SUM(Cr).**
+
+Sale ₹1,000 (incl. tax) → Party A/c **Dr** ₹1,000 · Sales A/c **Cr** ₹900 · Output GST A/c **Cr** ₹100
+
+Receipt ₹1,000 → Cash/Bank A/c **Dr** ₹1,000 · Party A/c **Cr** ₹1,000
+
+### 4. GST & ITC Rules
+- **Purchase** → Tax paid is **ITC** (Input Tax Credit) — recorded as asset
+  - Intra-state: CGST ITC + SGST ITC
+  - Inter-state: IGST ITC
+- **Sale** → Tax collected is **GST Liability** — recorded as liability
+  - Intra-state: CGST Payable + SGST Payable
+  - Inter-state: IGST Payable
+
+**Purchase Invoice entry:**
+Purchase A/c Dr · CGST ITC Dr · SGST ITC Dr (or IGST ITC Dr) · Vendor A/c Cr
+
+**Sales Invoice entry:**
+Customer A/c Dr · Sales A/c Cr · CGST Payable Cr · SGST Payable Cr (or IGST Payable Cr)
+
+---
+
 ## Login Details
 
 Role-wise login credentials for testing. **Password for all: `Aashu@123`**

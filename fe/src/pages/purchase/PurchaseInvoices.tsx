@@ -41,6 +41,14 @@ const invoiceSchema = z.object({
 
 type InvoiceForm = z.infer<typeof invoiceSchema>;
 
+// Edit form — backend only allows status + notes update on draft invoices
+const editSchema = z.object({
+  status: z.enum(['draft', 'confirmed', 'cancelled']),
+  notes: z.string().optional(),
+});
+
+type EditForm = z.infer<typeof editSchema>;
+
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
   draft: 'default',
   confirmed: 'success',
@@ -52,6 +60,7 @@ export default function PurchaseInvoices() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editInv, setEditInv] = useState<PurchaseInvoice | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -87,7 +96,7 @@ export default function PurchaseInvoices() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => purchaseInvoicesApi.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] }); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] }); closeEditModal(); },
   });
 
   const deleteMutation = useMutation({
@@ -123,40 +132,35 @@ export default function PurchaseInvoices() {
     setShowModal(true);
   };
 
+  // Edit form (separate from create form — backend only allows status + notes)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { register: registerEdit, handleSubmit: handleEditSubmit, reset: resetEdit, formState: { errors: editErrors } } = useForm<EditForm>({ resolver: zodResolver(editSchema) as any });
+
   const openEdit = (inv: PurchaseInvoice) => {
     setEditInv(inv);
-    reset({
-      invoice_number: inv.invoice_number ?? '',
-      party_id: inv.party_id,
-      invoice_date: inv.invoice_date,
-      vendor_invoice_number: inv.vendor_invoice_number ?? '',
-      due_date: inv.due_date ?? '',
-      is_inter_state: inv.is_inter_state,
-      notes: inv.notes ?? '',
-      lines: inv.lines?.map((l) => ({
-        item_id: l.item_id,
-        godown_id: (l as unknown as { godown_id?: string }).godown_id ?? defaultGodownId,
-        quantity: l.quantity,
-        rate: l.rate,
-        discount_percent: l.discount_percent,
-        gst_rate: l.gst_rate,
-      })) ?? [{ item_id: '', godown_id: defaultGodownId, quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],
-    });
-    setShowModal(true);
+    resetEdit({ status: inv.status as EditForm['status'], notes: inv.notes ?? '' });
+    setShowEditModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setEditInv(null);
     reset();
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditInv(null);
+    resetEdit();
   };
 
   const onSubmit = (formData: InvoiceForm) => {
     const payload = { ...formData } as Record<string, unknown>;
+    createMutation.mutate(payload);
+  };
+
+  const onEditSubmit = (formData: EditForm) => {
     if (editInv) {
-      updateMutation.mutate({ id: editInv.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
+      updateMutation.mutate({ id: editInv.id, data: formData as Record<string, unknown> });
     }
   };
 
@@ -249,7 +253,8 @@ export default function PurchaseInvoices() {
         {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}
       </Card>
 
-      <Modal open={showModal} onClose={closeModal} title={editInv ? 'Edit Purchase Invoice' : 'New Purchase Invoice'} size="xl">
+      {/* Create Modal */}
+      <Modal open={showModal} onClose={closeModal} title="New Purchase Invoice" size="xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input id="invoice_number" label="Invoice Number (optional)" placeholder="Auto-generated if empty" error={errors.invoice_number?.message} {...register('invoice_number')} />
@@ -345,11 +350,69 @@ export default function PurchaseInvoices() {
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
-              {editInv ? 'Update' : 'Create'}
-            </Button>
+            <Button type="submit" loading={createMutation.isPending}>Create</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Edit Modal — only status + notes (backend constraint) */}
+      <Modal open={showEditModal} onClose={closeEditModal} title="Edit Purchase Invoice" size="lg">
+        {editInv && (
+          <div className="space-y-4">
+            {/* Read-only invoice summary */}
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <div><span className="text-gray-500 dark:text-gray-400">Invoice #: </span><span className="font-medium text-gray-900 dark:text-gray-100">{editInv.invoice_number}</span></div>
+                <div><span className="text-gray-500 dark:text-gray-400">Vendor: </span><span className="font-medium text-gray-900 dark:text-gray-100">{editInv.party?.name ?? '—'}</span></div>
+                <div><span className="text-gray-500 dark:text-gray-400">Date: </span><span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(editInv.invoice_date)}</span></div>
+                <div><span className="text-gray-500 dark:text-gray-400">Vendor Inv #: </span><span className="font-medium text-gray-900 dark:text-gray-100">{editInv.vendor_invoice_number ?? '—'}</span></div>
+                <div><span className="text-gray-500 dark:text-gray-400">Grand Total: </span><span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(editInv.grand_total)}</span></div>
+                <div><span className="text-gray-500 dark:text-gray-400">Balance Due: </span><span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(editInv.balance_due)}</span></div>
+              </div>
+
+              {/* Line items summary */}
+              {editInv.lines && editInv.lines.length > 0 && (
+                <div className="mt-3 border-t dark:border-gray-700 pt-3">
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">LINE ITEMS</h4>
+                  <div className="space-y-1">
+                    {editInv.lines.map((line, idx) => (
+                      <div key={line.id ?? idx} className="flex justify-between text-sm text-gray-700 dark:text-gray-300">
+                        <span>{line.item?.name ?? 'Item'} × {line.quantity}</span>
+                        <span>{formatCurrency(line.line_total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Editable fields */}
+            {editInv.status !== 'draft' ? (
+              <div className="rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-3 text-sm text-yellow-700 dark:text-yellow-400">
+                Only draft invoices can be edited. This invoice is <strong>{editInv.status}</strong>.
+              </div>
+            ) : (
+              <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-4">
+                <Select
+                  id="edit_status"
+                  label="Status"
+                  options={[
+                    { value: 'draft', label: 'Draft' },
+                    { value: 'confirmed', label: 'Confirmed' },
+                    { value: 'cancelled', label: 'Cancelled' },
+                  ]}
+                  error={editErrors.status?.message}
+                  {...registerEdit('status')}
+                />
+                <Input id="edit_notes" label="Notes" {...registerEdit('notes')} />
+                <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
+                  <Button type="button" variant="secondary" onClick={closeEditModal}>Cancel</Button>
+                  <Button type="submit" loading={updateMutation.isPending}>Update</Button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

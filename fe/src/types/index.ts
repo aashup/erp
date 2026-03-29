@@ -115,8 +115,9 @@ export interface Party extends SyncColumns {
   contact_person: string | null;
   credit_limit: number | null;
   opening_balance: number | null;
-  balance_type: 'debit' | 'credit' | null;
-  ledger_account_id: string | null;
+  balance_type: 'dr' | 'cr' | null;
+  debtor_ledger_id: string | null;
+  creditor_ledger_id: string | null;
   is_active: boolean;
 }
 

@@ -28,10 +28,12 @@ const schema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   state_code: z.string().optional(),
+  pincode: z.string().optional(),
   contact_person: z.string().optional(),
   credit_limit: z.coerce.number().min(0).optional(),
   opening_balance: z.coerce.number().optional(),
-  balance_type: z.enum(['debit', 'credit']).optional(),
+  balance_type: z.enum(['dr', 'cr']).optional(),
+  is_active: z.boolean().optional(),
 });
 
 type PartyForm = z.infer<typeof schema>;
@@ -68,10 +70,10 @@ export default function Parties() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, formState: { errors } } = useForm<PartyForm>({ resolver: zodResolver(schema) as any });
 
-  const openCreate = () => { setEditParty(null); reset({ type: 'customer', name: '', opening_balance: undefined, balance_type: undefined }); setShowModal(true); };
+  const openCreate = () => { setEditParty(null); reset({ type: 'customer', name: '', opening_balance: undefined, balance_type: undefined, is_active: true }); setShowModal(true); };
   const openEdit = (p: Party) => {
     setEditParty(p);
-    reset({ type: p.type, name: p.name, gstin: p.gstin ?? '', pan: p.pan ?? '', phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', city: p.city ?? '', state: p.state ?? '', state_code: p.state_code ?? '', contact_person: p.contact_person ?? '', credit_limit: p.credit_limit ?? undefined, opening_balance: p.opening_balance ?? undefined, balance_type: p.balance_type ?? undefined });
+    reset({ type: p.type, name: p.name, gstin: p.gstin ?? '', pan: p.pan ?? '', phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', city: p.city ?? '', state: p.state ?? '', state_code: p.state_code ?? '', pincode: p.pincode ?? '', contact_person: p.contact_person ?? '', credit_limit: p.credit_limit ?? undefined, is_active: p.is_active });
     setShowModal(true);
   };
 
@@ -137,13 +139,20 @@ export default function Parties() {
             <Input id="city" label="City" {...register('city')} />
             <Input id="state" label="State" {...register('state')} />
             <Input id="state_code" label="State Code" {...register('state_code')} />
+            <Input id="pincode" label="Pincode" {...register('pincode')} />
             <Input id="contact_person" label="Contact Person" {...register('contact_person')} />
             <Input id="credit_limit" label="Credit Limit" type="number" step="0.01" {...register('credit_limit')} />
             {!editParty && (
               <>
                 <Input id="opening_balance" label="Opening Balance" type="number" step="0.01" {...register('opening_balance')} />
-                <Select id="balance_type" label="Balance Type" options={[{ value: '', label: 'Select...' }, { value: 'debit', label: 'Debit' }, { value: 'credit', label: 'Credit' }]} {...register('balance_type')} />
+                <Select id="balance_type" label="Balance Type" options={[{ value: '', label: 'Select...' }, { value: 'dr', label: 'Debit (Dr)' }, { value: 'cr', label: 'Credit (Cr)' }]} {...register('balance_type')} />
               </>
+            )}
+            {editParty && (
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600" {...register('is_active')} />
+                Active
+              </label>
             )}
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">

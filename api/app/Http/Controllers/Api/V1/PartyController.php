@@ -42,7 +42,7 @@ class PartyController extends Controller
             'contact_person' => 'nullable|string|max:255',
             'credit_limit' => 'nullable|numeric|min:0',
             'opening_balance' => 'nullable|numeric',
-            'balance_type' => 'nullable|in:debit,credit',
+            'balance_type' => 'nullable|in:dr,cr',
         ]);
 
         $party = Party::create($validated);
