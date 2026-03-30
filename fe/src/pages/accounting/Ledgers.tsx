@@ -5,12 +5,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ledgersApi, accountingGroupsApi } from '@/api/accounting';
-import type { Ledger } from '@/types';
+import type { AccountingGroup, Ledger } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -83,7 +84,7 @@ export default function Ledgers() {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<LedgerForm>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<LedgerForm>({
     resolver: zodResolver(ledgerSchema) as any,
     defaultValues,
   });
@@ -219,12 +220,18 @@ export default function Ledgers() {
             <Input id="alias" label="Alias" {...register('alias')} />
           </div>
 
-          <Select
-            id="group_id"
+          <SlideSelect
+            name="group_id"
             label="Under Group"
-            options={groupOptions}
+            placeholder="Select group..."
+            panelTitle="Select Group"
+            value={watch('group_id')}
+            onChange={(val) => setValue('group_id', val, { shouldValidate: true })}
             error={errors.group_id?.message}
-            {...register('group_id')}
+            queryKey={['accounting-groups-all']}
+            queryFn={(params) => accountingGroupsApi.list({ ...params, per_page: '500' })}
+            mapFn={(g: AccountingGroup) => ({ value: g.id, label: `${g.name}`})}
+            displayValue={editItem?.group ? `${editItem.group.code} - ${editItem.group.name}` : undefined}
           />
 
           <div className="grid grid-cols-3 gap-4">

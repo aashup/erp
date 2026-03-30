@@ -10,8 +10,8 @@ fe/src/
 │   ├── settings.ts, financialYears.ts, dashboard.ts
 ├── components/
 │   ├── layout/             # AppLayout, AuthLayout, Sidebar, Header
-│   └── ui/                 # Button, Input, Select, Modal, Card, DataTable, Pagination, Badge
-├── hooks/                  # useFinancialYear, useSelectedFYId, useOnlineStatus, useSync
+│   └── ui/                 # Button, Input, Select, SlideSelect, Modal, Card, DataTable, Pagination, Badge
+├── hooks/                  # useFinancialYear, useSelectedFYId, useOnlineStatus, useSync, useDebounce
 ├── lib/
 │   ├── axios.ts            # Axios instance, auto-attaches JWT + financial_year_id
 │   └── utils.ts            # cn(), formatCurrency(), formatDate(), calcGST()
@@ -83,6 +83,17 @@ Response wrappers: ApiResponse<T>, PaginatedResponse<T>
 - **authStore**: user, token, isAuthenticated, setAuth(), logout()
 - **fyStore**: selectedFY, allFYs, setSelectedFY() (persisted to localStorage)
 - **themeStore**: isDarkMode, toggleDarkMode()
+
+## SlideSelect Component (`fe/src/components/ui/SlideSelect.tsx`)
+
+Reusable searchable select that opens a right-side sliding panel. Use for entity selection (parties, items, ledgers, godowns) — replaces native `<Select>` when search/filter is needed.
+
+- **Static mode**: pass `options: SlideSelectOption[]` for client-side filtering
+- **API mode**: pass `queryKey`, `queryFn`, `mapFn` for server-side search with pagination
+- **Form integration**: uses `value`/`onChange` pattern (NOT `register()`). Use with `watch()` + `setValue()` from react-hook-form
+- **Features**: keyboard nav (arrows/Enter/Escape), debounced search, dark mode, body scroll lock, clear button
+- **Keep existing `Select.tsx`** for small static enum lists (status, payment mode, voucher type)
+- See `fe/SLIDE_SELECT_PLAN.md` for full usage examples
 
 ## Routing (App.tsx)
 - AuthLayout wraps /login, /register
