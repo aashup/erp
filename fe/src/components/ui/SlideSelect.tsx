@@ -1,9 +1,8 @@
 import { cn } from '@/lib/utils';
-import { useDebounce } from '@/hooks/useDebounce';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import type { PaginatedResponse } from '@/types';
 
 export interface SlideSelectOption {
@@ -55,7 +54,6 @@ export function SlideSelect({
   const [isAnimating, setIsAnimating] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const [page, setPage] = useState(1);
   const [selectedLabel, setSelectedLabel] = useState(displayValue ?? '');
 
   const triggerInputRef = useRef<HTMLInputElement>(null);
@@ -64,34 +62,36 @@ export function SlideSelect({
   const [isFocused, setIsFocused] = useState(false);
 
   const isApiMode = Boolean(queryKey && queryFn && mapFn);
-  const debouncedSearch = useDebounce(search, 300);
 
-  // --- API mode query ---
+  // --- API mode: fetch all data once (no search/page params) ---
   const { data: apiData, isLoading, isError, refetch } = useQuery({
-    queryKey: [...(queryKey ?? []), 'slide-select', { search: debouncedSearch, page: String(page) }],
-    queryFn: () => queryFn!({ search: debouncedSearch, page: String(page), per_page: '20' }),
+    queryKey: [...(queryKey ?? []), 'slide-select-all'],
+    queryFn: () => queryFn!({ per_page: '500' }),
     enabled: isOpen && isApiMode,
     select: (res) => res.data,
+    staleTime: 30_000,
   });
 
-  const apiOptions = useMemo(
-    () => (apiData?.data ?? []).map(mapFn!),
+  // Map all API data to options once
+  const allApiOptions = useMemo(
+    () => (apiData?.data ?? []).map(mapFn!).sort((a, b) => a.label.localeCompare(b.label)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [apiData?.data]
   );
 
-  // --- Static mode filtering ---
-  const filteredStaticOptions = useMemo(() => {
-    if (!options) return [];
-    if (!search.trim()) return options;
-    const q = search.toLowerCase();
-    return options.filter(
+  // --- Client-side filtering (works for both static and API modes) ---
+  const filterOptions = useCallback((items: SlideSelectOption[], query: string) => {
+    if (!query.trim()) return items;
+    const q = query.toLowerCase();
+    return items.filter(
       (o) => o.label.toLowerCase().includes(q) || o.subtitle?.toLowerCase().includes(q)
     );
-  }, [options, search]);
+  }, []);
 
-  const currentOptions = isApiMode ? apiOptions : filteredStaticOptions;
-  const paginationData = isApiMode ? apiData : null;
+  const currentOptions = useMemo(() => {
+    const source = isApiMode ? allApiOptions : (options ?? []);
+    return filterOptions(source, search);
+  }, [isApiMode, allApiOptions, options, search, filterOptions]);
 
   // --- Resolve selected label ---
   useEffect(() => {
@@ -111,20 +111,16 @@ export function SlideSelect({
 
   // Also update label when API options load and we have a value
   useEffect(() => {
-    if (isApiMode && value && apiOptions.length > 0 && !selectedLabel) {
-      const found = apiOptions.find((o) => o.value === value);
+    if (isApiMode && value && allApiOptions.length > 0 && !selectedLabel) {
+      const found = allApiOptions.find((o) => o.value === value);
       if (found) setSelectedLabel(found.label);
     }
-  }, [isApiMode, value, apiOptions, selectedLabel]);
+  }, [isApiMode, value, allApiOptions, selectedLabel]);
 
-  // --- Reset on search/page change ---
+  // --- Reset highlight on search change ---
   useEffect(() => {
     setHighlightedIndex(0);
-  }, [debouncedSearch, page]);
-
-  useEffect(() => {
-    if (isApiMode) setPage(1);
-  }, [debouncedSearch, isApiMode]);
+  }, [search]);
 
   // --- Body scroll lock ---
   useEffect(() => {
@@ -144,7 +140,6 @@ export function SlideSelect({
     if (isOpen) return;
     setSearch('');
     setHighlightedIndex(0);
-    setPage(1);
     setIsOpen(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -295,7 +290,7 @@ export function SlideSelect({
             {/* Backdrop */}
             <div
               className={cn(
-                'fixed inset-0 z-50 bg-black/50 transition-opacity duration-300',
+                'fixed inset-0 z-50 transition-opacity duration-300',
                 isAnimating ? 'opacity-100' : 'opacity-0'
               )}
               onClick={close}
@@ -392,35 +387,6 @@ export function SlideSelect({
                   ))}
               </div>
 
-              {/* Pagination footer (API mode) */}
-              {paginationData && paginationData.last_page > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-4 py-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Total: <span className="font-medium">{paginationData.total}</span>
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page <= 1}
-                      className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <span className="text-xs text-gray-700 dark:text-gray-300">
-                      {page} / {paginationData.last_page}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.min(paginationData.last_page, p + 1))}
-                      disabled={page >= paginationData.last_page}
-                      className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </>,
           document.body
