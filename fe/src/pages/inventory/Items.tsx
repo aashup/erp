@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
-import { itemsApi } from '@/api/inventory';
+import { itemsApi, itemGroupsApi } from '@/api/inventory';
 import { companySettingsApi } from '@/api/settings';
-import type { Item, UnitOption } from '@/types';
+import type { Item, ItemGroup, UnitOption } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +23,7 @@ const itemSchema = z.object({
   sku: z.string().optional(),
   hsn_code: z.string().optional(),
   unit: z.string().min(1, 'Unit is required'),
-  category: z.string().optional(),
+  item_group_id: z.string().optional(),
   gst_rate: z.coerce.number().min(0),
   mrp: z.union([z.coerce.number(), z.nan()]).transform((val) => (isNaN(val) ? undefined : val)).optional(),
   purchase_price: z.coerce.number().min(0).optional(),
@@ -51,6 +51,15 @@ export default function Items() {
     queryKey: ['company-settings'],
     queryFn: () => companySettingsApi.get(),
     select: (res) => res.data.data,
+  });
+
+  const { data: itemGroupsData } = useQuery({
+    queryKey: ['item-groups'],
+    queryFn: () => itemGroupsApi.list({ per_page: '500', active_only: '1' }),
+    select: (res) => {
+      const d = res.data;
+      return (Array.isArray(d) ? d : d.data || []) as ItemGroup[];
+    },
   });
 
   const createMutation = useMutation({
@@ -93,7 +102,7 @@ export default function Items() {
       sku: '',
       hsn_code: '',
       unit: unitOptions[0]?.value ?? '',
-      category: '',
+      item_group_id: '',
       gst_rate: 18,
       is_batch_tracked: false,
     });
@@ -107,7 +116,7 @@ export default function Items() {
       sku: item.sku ?? '',
       hsn_code: item.hsn_code ?? '',
       unit: item.unit,
-      category: item.category ?? '',
+      item_group_id: item.item_group_id ?? '',
       gst_rate: item.gst_rate,
       mrp: item.mrp ?? undefined,
       purchase_price: item.purchase_price ?? undefined,
@@ -147,7 +156,11 @@ export default function Items() {
     { accessorKey: 'sku', header: 'SKU' },
     { accessorKey: 'hsn_code', header: 'HSN' },
     { accessorKey: 'unit', header: 'Unit' },
-    { accessorKey: 'category', header: 'Category' },
+    {
+      accessorKey: 'item_group',
+      header: 'Group',
+      cell: ({ row }) => row.original.item_group?.name ?? '—',
+    },
     {
       accessorKey: 'gst_rate',
       header: 'GST %',
@@ -249,7 +262,12 @@ export default function Items() {
               disabled={isUnitsLoading || formUnitOptions.length === 0}
               {...register('unit')}
             />
-            <Input id="category" label="Category" {...register('category')} />
+            <Select
+              id="item_group_id"
+              label="Item Group"
+              options={[{ value: '', label: 'None' }, ...(itemGroupsData ?? []).map((g) => ({ value: g.id, label: g.name }))]}
+              {...register('item_group_id')}
+            />
             <Input id="gst_rate" label="GST Rate (%)" type="number" step="0.01" error={errors.gst_rate?.message} {...register('gst_rate', { valueAsNumber: true })} />
             <Input id="mrp" label="MRP" type="number" step="0.01" error={errors.mrp?.message} {...register('mrp', { valueAsNumber: true })} />
             <Input id="purchase_price" label="Purchase Price" type="number" step="0.01" error={errors.purchase_price?.message} {...register('purchase_price', { valueAsNumber: true })} />

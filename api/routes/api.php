@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\FinancialYearController;
 use App\Http\Controllers\Api\V1\GodownController;
 use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\ItemController;
+use App\Http\Controllers\Api\V1\ItemGroupController;
 use App\Http\Controllers\Api\V1\LedgerController;
 use App\Http\Controllers\Api\V1\PartyController;
 use App\Http\Controllers\Api\V1\PaymentReceiptController;
@@ -52,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sync/pull', [SyncController::class, 'pull']);
 
     // Inventory
+    Route::apiResource('item-groups', ItemGroupController::class);
     Route::apiResource('items', ItemController::class);
     Route::apiResource('godowns', GodownController::class);
 

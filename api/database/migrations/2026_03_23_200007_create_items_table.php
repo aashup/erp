@@ -9,14 +9,30 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('item_groups', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('parent_id')->nullable()->constrained('item_groups')->nullOnDelete();
+            $table->string('name');
+            $table->boolean('is_active')->default(true);
+
+            // Sync columns
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
+            $table->timestamp('synced_at')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
         Schema::create('items', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('item_group_id')->nullable()->constrained('item_groups')->nullOnDelete();
             $table->string('name');
             $table->string('sku')->nullable();
             $table->string('hsn_code')->nullable();
             $table->string('unit'); // e.g. PCS, KG, BOX, STRIP
-            $table->string('category')->nullable();
             $table->decimal('gst_rate', 5, 2)->default(0);
             $table->decimal('mrp', 15, 2)->nullable();
             $table->decimal('purchase_price', 15, 2)->nullable();
@@ -38,5 +54,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('items');
+        Schema::dropIfExists('item_groups');
     }
 };

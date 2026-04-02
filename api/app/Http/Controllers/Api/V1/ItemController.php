@@ -15,9 +15,9 @@ class ItemController extends Controller
     {
         $this->authorize('viewAny', Item::class);
 
-        $items = Item::with('batches')
+        $items = Item::with(['batches', 'itemGroup'])
             ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%"))
-            ->when($request->category, fn ($q, $c) => $q->where('category', $c))
+            ->when($request->item_group_id, fn ($q, $g) => $q->where('item_group_id', $g))
             ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
             ->orderBy('name')
             ->paginate($request->per_page ?? 25);
@@ -34,7 +34,7 @@ class ItemController extends Controller
             'sku' => 'nullable|string|max:100',
             'hsn_code' => 'nullable|string|max:10',
             'unit' => ['required', 'string', 'max:20', Rule::in(CompanySetting::getItemUnitValues($request->user()->company_id))],
-            'category' => 'nullable|string|max:100',
+            'item_group_id' => 'nullable|uuid|exists:item_groups,id',
             'gst_rate' => 'required|numeric|min:0',
             'mrp' => 'nullable|numeric|min:0',
             'purchase_price' => 'nullable|numeric|min:0',
@@ -64,7 +64,7 @@ class ItemController extends Controller
             'sku' => 'nullable|string|max:100',
             'hsn_code' => 'nullable|string|max:10',
             'unit' => ['sometimes', 'string', 'max:20', Rule::in(CompanySetting::getItemUnitValues($request->user()->company_id))],
-            'category' => 'nullable|string|max:100',
+            'item_group_id' => 'nullable|uuid|exists:item_groups,id',
             'gst_rate' => 'sometimes|numeric|min:0',
             'mrp' => 'nullable|numeric|min:0',
             'purchase_price' => 'nullable|numeric|min:0',

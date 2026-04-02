@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 import Dashboard from '@/pages/dashboard/Dashboard';
+import ItemGroups from '@/pages/inventory/ItemGroups';
 import Items from '@/pages/inventory/Items';
 import Godowns from '@/pages/inventory/Godowns';
 import StockSummary from '@/pages/inventory/StockSummary';
@@ -48,6 +49,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
   '/login': 'Login',
   '/register': 'Register',
+  '/inventory/item-groups': 'Item Groups',
   '/inventory/items': 'Items',
   '/inventory/godowns': 'Godowns',
   '/inventory/stock-summary': 'Stock Summary',
@@ -116,6 +118,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
 
             {/* Inventory */}
+            <Route path="/inventory/item-groups" element={<ItemGroups />} />
             <Route path="/inventory/items" element={<Items />} />
             <Route path="/inventory/godowns" element={<Godowns />} />
             <Route path="/inventory/stock-summary" element={<StockSummary />} />

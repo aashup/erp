@@ -32,7 +32,7 @@ class ErpDatabase extends Dexie {
     super('erpdb');
 
     this.version(1).stores({
-      items: 'id, company_id, name, sku, category, sync_status',
+      items: 'id, company_id, name, sku, item_group_id, sync_status',
       parties: 'id, company_id, type, name, sync_status',
       godowns: 'id, company_id, branch_id, sync_status',
       branches: 'id, company_id, sync_status',

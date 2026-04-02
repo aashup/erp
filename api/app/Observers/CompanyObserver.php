@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Company;
 use App\Models\FinancialYear;
+use App\Models\ItemGroup;
 use Carbon\Carbon;
 
 class CompanyObserver
@@ -24,6 +25,12 @@ class CompanyObserver
             'end_date' => Carbon::create($fyStartYear + 1, 3, 31),
             'is_current' => true,
             'is_locked' => false,
+        ]);
+
+        ItemGroup::create([
+            'company_id' => $company->id,
+            'name' => 'Primary',
+            'is_active' => true,
         ]);
     }
 }

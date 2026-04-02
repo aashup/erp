@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\Item;
+use App\Models\ItemGroup;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -20,7 +21,6 @@ class ItemSeeder extends Seeder
             'sku' => 'MED001',
             'hsn_code' => '30049099',
             'unit' => 'strip',
-            'category' => 'Medicine',
             'gst_rate' => 12,
             'mrp' => 20.00,
             'purchase_price' => 15.00,
@@ -33,7 +33,6 @@ class ItemSeeder extends Seeder
             'sku' => 'MED002',
             'hsn_code' => '30049099',
             'unit' => 'bottle',
-            'category' => 'Medicine',
             'gst_rate' => 12,
             'mrp' => 120.00,
             'purchase_price' => 85.00,
@@ -46,7 +45,6 @@ class ItemSeeder extends Seeder
             'sku' => 'GRO001',
             'hsn_code' => '10063090',
             'unit' => 'packet',
-            'category' => 'Grocery',
             'gst_rate' => 5,
             'mrp' => 350.00,
             'purchase_price' => 280.00,
@@ -59,7 +57,6 @@ class ItemSeeder extends Seeder
             'sku' => 'PERS001',
             'hsn_code' => '33061010',
             'unit' => 'tube',
-            'category' => 'Personal Care',
             'gst_rate' => 18,
             'mrp' => 45.00,
             'purchase_price' => 30.00,
@@ -81,10 +78,14 @@ class ItemSeeder extends Seeder
             $company = Company::factory()->create();
         }
 
+        // Get the Primary item group (auto-created by CompanyObserver)
+        $primaryGroup = ItemGroup::where('company_id', $company->id)->first();
+
         // Create sample items
         foreach ($this->sampleItems as $item) {
             Item::factory()->create(array_merge($item, [
                 'company_id' => $company->id,
+                'item_group_id' => $primaryGroup?->id,
                 'is_active' => true,
             ]));
         }
@@ -93,6 +94,7 @@ class ItemSeeder extends Seeder
         if (app()->environment('local', 'testing')) {
             Item::factory()->count(500)->create([
                 'company_id' => $company->id,
+                'item_group_id' => $primaryGroup?->id,
             ]);
         }
     }

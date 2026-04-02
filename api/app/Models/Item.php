@@ -17,11 +17,11 @@ class Item extends Model
 
     protected $fillable = [
         'company_id',
+        'item_group_id',
         'name',
         'sku',
         'hsn_code',
         'unit',
-        'category',
         'gst_rate',
         'mrp',
         'purchase_price',
@@ -46,6 +46,11 @@ class Item extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logFillable();
+    }
+
+    public function itemGroup()
+    {
+        return $this->belongsTo(ItemGroup::class);
     }
 
     public function batches()

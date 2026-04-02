@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import {
   LayoutDashboard,
   Package,
+  FolderTree,
   ShoppingCart,
   IndianRupee,
   BookOpen,
@@ -29,6 +30,7 @@ const navigation = [
     children: [
       { name: 'Stock Summary', href: '/inventory/stock-summary', icon: BarChart3 },
       { name: 'Stock Ledger', href: '/inventory/stock-ledger', icon: BookOpenCheck },
+      { name: 'Item Groups', href: '/inventory/item-groups', icon: FolderTree },
       { name: 'Items', href: '/inventory/items', icon: Package },
       { name: 'Godowns', href: '/inventory/godowns', icon: Warehouse },
       { name: 'Stock Transfer', href: '/inventory/stock-transfer', icon: ArrowLeftRight },

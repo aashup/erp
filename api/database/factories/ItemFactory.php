@@ -27,7 +27,7 @@ class ItemFactory extends Factory
             'sku' => fake()->unique()->regexify('[A-Z]{3}[0-9]{5}'),
             'hsn_code' => fake()->regexify('[0-9]{4}[0-9]{2}[0-9]{2}'),
             'unit' => fake()->randomElement($units),
-            'category' => fake()->word(),
+            'item_group_id' => null,
             'gst_rate' => fake()->randomElement($gstRates),
             'mrp' => fake()->randomFloat(2, 10, 1000),
             'purchase_price' => fake()->randomFloat(2, 5, 800),

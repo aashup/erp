@@ -58,14 +58,24 @@ export interface FinancialYear extends SyncColumns {
   is_current: boolean;
 }
 
+export interface ItemGroup extends SyncColumns {
+  id: string;
+  company_id: string;
+  parent_id: string | null;
+  name: string;
+  is_active: boolean;
+  children?: ItemGroup[];
+  parent?: ItemGroup;
+}
+
 export interface Item extends SyncColumns {
   id: string;
   company_id: string;
+  item_group_id: string | null;
   name: string;
   sku: string | null;
   hsn_code: string | null;
   unit: string;
-  category: string | null;
   gst_rate: number;
   mrp: number | null;
   purchase_price: number | null;
@@ -73,6 +83,7 @@ export interface Item extends SyncColumns {
   reorder_level: number | null;
   is_batch_tracked: boolean;
   is_active: boolean;
+  item_group?: ItemGroup;
   batches?: Batch[];
 }
 

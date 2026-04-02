@@ -1,5 +1,20 @@
 import api from '@/lib/axios';
-import type { ApiResponse, Batch, Item, Godown, PaginatedResponse, StockLedgerEntry, StockSummaryRow, ReorderAlert } from '@/types';
+import type { ApiResponse, Batch, Item, ItemGroup, Godown, PaginatedResponse, StockLedgerEntry, StockSummaryRow, ReorderAlert } from '@/types';
+
+export const itemGroupsApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<ItemGroup>>('/item-groups', { params }),
+
+  get: (id: string) => api.get<ApiResponse<ItemGroup>>(`/item-groups/${id}`),
+
+  create: (data: Partial<ItemGroup>) =>
+    api.post<ApiResponse<ItemGroup>>('/item-groups', data),
+
+  update: (id: string, data: Partial<ItemGroup>) =>
+    api.put<ApiResponse<ItemGroup>>(`/item-groups/${id}`, data),
+
+  delete: (id: string) => api.delete(`/item-groups/${id}`),
+};
 
 export const itemsApi = {
   list: (params?: Record<string, string>) =>
