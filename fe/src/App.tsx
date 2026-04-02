@@ -36,6 +36,7 @@ import ProfitAndLoss from '@/pages/accounting/ProfitAndLoss';
 import Settings from '@/pages/Settings';
 import FinancialYears from '@/pages/settings/FinancialYears';
 import Units from '@/pages/settings/Units';
+import InventorySettings from '@/pages/settings/InventorySettings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -130,6 +131,7 @@ export default function App() {
             <Route path="/settings/base" element={<Settings />} />
             <Route path="/settings/financial-years" element={<FinancialYears />} />
             <Route path="/settings/units" element={<Units />} />
+            <Route path="/settings/inventory" element={<InventorySettings />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -17,9 +17,7 @@ import {
   X,
   BarChart3,
   BookOpenCheck,
-  ArrowLeftRight,
   ClipboardEdit,
-  PackageOpen,
   Scale,
   TrendingUp,
 } from 'lucide-react';
@@ -34,9 +32,7 @@ const navigation = [
       { name: 'Item Groups', href: '/inventory/item-groups', icon: FolderTree },
       { name: 'Items', href: '/inventory/items', icon: Package },
       { name: 'Godowns', href: '/inventory/godowns', icon: Warehouse },
-      { name: 'Stock Transfer', href: '/inventory/stock-transfer', icon: ArrowLeftRight },
       { name: 'Adjustment', href: '/inventory/stock-adjustment', icon: ClipboardEdit },
-      { name: 'Opening Stock', href: '/inventory/opening-stock', icon: PackageOpen },
     ],
   },
   { name: 'Parties', href: '/parties', icon: Users },
@@ -69,6 +65,7 @@ const navigation = [
     name: 'Settings',
     children: [
       { name: 'Base Settings', href: '/settings/base', icon: Settings },
+      { name: 'Inventory', href: '/settings/inventory', icon: Package },
       { name: 'Units', href: '/settings/units', icon: Ruler },
       { name: 'Financial Years', href: '/settings/financial-years', icon: Calendar },
     ],
