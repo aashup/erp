@@ -74,9 +74,9 @@ export function SlideSelect({
 
   // Map all API data to options once
   const allApiOptions = useMemo(
-    () => (apiData?.data ?? []).map(mapFn!).sort((a, b) => a.label.localeCompare(b.label)),
+    () => mapFn ? (apiData?.data ?? []).map(mapFn).sort((a, b) => a.label.localeCompare(b.label)) : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apiData?.data]
+    [apiData?.data, mapFn]
   );
 
   // --- Client-side filtering (works for both static and API modes) ---

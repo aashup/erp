@@ -14,6 +14,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -266,7 +267,7 @@ export default function VouchersEntry() {
     } as unknown as Record<string, unknown>);
   };
 
-  const ledgerOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: `${l.name}${l.group?.name ? ` (${l.group.name})` : ''}` }));
+  const ledgerSlideOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name }));
 
   // ─── Payment/Receipt State ──────────────────────────────────────────────
 
@@ -349,7 +350,7 @@ export default function VouchersEntry() {
     paymentCreateMutation.mutate({ ...formData, type: activeTab as 'payment' | 'receipt' });
   };
 
-  const partyOptions = (partiesData?.data ?? []).map((p) => ({ value: p.id, label: `${p.name} (${p.type})` }));
+  const partySlideOptions = (partiesData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type }));
 
   // ─── Column Definitions ─────────────────────────────────────────────────
 
@@ -515,10 +516,15 @@ export default function VouchersEntry() {
               {journalFields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-5">
-                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...journalForm.register(`lines.${index}.ledger_id`)}>
-                      <option value="">Select ledger</option>
-                      {ledgerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    <SlideSelect
+                      name={`lines.${index}.ledger_id`}
+                      placeholder="Select ledger"
+                      panelTitle="Select Ledger"
+                      options={ledgerSlideOptions}
+                      value={journalForm.watch(`lines.${index}.ledger_id`)}
+                      onChange={(val) => journalForm.setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })}
+                      error={journalForm.formState.errors.lines?.[index]?.ledger_id?.message}
+                    />
                   </div>
                   <div className="col-span-2">
                     <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...journalForm.register(`lines.${index}.debit`)} />
@@ -618,7 +624,16 @@ export default function VouchersEntry() {
               </div>
             </div>
             <Input id="receipt_number" label="Number" error={paymentForm.formState.errors.receipt_number?.message} {...paymentForm.register('receipt_number')} />
-            <Select id="party_id" label="Party" options={partyOptions} error={paymentForm.formState.errors.party_id?.message} {...paymentForm.register('party_id')} />
+            <SlideSelect
+              name="party_id"
+              label="Party"
+              placeholder="Select party"
+              panelTitle="Select Party"
+              options={partySlideOptions}
+              value={paymentForm.watch('party_id')}
+              onChange={(val) => paymentForm.setValue('party_id', val, { shouldValidate: true })}
+              error={paymentForm.formState.errors.party_id?.message}
+            />
             <Input id="receipt_date" label="Date" type="date" error={paymentForm.formState.errors.receipt_date?.message} {...paymentForm.register('receipt_date')} />
             <Input id="amount" label={`Amount (${'\u20B9'})`} type="number" step="0.01" error={paymentForm.formState.errors.amount?.message} {...paymentForm.register('amount')} />
             <Select id="payment_mode" label="Payment Mode" options={[
