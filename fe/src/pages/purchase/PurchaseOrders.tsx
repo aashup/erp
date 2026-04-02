@@ -14,7 +14,7 @@ import { formatCurrency, formatDate, calcGST } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -208,8 +208,8 @@ export default function PurchaseOrders() {
     }
   };
 
-  const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name }));
-  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? i.hsn_code ?? ''})` }));
+  const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type ?? 'vendor' }));
+  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
 
   const columns: ColumnDef<PurchaseOrder, unknown>[] = [
     { accessorKey: 'po_number', header: 'PO #' },
@@ -296,7 +296,7 @@ export default function PurchaseOrders() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input id="po_number" label="PO Number (optional)" placeholder="Auto-generated if empty" error={errors.po_number?.message} {...register('po_number')} />
-            <Select id="party_id" label="Vendor" options={vendorOptions} error={errors.party_id?.message} {...register('party_id')} />
+            <SlideSelect name="party_id" label="Vendor" placeholder="Select vendor" panelTitle="Select Vendor" options={vendorOptions} value={watch('party_id')} onChange={(val) => setValue('party_id', val, { shouldValidate: true })} error={errors.party_id?.message} />
             <Input id="po_date" label="PO Date" type="date" error={errors.po_date?.message} {...register('po_date')} />
             <Input id="expected_delivery_date" label="Expected Delivery" type="date" {...register('expected_delivery_date')} />
             <Input id="notes" label="Notes" {...register('notes')} />
@@ -324,14 +324,7 @@ export default function PurchaseOrders() {
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-4">
-                    <select
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
-                      {...register(`lines.${index}.item_id`)}
-                      onChange={(e) => handleItemChange(index, e.target.value)}
-                    >
-                      <option value="">Select item</option>
-                      {itemOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemChange(index, val)} />
                     {errors.lines?.[index]?.item_id && <p className="text-xs text-red-500 mt-1">{errors.lines[index]?.item_id?.message}</p>}
                   </div>
                   <div className="col-span-2">

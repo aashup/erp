@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -90,6 +90,8 @@ export default function Items() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ItemForm>({
@@ -257,19 +259,25 @@ export default function Items() {
             <Input id="name" label="Name" error={errors.name?.message} {...register('name')} />
             <Input id="sku" label="SKU" error={errors.sku?.message} {...register('sku')} />
             <Input id="hsn_code" label="HSN Code" {...register('hsn_code')} />
-            <Select
-              id="unit"
+            <SlideSelect
+              name="unit"
               label="Unit"
+              placeholder="Select unit"
+              panelTitle="Select Unit"
               options={formUnitOptions}
+              value={watch('unit')}
+              onChange={(val) => setValue('unit', val, { shouldValidate: true })}
               error={errors.unit?.message}
               disabled={isUnitsLoading || formUnitOptions.length === 0}
-              {...register('unit')}
             />
-            <Select
-              id="item_group_id"
+            <SlideSelect
+              name="item_group_id"
               label="Item Group"
+              placeholder="Select group"
+              panelTitle="Select Item Group"
               options={[{ value: '', label: 'None' }, ...(itemGroupsData ?? []).map((g) => ({ value: g.id, label: g.name }))]}
-              {...register('item_group_id')}
+              value={watch('item_group_id')}
+              onChange={(val) => setValue('item_group_id', val)}
             />
             <Input id="gst_rate" label="GST Rate (%)" type="number" step="0.01" error={errors.gst_rate?.message} {...register('gst_rate', { valueAsNumber: true })} />
             <Input id="mrp" label="MRP" type="number" step="0.01" error={errors.mrp?.message} {...register('mrp', { valueAsNumber: true })} />

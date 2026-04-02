@@ -7,7 +7,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 
@@ -65,6 +65,8 @@ export default function Register() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
@@ -111,13 +113,15 @@ export default function Register() {
             {...register('gstin')}
           />
 
-          <Select
-            id="state_code"
+          <SlideSelect
+            name="state_code"
             label="State"
-            options={INDIAN_STATES}
             placeholder="Select state"
+            panelTitle="Select State"
+            options={INDIAN_STATES}
+            value={watch('state_code')}
+            onChange={(val) => setValue('state_code', val, { shouldValidate: true })}
             error={errors.state_code?.message}
-            {...register('state_code')}
           />
 
           <Input

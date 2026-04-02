@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { DataTable } from '@/components/ui/DataTable';
 
 const adjustmentSchema = z.object({
@@ -69,12 +69,12 @@ export default function StockAdjustment() {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<AdjustmentForm>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<AdjustmentForm>({
     resolver: zodResolver(adjustmentSchema) as any,
     defaultValues: { adjustment_type: 'add' },
   });
 
-  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? ''})` }));
+  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? ''})`, subtitle: i.sku ?? i.hsn_code ?? '' }));
   const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name }));
 
   const columns: ColumnDef<StockLedgerEntry, unknown>[] = [
@@ -103,14 +103,17 @@ export default function StockAdjustment() {
         <CardContent>
           <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Select id="item_id" label="Item" options={itemOptions} error={errors.item_id?.message} {...register('item_id')} />
-              <Select id="godown_id" label="Godown" options={godownOptions} error={errors.godown_id?.message} {...register('godown_id')} />
-              <Select
-                id="adjustment_type"
+              <SlideSelect name="item_id" label="Item" placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch('item_id')} onChange={(val) => setValue('item_id', val, { shouldValidate: true })} error={errors.item_id?.message} />
+              <SlideSelect name="godown_id" label="Godown" placeholder="Select godown" panelTitle="Select Godown" options={godownOptions} value={watch('godown_id')} onChange={(val) => setValue('godown_id', val, { shouldValidate: true })} error={errors.godown_id?.message} />
+              <SlideSelect
+                name="adjustment_type"
                 label="Adjustment Type"
+                placeholder="Select type"
+                panelTitle="Adjustment Type"
                 options={[{ value: 'add', label: 'Add Stock' }, { value: 'reduce', label: 'Reduce / Write-off' }]}
+                value={watch('adjustment_type')}
+                onChange={(val) => setValue('adjustment_type', val as 'add' | 'reduce', { shouldValidate: true })}
                 error={errors.adjustment_type?.message}
-                {...register('adjustment_type')}
               />
               <Input id="quantity" label="Quantity" type="number" step="0.001" error={errors.quantity?.message} {...register('quantity')} />
               <Input id="rate" label="Rate (₹)" type="number" step="0.01" error={errors.rate?.message} {...register('rate')} />

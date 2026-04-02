@@ -12,7 +12,7 @@ import { formatCurrency, calcGST } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Plus, ArrowLeft, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -169,9 +169,9 @@ export default function SalesInvoiceFormPage() {
     [itemsData?.data]
   );
 
-  const customerOptions = (customersData?.data ?? []).map((p) => ({ value: p.id, label: p.name }));
-  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? i.hsn_code ?? ''})` }));
-  const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: `${g.name}${g.is_default ? ' (Default)' : ''}` }));
+  const customerOptions = (customersData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type ?? 'customer' }));
+  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
+  const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name, subtitle: g.is_default ? 'Default' : '' }));
 
   const handleItemSelect = (index: number, itemId: string) => {
     setValue(`lines.${index}.item_id`, itemId, { shouldDirty: true, shouldValidate: true });
@@ -256,12 +256,15 @@ export default function SalesInvoiceFormPage() {
                   error={errors.invoice_number?.message}
                   {...register('invoice_number')}
                 />
-                <Select
-                  id="party_id"
+                <SlideSelect
+                  name="party_id"
                   label="Customer"
+                  placeholder="Select customer"
+                  panelTitle="Select Customer"
                   options={customerOptions}
+                  value={watch('party_id')}
+                  onChange={(val) => setValue('party_id', val, { shouldValidate: true })}
                   error={errors.party_id?.message}
-                  {...register('party_id')}
                 />
                 <Input
                   id="invoice_date"
@@ -309,33 +312,10 @@ export default function SalesInvoiceFormPage() {
                   {fields.map((field, index) => (
                     <div key={field.id} className="grid grid-cols-12 items-start gap-2">
                       <div className="col-span-3">
-                        <select
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                          value={watchedLines?.[index]?.item_id ?? ''}
-                          onChange={(event) => handleItemSelect(index, event.target.value)}
-                        >
-                          <option value="">Select item</option>
-                          {itemOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <input type="hidden" {...register(`lines.${index}.item_id`)} />
-                        <input type="hidden" {...register(`lines.${index}.gst_rate`)} />
+                        <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemSelect(index, val)} />
                       </div>
                       <div className="col-span-2">
-                        <select
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                          {...register(`lines.${index}.godown_id`)}
-                        >
-                          <option value="">Select godown</option>
-                          {godownOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                        <SlideSelect name={`lines.${index}.godown_id`} placeholder="Select godown" panelTitle="Select Godown" options={godownOptions} value={watch(`lines.${index}.godown_id`)} onChange={(val) => setValue(`lines.${index}.godown_id`, val, { shouldValidate: true })} />
                       </div>
                       <div className="col-span-1">
                         <input

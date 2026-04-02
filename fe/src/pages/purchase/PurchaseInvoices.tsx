@@ -13,7 +13,7 @@ import { formatCurrency, formatDate, calcGST } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -136,7 +136,7 @@ export default function PurchaseInvoices() {
 
   // Edit form (separate from create form — backend only allows status + notes)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register: registerEdit, handleSubmit: handleEditSubmit, reset: resetEdit, formState: { errors: editErrors } } = useForm<EditForm>({ resolver: zodResolver(editSchema) as any });
+  const { register: registerEdit, handleSubmit: handleEditSubmit, reset: resetEdit, watch: watchEdit, setValue: setEditValue, formState: { errors: editErrors } } = useForm<EditForm>({ resolver: zodResolver(editSchema) as any });
 
   const openEdit = (inv: PurchaseInvoice) => {
     setEditInv(inv);
@@ -200,9 +200,9 @@ export default function PurchaseInvoices() {
     }
   };
 
-  const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name }));
-  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? i.hsn_code ?? ''})` }));
-  const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: `${g.name}${g.is_default ? ' (Default)' : ''}` }));
+  const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type ?? 'vendor' }));
+  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
+  const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name, subtitle: g.is_default ? 'Default' : '' }));
 
   const columns: ColumnDef<PurchaseInvoice, unknown>[] = [
     { accessorKey: 'invoice_number', header: 'Invoice #' },
@@ -260,7 +260,7 @@ export default function PurchaseInvoices() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input id="invoice_number" label="Invoice Number (optional)" placeholder="Auto-generated if empty" error={errors.invoice_number?.message} {...register('invoice_number')} />
-            <Select id="party_id" label="Vendor" options={vendorOptions} error={errors.party_id?.message} {...register('party_id')} />
+            <SlideSelect name="party_id" label="Vendor" placeholder="Select vendor" panelTitle="Select Vendor" options={vendorOptions} value={watch('party_id')} onChange={(val) => setValue('party_id', val, { shouldValidate: true })} error={errors.party_id?.message} />
             <Input id="invoice_date" label="Invoice Date" type="date" error={errors.invoice_date?.message} {...register('invoice_date')} />
             <Input id="vendor_invoice_number" label="Vendor Invoice #" {...register('vendor_invoice_number')} />
             <Input id="due_date" label="Due Date" type="date" {...register('due_date')} />
@@ -293,20 +293,10 @@ export default function PurchaseInvoices() {
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-3">
-                    <select
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
-                      {...register(`lines.${index}.item_id`)}
-                      onChange={(e) => handleItemChange(index, e.target.value)}
-                    >
-                      <option value="">Select item</option>
-                      {itemOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemChange(index, val)} />
                   </div>
                   <div className="col-span-2">
-                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.godown_id`)}>
-                      <option value="">Select godown</option>
-                      {godownOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    <SlideSelect name={`lines.${index}.godown_id`} placeholder="Select godown" panelTitle="Select Godown" options={godownOptions} value={watch(`lines.${index}.godown_id`)} onChange={(val) => setValue(`lines.${index}.godown_id`, val, { shouldValidate: true })} />
                   </div>
                   <div className="col-span-1">
                     <input type="number" min="1" step="1" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.quantity`)} />
@@ -395,16 +385,19 @@ export default function PurchaseInvoices() {
               </div>
             ) : (
               <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-4">
-                <Select
-                  id="edit_status"
+                <SlideSelect
+                  name="edit_status"
                   label="Status"
+                  placeholder="Select status"
+                  panelTitle="Select Status"
                   options={[
                     { value: 'draft', label: 'Draft' },
                     { value: 'confirmed', label: 'Confirmed' },
                     { value: 'cancelled', label: 'Cancelled' },
                   ]}
+                  value={watchEdit('status')}
+                  onChange={(val) => setEditValue('status', val as EditForm['status'], { shouldValidate: true })}
                   error={editErrors.status?.message}
-                  {...registerEdit('status')}
                 />
                 <Input id="edit_notes" label="Notes" {...registerEdit('notes')} />
                 <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">

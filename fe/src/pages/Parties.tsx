@@ -11,7 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -70,7 +70,7 @@ export default function Parties() {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<PartyForm>({ resolver: zodResolver(schema) as any });
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<PartyForm>({ resolver: zodResolver(schema) as any });
 
   const openCreate = () => { setEditParty(null); reset({ type: 'customer', name: '', opening_balance: undefined, balance_type: undefined, is_active: true }); setShowModal(true); };
   const openEdit = (p: Party) => {
@@ -131,7 +131,7 @@ export default function Parties() {
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editParty ? 'Edit Party' : 'New Party'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Select id="type" label="Type" options={[{ value: 'customer', label: 'Customer' }, { value: 'vendor', label: 'Vendor' }, { value: 'both', label: 'Both' }]} error={errors.type?.message} {...register('type')} />
+            <SlideSelect name="type" label="Type" placeholder="Select type" panelTitle="Select Type" options={[{ value: 'customer', label: 'Customer' }, { value: 'vendor', label: 'Vendor' }, { value: 'both', label: 'Both' }]} value={watch('type')} onChange={(val) => setValue('type', val as 'customer' | 'vendor' | 'both', { shouldValidate: true })} error={errors.type?.message} />
             <Input id="name" label="Name" error={errors.name?.message} {...register('name')} />
             <Input id="gstin" label="GSTIN" {...register('gstin')} />
             <Input id="pan" label="PAN" {...register('pan')} />
@@ -147,7 +147,7 @@ export default function Parties() {
             {!editParty && (
               <>
                 <Input id="opening_balance" label="Opening Balance" type="number" step="0.01" {...register('opening_balance')} />
-                <Select id="balance_type" label="Balance Type" options={[{ value: '', label: 'Select...' }, { value: 'dr', label: 'Debit (Dr)' }, { value: 'cr', label: 'Credit (Cr)' }]} {...register('balance_type')} />
+                <SlideSelect name="balance_type" label="Balance Type" placeholder="Select..." panelTitle="Balance Type" options={[{ value: '', label: 'Select...' }, { value: 'dr', label: 'Debit (Dr)' }, { value: 'cr', label: 'Credit (Cr)' }]} value={watch('balance_type') ?? ''} onChange={(val) => setValue('balance_type', (val === '' ? undefined : val) as 'dr' | 'cr' | undefined)} />
               </>
             )}
             {editParty && (

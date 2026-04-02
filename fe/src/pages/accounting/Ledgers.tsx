@@ -11,7 +11,6 @@ import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
@@ -238,14 +237,17 @@ export default function Ledgers() {
 
           <div className="grid grid-cols-3 gap-4">
             <Input id="opening_balance" label="Opening Balance" type="number" step="0.01" min="0" error={errors.opening_balance?.message} {...register('opening_balance')} />
-            <Select
-              id="opening_type"
+            <SlideSelect
+              name="opening_type"
               label="Dr / Cr"
+              placeholder="Select..."
+              panelTitle="Debit / Credit"
               options={[
                 { value: 'dr', label: 'Debit (Dr)' },
                 { value: 'cr', label: 'Credit (Cr)' },
               ]}
-              {...register('opening_type')}
+              value={watch('opening_type')}
+              onChange={(val) => setValue('opening_type', val as 'dr' | 'cr', { shouldValidate: true })}
             />
             <Input id="opening_date" label="Opening Date" type="date" {...register('opening_date')} />
           </div>

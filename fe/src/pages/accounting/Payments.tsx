@@ -12,7 +12,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -64,7 +64,7 @@ export default function Payments() {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<PaymentForm>({ resolver: zodResolver(schema) as any });
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<PaymentForm>({ resolver: zodResolver(schema) as any });
 
   const openCreate = () => {
     setEditRecord(null);
@@ -148,12 +148,12 @@ export default function Payments() {
       <Modal open={showModal} onClose={closeModal} title={editRecord ? 'Edit Payment/Receipt' : 'New Payment/Receipt'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Select id="type" label="Type" options={[{ value: 'payment', label: 'Payment (You Pay)' }, { value: 'receipt', label: 'Receipt (You Receive)' }]} error={errors.type?.message} {...register('type')} />
+            <SlideSelect name="type" label="Type" placeholder="Select type" panelTitle="Select Type" options={[{ value: 'payment', label: 'Payment (You Pay)' }, { value: 'receipt', label: 'Receipt (You Receive)' }]} value={watch('type')} onChange={(val) => setValue('type', val as 'payment' | 'receipt', { shouldValidate: true })} error={errors.type?.message} />
             <Input id="receipt_number" label="Number" error={errors.receipt_number?.message} {...register('receipt_number')} />
-            <Select id="party_id" label="Party" options={partyOptions} error={errors.party_id?.message} {...register('party_id')} />
+            <SlideSelect name="party_id" label="Party" placeholder="Select party" panelTitle="Select Party" options={partyOptions} value={watch('party_id')} onChange={(val) => setValue('party_id', val, { shouldValidate: true })} error={errors.party_id?.message} />
             <Input id="receipt_date" label="Date" type="date" error={errors.receipt_date?.message} {...register('receipt_date')} />
             <Input id="amount" label="Amount (₹)" type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />
-            <Select id="payment_mode" label="Payment Mode" options={[{ value: 'cash', label: 'Cash' }, { value: 'bank', label: 'Bank Transfer' }, { value: 'cheque', label: 'Cheque' }, { value: 'upi', label: 'UPI' }, { value: 'other', label: 'Other' }]} error={errors.payment_mode?.message} {...register('payment_mode')} />
+            <SlideSelect name="payment_mode" label="Payment Mode" placeholder="Select mode" panelTitle="Payment Mode" options={[{ value: 'cash', label: 'Cash' }, { value: 'bank', label: 'Bank Transfer' }, { value: 'cheque', label: 'Cheque' }, { value: 'upi', label: 'UPI' }, { value: 'other', label: 'Other' }]} value={watch('payment_mode')} onChange={(val) => setValue('payment_mode', val as 'cash' | 'bank' | 'cheque' | 'upi' | 'other', { shouldValidate: true })} error={errors.payment_mode?.message} />
             <Input id="reference_number" label="Reference Number" {...register('reference_number')} />
             <Input id="bank_name" label="Bank Name" {...register('bank_name')} />
           </div>

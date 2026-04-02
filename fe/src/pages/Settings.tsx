@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Modal } from '@/components/ui/Modal';
 import api from '@/lib/axios';
 import { invoiceTemplatesApi, companySettingsApi } from '@/api/settings';
@@ -423,7 +423,7 @@ export default function Settings() {
             <Input id="name" label="Company Name" error={companyForm.formState.errors.name?.message} {...companyForm.register('name')} />
             <Input id="gstin" label="GSTIN" {...companyForm.register('gstin')} />
             <Input id="pan" label="PAN" {...companyForm.register('pan')} />
-            <Select id="state_code" label="State" options={INDIAN_STATES} {...companyForm.register('state_code')} />
+            <SlideSelect name="state_code" label="State" placeholder="Select state" panelTitle="Select State" options={INDIAN_STATES} value={companyForm.watch('state_code')} onChange={(val) => companyForm.setValue('state_code', val, { shouldValidate: true })} />
             <Input id="city" label="City" {...companyForm.register('city')} />
             <Input id="pincode" label="Pincode" {...companyForm.register('pincode')} />
             <Input id="phone" label="Phone" {...companyForm.register('phone')} />

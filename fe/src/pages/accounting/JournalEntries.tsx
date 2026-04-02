@@ -12,7 +12,7 @@ import { useSelectedFYId } from '@/hooks/useFinancialYear';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -70,7 +70,7 @@ export default function JournalEntries() {
   const fyId = useSelectedFYId();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<JournalForm>({
+  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<JournalForm>({
     resolver: zodResolver(journalSchema) as any,
     defaultValues: {
       voucher_type: 'journal',
@@ -113,7 +113,7 @@ export default function JournalEntries() {
     } as unknown as Record<string, unknown>);
   };
 
-  const ledgerOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: `${l.name}${l.group?.name ? ` (${l.group.name})` : ''}` }));
+  const ledgerOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name ?? '' }));
 
   const columns: ColumnDef<Voucher, unknown>[] = [
     { accessorKey: 'voucher_number', header: 'Voucher #' },
@@ -154,14 +154,14 @@ export default function JournalEntries() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input id="voucher_date" label="Voucher Date" type="date" error={errors.voucher_date?.message} {...register('voucher_date')} />
-            <Select id="voucher_type" label="Voucher Type" options={[
+            <SlideSelect name="voucher_type" label="Voucher Type" placeholder="Select type" panelTitle="Select Voucher Type" options={[
               { value: 'journal', label: 'Journal' },
               { value: 'contra', label: 'Contra' },
               { value: 'payment', label: 'Payment' },
               { value: 'receipt', label: 'Receipt' },
               { value: 'purchase', label: 'Purchase' },
               { value: 'sales', label: 'Sales' },
-            ]} error={errors.voucher_type?.message} {...register('voucher_type')} />
+            ]} value={watch('voucher_type')} onChange={(val) => setValue('voucher_type', val as JournalForm['voucher_type'], { shouldValidate: true })} error={errors.voucher_type?.message} />
           </div>
           <Input id="narration" label="Narration" {...register('narration')} />
 
@@ -185,10 +185,7 @@ export default function JournalEntries() {
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-5">
-                    <select className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.ledger_id`)}>
-                      <option value="">Select ledger</option>
-                      {ledgerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    <SlideSelect name={`lines.${index}.ledger_id`} placeholder="Select ledger" panelTitle="Select Ledger" options={ledgerOptions} value={watch(`lines.${index}.ledger_id`)} onChange={(val) => setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })} />
                   </div>
                   <div className="col-span-2">
                     <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none" {...register(`lines.${index}.debit`)} />

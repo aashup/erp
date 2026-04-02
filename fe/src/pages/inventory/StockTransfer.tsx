@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { DataTable } from '@/components/ui/DataTable';
 
 const transferSchema = z.object({
@@ -67,9 +67,9 @@ export default function StockTransfer() {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<TransferForm>({ resolver: zodResolver(transferSchema) as any });
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransferForm>({ resolver: zodResolver(transferSchema) as any });
 
-  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? ''})` }));
+  const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? ''})`, subtitle: i.sku ?? i.hsn_code ?? '' }));
   const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name }));
 
   const columns: ColumnDef<StockLedgerEntry, unknown>[] = [
@@ -92,9 +92,9 @@ export default function StockTransfer() {
         <CardContent>
           <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Select id="item_id" label="Item" options={itemOptions} error={errors.item_id?.message} {...register('item_id')} />
-              <Select id="from_godown_id" label="From Godown" options={godownOptions} error={errors.from_godown_id?.message} {...register('from_godown_id')} />
-              <Select id="to_godown_id" label="To Godown" options={godownOptions} error={errors.to_godown_id?.message} {...register('to_godown_id')} />
+              <SlideSelect name="item_id" label="Item" placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch('item_id')} onChange={(val) => setValue('item_id', val, { shouldValidate: true })} error={errors.item_id?.message} />
+              <SlideSelect name="from_godown_id" label="From Godown" placeholder="Select godown" panelTitle="Select Source Godown" options={godownOptions} value={watch('from_godown_id')} onChange={(val) => setValue('from_godown_id', val, { shouldValidate: true })} error={errors.from_godown_id?.message} />
+              <SlideSelect name="to_godown_id" label="To Godown" placeholder="Select godown" panelTitle="Select Destination Godown" options={godownOptions} value={watch('to_godown_id')} onChange={(val) => setValue('to_godown_id', val, { shouldValidate: true })} error={errors.to_godown_id?.message} />
               <Input id="quantity" label="Quantity" type="number" step="0.001" error={errors.quantity?.message} {...register('quantity')} />
               <Input id="rate" label="Rate (₹)" type="number" step="0.01" error={errors.rate?.message} {...register('rate')} />
               <Input id="narration" label="Narration" error={errors.narration?.message} {...register('narration')} />
