@@ -12,6 +12,7 @@ import {
   Warehouse,
   Building2,
   Settings,
+  Ruler,
   Calendar,
   X,
   BarChart3,
@@ -68,6 +69,7 @@ const navigation = [
     name: 'Settings',
     children: [
       { name: 'Base Settings', href: '/settings/base', icon: Settings },
+      { name: 'Units', href: '/settings/units', icon: Ruler },
       { name: 'Financial Years', href: '/settings/financial-years', icon: Calendar },
     ],
   },

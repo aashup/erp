@@ -92,7 +92,7 @@ export default function Items() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ItemForm>({
     resolver: zodResolver(itemSchema) as any,
-    defaultValues: { gst_rate: 18 },
+    defaultValues: { gst_rate: 18, reorder_level: 0 },
   });
 
   const openCreate = () => {
@@ -104,6 +104,7 @@ export default function Items() {
       unit: unitOptions[0]?.value ?? '',
       item_group_id: '',
       gst_rate: 18,
+      reorder_level: 0,
       is_batch_tracked: false,
     });
     setShowModal(true);

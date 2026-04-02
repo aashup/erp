@@ -34,6 +34,7 @@ import TrialBalance from '@/pages/accounting/TrialBalance';
 import ProfitAndLoss from '@/pages/accounting/ProfitAndLoss';
 import Settings from '@/pages/Settings';
 import FinancialYears from '@/pages/settings/FinancialYears';
+import Units from '@/pages/settings/Units';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,6 +73,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/accounting/profit-and-loss': 'Profit & Loss',
   '/settings/base': 'Settings',
   '/settings/financial-years': 'Financial Years',
+  '/settings/units': 'Units',
 };
 
 function DocumentTitleManager() {
@@ -157,6 +159,7 @@ export default function App() {
             {/* Settings */}
             <Route path="/settings/base" element={<Settings />} />
             <Route path="/settings/financial-years" element={<FinancialYears />} />
+            <Route path="/settings/units" element={<Units />} />
           </Route>
         </Routes>
       </BrowserRouter>
