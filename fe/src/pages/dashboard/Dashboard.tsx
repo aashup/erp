@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useAuthStore } from '@/store/authStore';
@@ -97,6 +98,7 @@ function LowStockAlerts() {
 }
 
 export default function Dashboard() {
+  usePageTitle('Dashboard');
   const { user } = useAuthStore();
   const { pendingCount, lastSync, isSyncing } = useSync();
   const [salesPeriod, setSalesPeriod] = useState<Period>('this_month');

@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { Input } from '@/components/ui/Input';
@@ -56,6 +57,7 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 export default function Register() {
+  usePageTitle('Register');
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const [error, setError] = useState('');

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { ColumnDef } from '@tanstack/react-table';
 import { stockLedgerApi, itemsApi, godownsApi } from '@/api/inventory';
 import type { StockLedgerEntry } from '@/types';
@@ -33,6 +34,7 @@ const typeVariant: Record<string, 'info' | 'success' | 'warning' | 'danger' | 'd
 };
 
 export default function ItemMovements() {
+  usePageTitle('Item Movements');
   const { itemId: paramItemId } = useParams<{ itemId: string }>();
   const [selectedItem, setSelectedItem] = useState(paramItemId ?? '');
   const [godownFilter, setGodownFilter] = useState('');

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { stockLedgerApi, godownsApi, itemsApi } from '@/api/inventory';
 import type { StockLedgerEntry } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -29,6 +30,7 @@ const transferSchema = z.object({
 type TransferForm = z.infer<typeof transferSchema>;
 
 export default function StockTransfer() {
+  usePageTitle('Stock Transfer');
   const queryClient = useQueryClient();
   const [page] = useState(1);
 

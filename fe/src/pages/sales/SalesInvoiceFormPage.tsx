@@ -4,6 +4,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi } from '@/api/inventory';
 import { salesInvoicesApi } from '@/api/sales';
@@ -46,6 +47,7 @@ const makeEmptyLine = (defaultGodownId = ''): InvoiceForm['lines'][number] => ({
 });
 
 export default function SalesInvoiceFormPage() {
+  usePageTitle('Sales Invoice');
   const navigate = useNavigate();
   const { invoiceId } = useParams<{ invoiceId: string }>();
   const isEditMode = Boolean(invoiceId);

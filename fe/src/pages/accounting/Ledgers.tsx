@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { ledgersApi, accountingGroupsApi } from '@/api/accounting';
 import type { AccountingGroup, Ledger } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -46,6 +47,7 @@ const defaultValues: LedgerForm = {
 };
 
 export default function Ledgers() {
+  usePageTitle('Ledgers');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

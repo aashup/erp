@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { accountingGroupsApi } from '@/api/accounting';
 import type { AccountingGroup } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -675,6 +676,7 @@ function CreateModal({ open, allAccounts, onClose, onSave, saving }: CreateModal
 // ---------------------------------------------------------------------------
 
 export default function AccountingGroups() {
+  usePageTitle('Accounting Groups');
   const queryClient = useQueryClient();
 
   // Filter state

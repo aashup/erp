@@ -4,6 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { purchaseInvoicesApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi } from '@/api/inventory';
@@ -56,6 +57,7 @@ const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
 };
 
 export default function PurchaseInvoices() {
+  usePageTitle('Purchase Invoices');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

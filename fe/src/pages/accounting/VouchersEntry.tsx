@@ -4,6 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { vouchersApi, ledgersApi, paymentReceiptsApi } from '@/api/accounting';
 import { partiesApi } from '@/api/parties';
 import type { Voucher, PaymentReceipt } from '@/types';
@@ -155,6 +156,7 @@ type PaymentForm = z.infer<typeof paymentSchema>;
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function VouchersEntry() {
+  usePageTitle('Vouchers Entry');
   const queryClient = useQueryClient();
   const fyId = useSelectedFYId();
   const [activeTab, setActiveTab] = useState<VoucherTab>('journal');

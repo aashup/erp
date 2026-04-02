@@ -4,6 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { vouchersApi, ledgersApi } from '@/api/accounting';
 import type { Voucher } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -42,6 +43,7 @@ const journalSchema = z.object({
 type JournalForm = z.infer<typeof journalSchema>;
 
 export default function JournalEntries() {
+  usePageTitle('Journal Entries');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

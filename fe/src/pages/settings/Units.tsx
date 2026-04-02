@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { companySettingsApi } from '@/api/settings';
 import type { UnitOption } from '@/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -17,6 +18,7 @@ const makeUnitRow = (unit?: Partial<UnitOption>): UnitRow => ({
 });
 
 export default function Units() {
+  usePageTitle('Units');
   const queryClient = useQueryClient();
   const [unitRows, setUnitRows] = useState<UnitRow[]>([]);
   const [unitError, setUnitError] = useState('');

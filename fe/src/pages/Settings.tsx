@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -72,6 +73,7 @@ type CompanyForm = z.infer<typeof companySchema>;
 type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 export default function Settings() {
+  usePageTitle('Settings');
   const { user, updateUser } = useAuthStore();
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();

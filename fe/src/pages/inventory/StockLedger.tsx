@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { stockLedgerApi, godownsApi, itemsApi } from '@/api/inventory';
 import type { StockLedgerEntry } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -32,6 +33,7 @@ const typeLabel: Record<string, string> = {
 };
 
 export default function StockLedger() {
+  usePageTitle('Stock Ledger');
   const [page, setPage] = useState(1);
   const [itemFilter, setItemFilter] = useState('');
   const [godownFilter, setGodownFilter] = useState('');

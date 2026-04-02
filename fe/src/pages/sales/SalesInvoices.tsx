@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { salesInvoicesApi } from '@/api/sales';
 import type { SalesInvoice } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -32,6 +33,7 @@ const allowedTransitions: Record<string, string[]> = {
 };
 
 export default function SalesInvoices() {
+  usePageTitle('Sales Invoices');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);

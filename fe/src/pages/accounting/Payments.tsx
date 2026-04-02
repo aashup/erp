@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { paymentReceiptsApi } from '@/api/accounting';
 import { partiesApi } from '@/api/parties';
 import type { PaymentReceipt } from '@/types';
@@ -33,6 +34,7 @@ const schema = z.object({
 type PaymentForm = z.infer<typeof schema>;
 
 export default function Payments() {
+  usePageTitle('Payments');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

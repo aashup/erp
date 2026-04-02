@@ -4,6 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { salesOrdersApi } from '@/api/sales';
 import { partiesApi } from '@/api/parties';
 import { itemsApi } from '@/api/inventory';
@@ -64,6 +65,7 @@ const allowedTransitions: Record<string, string[]> = {
 };
 
 export default function SalesOrders() {
+  usePageTitle('Sales Orders');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { stockLedgerApi, godownsApi, itemsApi } from '@/api/inventory';
 import type { StockLedgerEntry } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -26,6 +27,7 @@ const adjustmentSchema = z.object({
 type AdjustmentForm = z.infer<typeof adjustmentSchema>;
 
 export default function StockAdjustment() {
+  usePageTitle('Stock Adjustment');
   const queryClient = useQueryClient();
   const [page] = useState(1);
 

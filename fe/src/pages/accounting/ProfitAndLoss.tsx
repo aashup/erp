@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi } from '@/api/accounting';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
@@ -11,6 +12,7 @@ function formatCurrency(amount: number) {
 }
 
 export default function ProfitAndLoss() {
+  usePageTitle('Profit & Loss');
   const { data, isLoading } = useQuery({
     queryKey: ['report-profit-and-loss'],
     queryFn: () => reportsApi.profitAndLoss(),

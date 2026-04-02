@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { itemsApi, itemGroupsApi } from '@/api/inventory';
 import { companySettingsApi } from '@/api/settings';
 import type { Item, ItemGroup, UnitOption } from '@/types';
@@ -35,6 +36,7 @@ const itemSchema = z.object({
 type ItemForm = z.infer<typeof itemSchema>;
 
 export default function Items() {
+  usePageTitle('Items');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

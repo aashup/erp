@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { ColumnDef } from '@tanstack/react-table';
 import { stockLedgerApi, godownsApi } from '@/api/inventory';
 import type { StockSummaryRow } from '@/types';
@@ -11,6 +12,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Search } from 'lucide-react';
 
 export default function StockSummary() {
+  usePageTitle('Stock Summary');
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

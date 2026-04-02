@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { purchaseOrdersApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
 import { itemsApi } from '@/api/inventory';
@@ -65,6 +66,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function PurchaseOrders() {
+  usePageTitle('Purchase Orders');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

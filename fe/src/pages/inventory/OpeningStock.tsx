@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { stockLedgerApi, godownsApi, itemsApi } from '@/api/inventory';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ interface OpeningRow {
 const emptyRow = (): OpeningRow => ({ item_id: '', godown_id: '', quantity: '', rate: '' });
 
 export default function OpeningStock() {
+  usePageTitle('Opening Stock');
   const queryClient = useQueryClient();
   const [rows, setRows] = useState<OpeningRow[]>([emptyRow()]);
   const [saving, setSaving] = useState(false);

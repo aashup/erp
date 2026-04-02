@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import api from '@/lib/axios';
 import type { Branch, PaginatedResponse, ApiResponse } from '@/types';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -26,6 +27,7 @@ const schema = z.object({
 type BranchForm = z.infer<typeof schema>;
 
 export default function Branches() {
+  usePageTitle('Branches');
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editBranch, setEditBranch] = useState<Branch | null>(null);

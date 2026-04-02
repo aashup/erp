@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { itemGroupsApi } from '@/api/inventory';
 import type { ItemGroup } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -286,6 +287,7 @@ function GroupModal({ open, editGroup, allGroups, onClose, onSave, saving }: Gro
 // ---------------------------------------------------------------------------
 
 export default function ItemGroups() {
+  usePageTitle('Item Groups');
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');

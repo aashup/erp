@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { useAuthStore } from '@/store/authStore';
+import { usePageTitleStore } from '@/hooks/usePageTitle';
 
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
@@ -46,45 +47,14 @@ const queryClient = new QueryClient({
   },
 });
 
-const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
-  '/login': 'Login',
-  '/register': 'Register',
-  '/inventory/item-groups': 'Item Groups',
-  '/inventory/items': 'Items',
-  '/inventory/godowns': 'Godowns',
-  '/inventory/stock-summary': 'Stock Summary',
-  '/inventory/stock-ledger': 'Stock Ledger',
-  '/inventory/stock-transfer': 'Stock Transfer',
-  '/inventory/stock-adjustment': 'Stock Adjustment',
-  '/inventory/opening-stock': 'Opening Stock',
-  '/inventory/item-movements': 'Item Movements',
-  '/parties': 'Parties',
-  '/branches': 'Branches',
-  '/purchase/orders': 'Purchase Orders',
-  '/purchase/invoices': 'Purchase Invoices',
-  '/sales/orders': 'Sales Orders',
-  '/sales/invoices': 'Sales Invoices',
-  '/accounting/accounts': 'Accounting Groups',
-  '/accounting/vouchers': 'Vouchers Entry',
-  '/accounting/journals': 'Journal Entries',
-  '/accounting/payments': 'Payments',
-  '/accounting/trial-balance': 'Trial Balance',
-  '/accounting/profit-and-loss': 'Profit & Loss',
-  '/settings/base': 'Settings',
-  '/settings/financial-years': 'Financial Years',
-  '/settings/units': 'Units',
-};
-
 function DocumentTitleManager() {
-  const location = useLocation();
-  const companyName = useAuthStore((state) => state.user?.company?.name?.trim() || null);
+  const pageTitle = usePageTitleStore((s) => s.pageTitle);
+  const companyName = useAuthStore((s) => s.user?.company?.name?.trim() || null);
 
   useEffect(() => {
-    const pageTitle = PAGE_TITLES[location.pathname] ?? 'ERP';
     const appName = companyName || 'ERP';
     document.title = pageTitle === appName ? pageTitle : `${pageTitle} | ${appName}`;
-  }, [companyName, location.pathname]);
+  }, [companyName, pageTitle]);
 
   return null;
 }

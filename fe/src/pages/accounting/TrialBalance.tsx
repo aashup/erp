@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi } from '@/api/accounting';
 import type { TrialBalanceRow } from '@/types';
 import {
@@ -385,6 +386,7 @@ function FilterPanel({
 // ---------------------------------------------------------------------------
 
 export default function TrialBalance() {
+  usePageTitle('Trial Balance');
   // Filter state
   const [filterOpen, setFilterOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState('');

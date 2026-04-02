@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { financialYearsApi } from '@/api/financialYears';
 import type { FinancialYear } from '@/types';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -27,6 +28,7 @@ type FYForm = z.infer<typeof schema>;
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export default function FinancialYears() {
+  usePageTitle('Financial Years');
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editFY, setEditFY] = useState<FinancialYear | null>(null);

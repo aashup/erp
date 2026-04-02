@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { partiesApi } from '@/api/parties';
 import type { Party } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -39,6 +40,7 @@ const schema = z.object({
 type PartyForm = z.infer<typeof schema>;
 
 export default function Parties() {
+  usePageTitle('Parties');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { godownsApi } from '@/api/inventory';
 import type { Godown } from '@/types';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -24,6 +25,7 @@ const schema = z.object({
 type GodownForm = z.infer<typeof schema>;
 
 export default function Godowns() {
+  usePageTitle('Godowns');
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editGodown, setEditGodown] = useState<Godown | null>(null);
