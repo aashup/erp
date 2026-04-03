@@ -77,12 +77,12 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
           <div className="relative" ref={fyDropdownRef}>
             <button
               onClick={() => setShowFYDropdown(!showFYDropdown)}
-              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 sm:px-2.5"
             >
               <Calendar className="h-3.5 w-3.5" />
-              <span>FY {selectedFY.label}</span>
+              <span className="hidden sm:inline">FY {selectedFY.label}</span>
               <svg
-                className={`h-3 w-3 transition-transform ${showFYDropdown ? 'rotate-180' : ''}`}
+                className={`h-3 w-3 transition-transform hidden sm:block ${showFYDropdown ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -154,7 +154,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
         <button
           onClick={doSync}
           disabled={!isOnline || isSyncing}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800 sm:px-3 sm:py-1.5"
+          className="hidden items-center gap-1.5 rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800 sm:flex sm:px-3 sm:py-1.5"
           title={isOnline ? 'Click to sync' : 'Offline'}
         >
           {!isOnline ? (

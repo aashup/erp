@@ -18,5 +18,28 @@
     "NODE_ENV": "development",
     "REACT_ENV": "development"
   },
+   "caching": {
+    "enabled": true,
+    "ttl": "15m",
+    "type": "ephemeral",
+    "strategies": {
+      "system_instructions": {
+        "enabled": true,
+        "ttl": "2h",
+        "type": "ephemeral"
+      },
+      "large_documents": {
+        "enabled": true,
+        "ttl": "15m",
+        "type": "ephemeral",
+        "minTokens": 1024
+      },
+      "conversation_history": {
+        "enabled": true,
+        "ttl": "15m",
+        "type": "ephemeral"
+      }
+    }
+  },
   "spinnerTipsEnabled": false
 }

@@ -1,3 +1,40 @@
+# Project Context: PHP + React Application
+
+## Prompt Caching Configuration
+
+This project uses prompt caching to reduce API costs and improve performance:
+
+### Cache Settings
+- **Type**: Ephemeral (15-minute default, 2-hour for stable content)
+- **Cost Savings**: Cache reads cost 90% less than regular tokens
+- **Performance**: Responses up to 2x faster for cached content
+
+### What Gets Cached
+1. **System Instructions** (this CLAUDE.md)
+   - TTL: 1 hour (stable content)
+   - Minimum 1,024 tokens required
+
+2. **Large Documents**
+   - API documentation
+   - Database schemas
+   - Project specifications
+   - TTL: 5 minutes
+
+3. **Conversation History**
+   - Previous messages in multi-turn conversations
+   - TTL: 5 minutes
+
+### How It Works
+- First request: Content is cached (1.25x cost)
+- Subsequent requests: Cached content reused (0.1x cost)
+- Automatic cache refresh on each hit
+
+### Important Notes
+- Minimum content size: 1,024 tokens for Sonnet models
+- Cache expires if unused for 5 minutes (1-hour for extended cache)
+- Breaking changes: Modifying cached content invalidates the cache
+
+
 # Frontend Structure (React + Vite + TypeScript)
 
 ## Directory Layout
