@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Bash(npm *)",
+      "Bash(composer *)",
+      "Bash(php artisan *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Read(**/.env)",
+      "Read(**/.env.local)"
+    ],
+    "defaultMode": "ask"
+  },
+  "env": {
+    "NODE_ENV": "development",
+    "REACT_ENV": "development"
+  },
+  "spinnerTipsEnabled": false
+}

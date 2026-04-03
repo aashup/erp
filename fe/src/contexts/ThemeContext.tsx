@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useThemeStore, type AccentColor, type SurfaceColor } from '@/store/themeStore';
+import { useThemeStore, type AccentColor, type LightSurfaceColor, type DarkSurfaceColor } from '@/store/themeStore';
 
 const accentPalettes: Record<Exclude<AccentColor, 'blue'>, Record<string, string>> = {
   emerald: {
@@ -84,17 +84,19 @@ type ThemeContextType = {
   theme: 'light' | 'dark' | 'system';
   resolvedTheme: 'light' | 'dark';
   accent: AccentColor;
-  surface: SurfaceColor;
+  surfaceLight: LightSurfaceColor;
+  surfaceDark: DarkSurfaceColor;
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setAccent: (accent: AccentColor) => void;
-  setSurface: (surface: SurfaceColor) => void;
+  setSurfaceLight: (surface: LightSurfaceColor) => void;
+  setSurfaceDark: (surface: DarkSurfaceColor) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { theme, accent, surface, toggleTheme, setTheme, setAccent, setSurface } = useThemeStore();
+  const { theme, accent, surfaceLight, surfaceDark, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark } = useThemeStore();
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -137,21 +139,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [accent]);
 
-  // Apply surface/background color overrides
+  // Apply surface/background color overrides based on resolved theme
   useEffect(() => {
     const root = document.documentElement;
-    if (surface === 'gray') {
+    const activeSurface = resolvedTheme === 'dark' ? surfaceDark : surfaceLight;
+    if (activeSurface === 'gray') {
       for (const s of grayShades) root.style.removeProperty(`--color-gray-${s}`);
     } else {
-      const palette = surfacePalettes[surface];
+      const palette = surfacePalettes[activeSurface as Exclude<typeof activeSurface, 'gray'>];
       for (const [shade, color] of Object.entries(palette)) {
         root.style.setProperty(`--color-gray-${shade}`, color);
       }
     }
-  }, [surface]);
+  }, [surfaceLight, surfaceDark, resolvedTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, accent, surface, toggleTheme, setTheme, setAccent, setSurface }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, accent, surfaceLight, surfaceDark, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark }}>
       {children}
     </ThemeContext.Provider>
   );

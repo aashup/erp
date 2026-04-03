@@ -1,24 +1,29 @@
 import { create } from 'zustand';
 
 export type AccentColor = 'blue' | 'emerald' | 'violet' | 'rose' | 'amber' | 'teal' | 'indigo' | 'pink';
-export type SurfaceColor = 'gray' | 'slate' | 'zinc' | 'neutral' | 'stone' | 'cream' | 'sky' | 'sage' | 'lavender';
+export type DarkSurfaceColor = 'gray' | 'slate' | 'zinc' | 'neutral' | 'stone';
+export type LightSurfaceColor = 'gray' | 'cream' | 'sky' | 'sage' | 'lavender';
+export type SurfaceColor = DarkSurfaceColor | LightSurfaceColor;
 export type ThemeAccentColorOptions = { value: AccentColor; label: string; color: string; ring: string }
 export type ThemeSurfaceColorOptions = { value: SurfaceColor; label: string; swatch: string; ring: string }
 
 interface ThemeState {
   theme: 'light' | 'dark' | 'system';
   accent: AccentColor;
-  surface: SurfaceColor;
+  surfaceLight: LightSurfaceColor;
+  surfaceDark: DarkSurfaceColor;
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setAccent: (accent: AccentColor) => void;
-  setSurface: (surface: SurfaceColor) => void;
+  setSurfaceLight: (surface: LightSurfaceColor) => void;
+  setSurfaceDark: (surface: DarkSurfaceColor) => void;
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
   theme: (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system',
   accent: (localStorage.getItem('accent') as AccentColor) || 'blue',
-  surface: (localStorage.getItem('surface') as SurfaceColor) || 'gray',
+  surfaceLight: (localStorage.getItem('surfaceLight') as LightSurfaceColor) || 'gray',
+  surfaceDark: (localStorage.getItem('surfaceDark') as DarkSurfaceColor) || 'gray',
   setTheme: (theme) => {
     localStorage.setItem('theme', theme);
     set({ theme });
@@ -27,9 +32,13 @@ export const useThemeStore = create<ThemeState>((set) => ({
     localStorage.setItem('accent', accent);
     set({ accent });
   },
-  setSurface: (surface) => {
-    localStorage.setItem('surface', surface);
-    set({ surface });
+  setSurfaceLight: (surface) => {
+    localStorage.setItem('surfaceLight', surface);
+    set({ surfaceLight: surface });
+  },
+  setSurfaceDark: (surface) => {
+    localStorage.setItem('surfaceDark', surface);
+    set({ surfaceDark: surface });
   },
   toggleTheme: () =>
     set((state) => {

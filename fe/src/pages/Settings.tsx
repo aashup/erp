@@ -68,6 +68,12 @@ const surfaceOptions: {
 } = {
   light: [
     {
+      value: "gray",
+      label: "Default",
+      swatch: "bg-gray-300",
+      ring: "ring-gray-400",
+    },
+    {
       value: "cream",
       label: "Cream",
       swatch: "bg-amber-200",
@@ -181,7 +187,7 @@ type PasswordForm = z.infer<typeof passwordSchema>;
 export default function Settings() {
   usePageTitle("Settings");
   const { user, updateUser } = useAuthStore();
-  const { theme, accent, surface, setTheme, setAccent, setSurface } =
+  const { theme, accent, surfaceLight, surfaceDark, setTheme, setAccent, setSurfaceLight, setSurfaceDark } =
     useTheme();
   const queryClient = useQueryClient();
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -513,17 +519,17 @@ export default function Settings() {
                 {surfaceOptions.dark.map((opt) => (
                   <button
                     key={opt.value}
-                    onClick={() => setSurface(opt.value)}
+                    onClick={() => setSurfaceDark(opt.value as any)}
                     className="flex flex-col items-center gap-1.5"
                   >
                     <div
                       className={`flex h-9 w-9 items-center justify-center rounded-full ${opt.swatch} ${
-                        surface === opt.value
+                        surfaceDark === opt.value
                           ? `ring-2 ring-offset-2 ${opt.ring} dark:ring-offset-gray-800`
                           : ""
                       } transition-all`}
                     >
-                      {surface === opt.value && (
+                      {surfaceDark === opt.value && (
                         <Check className="h-4 w-4 text-white" />
                       )}
                     </div>
@@ -545,17 +551,17 @@ export default function Settings() {
                 {surfaceOptions.light.map((opt) => (
                   <button
                     key={opt.value}
-                    onClick={() => setSurface(opt.value)}
+                    onClick={() => setSurfaceLight(opt.value as any)}
                     className="flex flex-col items-center gap-1.5"
                   >
                     <div
                       className={`flex h-9 w-9 items-center justify-center rounded-full ${opt.swatch} ${
-                        surface === opt.value
+                        surfaceLight === opt.value
                           ? `ring-2 ring-offset-2 ${opt.ring} dark:ring-offset-gray-800`
                           : ""
                       } transition-all`}
                     >
-                      {surface === opt.value && (
+                      {surfaceLight === opt.value && (
                         <Check className="h-4 w-4 text-white" />
                       )}
                     </div>
