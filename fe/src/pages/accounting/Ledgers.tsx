@@ -17,7 +17,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import toast from 'react-hot-toast';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, X, Pencil, Trash2 } from 'lucide-react';
 
 const ledgerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -45,6 +45,86 @@ const defaultValues: LedgerForm = {
   allow_manual_entry: true,
 };
 
+// ---------------------------------------------------------------------------
+// Filter Panel (right slide-over)
+// ---------------------------------------------------------------------------
+
+interface FilterPanelProps {
+  open: boolean;
+  onClose: () => void;
+  search: string;
+  setSearch: (v: string) => void;
+  groupFilter: string;
+  setGroupFilter: (v: string) => void;
+}
+
+function FilterPanel({ open, onClose, search, setSearch, groupFilter, setGroupFilter }: FilterPanelProps) {
+  return (
+    <>
+      {/* Overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 transition-opacity"
+          onClick={onClose}
+        />
+      )}
+      {/* Slide-over panel */}
+      <div
+        className={`fixed inset-y-0 right-0 z-50 w-80 transform border-l border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-900 ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h3>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+            {/* Search */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Search
+              </label>
+              <input
+                type="text"
+                placeholder="Search ledger..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+
+            {/* Group Filter */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Filter by Group
+              </label>
+              <SlideSelect
+                name="groupFilter"
+                placeholder="All Groups"
+                panelTitle="Filter by Group"
+                value={groupFilter}
+                onChange={setGroupFilter}
+                queryKey={['accounting-groups-all']}
+                queryFn={(params) => accountingGroupsApi.list({ ...params, per_page: '500' })}
+                mapFn={(g: AccountingGroup) => ({ value: g.id, label: `${g.name}` })}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function Ledgers() {
   usePageTitle('Ledgers');
   const queryClient = useQueryClient();
@@ -52,6 +132,7 @@ export default function Ledgers() {
   const [search, setSearch] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editItem, setEditItem] = useState<Ledger | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -185,34 +266,18 @@ export default function Ledgers() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Ledgers</h1>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Ledger</Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilterPanel(!showFilterPanel)}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+          </button>
+          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Ledger</Button>
+        </div>
       </div>
       <Card>
-        <CardHeader>
-          <div className="flex flex-wrap gap-3">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                placeholder="Search ledger..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              />
-            </div>
-            <div className="w-64">
-              <SlideSelect
-                name="groupFilter"
-                placeholder="All Groups"
-                panelTitle="Filter by Group"
-                value={groupFilter}
-                onChange={(val) => { setGroupFilter(val); setPage(1); }}
-                queryKey={['accounting-groups-all']}
-                queryFn={(params) => accountingGroupsApi.list({ ...params, per_page: '500' })}
-                mapFn={(g: AccountingGroup) => ({ value: g.id, label: `${g.name}` })}
-              />
-            </div>
-          </div>
-        </CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
         {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}
       </Card>
@@ -282,6 +347,16 @@ export default function Ledgers() {
           </div>
         </form>
       </Modal>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        open={showFilterPanel}
+        onClose={() => setShowFilterPanel(false)}
+        search={search}
+        setSearch={(val) => { setSearch(val); setPage(1); }}
+        groupFilter={groupFilter}
+        setGroupFilter={(val) => { setGroupFilter(val); setPage(1); }}
+      />
     </div>
   );
 }
