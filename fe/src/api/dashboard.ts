@@ -13,7 +13,16 @@ export interface DashboardStats {
   payable_tax: number;
 }
 
+export interface DashboardChartData {
+  labels: string[];
+  sales: number[];
+  purchase: number[];
+  revenue: number[];
+}
+
 export const dashboardApi = {
   stats: (period: string) =>
     api.get<{ data: DashboardStats }>('/dashboard/stats', { params: { period } }),
+  chart: (months?: number) =>
+    api.get<{ data: DashboardChartData }>('/dashboard/chart', { params: { months } }),
 };
