@@ -5,10 +5,12 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { stockLedgerApi, godownsApi, itemsApi } from '@/api/inventory';
 import type { StockLedgerEntry } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
+import { FilterPanel } from '@/components/ui/FilterPanel';
+import { Filter } from 'lucide-react';
 
 const typeVariant: Record<string, 'info' | 'success' | 'warning' | 'danger' | 'default'> = {
   purchase: 'info',
@@ -35,6 +37,7 @@ const typeLabel: Record<string, string> = {
 export default function StockLedger() {
   usePageTitle('Stock Ledger');
   const [page, setPage] = useState(1);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [itemFilter, setItemFilter] = useState('');
   const [godownFilter, setGodownFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -96,43 +99,111 @@ export default function StockLedger() {
     { accessorKey: 'narration', header: 'Narration', cell: ({ getValue }) => <span className="max-w-[200px] truncate block">{(getValue() as string) ?? '—'}</span> },
   ];
 
-  const selectClass = "rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm";
-  const inputClass = "rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm";
-
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Stock Ledger</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Stock Ledger</h1>
+        <button
+          onClick={() => setShowFilterPanel(!showFilterPanel)}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+        >
+          <Filter className="h-4 w-4" />
+          Filters
+        </button>
+      </div>
       <Card>
-        <CardHeader>
-          <div className="flex flex-wrap gap-3">
-            <select className={selectClass} value={itemFilter} onChange={(e) => { setItemFilter(e.target.value); setPage(1); }}>
-              <option value="">All Items</option>
-              {(itemsData?.data ?? []).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
-            <select className={selectClass} value={godownFilter} onChange={(e) => { setGodownFilter(e.target.value); setPage(1); }}>
-              <option value="">All Godowns</option>
-              {(godownsData?.data ?? []).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-            <select className={selectClass} value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}>
-              <option value="">All Types</option>
-              {Object.entries(typeLabel).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-            <input type="date" className={inputClass} value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} />
-            <input type="date" className={inputClass} value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} />
-            {(itemFilter || godownFilter || typeFilter || fromDate || toDate) && (
-              <button
-                type="button"
-                onClick={() => { setItemFilter(''); setGodownFilter(''); setTypeFilter(''); setFromDate(''); setToDate(''); setPage(1); }}
-                className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
-        </CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
         {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}
       </Card>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        open={showFilterPanel}
+        onClose={() => setShowFilterPanel(false)}
+      >
+        {/* Item Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Item
+          </label>
+          <select
+            value={itemFilter}
+            onChange={(e) => { setItemFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Items</option>
+            {(itemsData?.data ?? []).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </select>
+        </div>
+
+        {/* Godown Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Godown
+          </label>
+          <select
+            value={godownFilter}
+            onChange={(e) => { setGodownFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Godowns</option>
+            {(godownsData?.data ?? []).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+        </div>
+
+        {/* Type Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Type
+          </label>
+          <select
+            value={typeFilter}
+            onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Types</option>
+            {Object.entries(typeLabel).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+
+        {/* Date Range */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Date Range
+          </label>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">From Date</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">To Date</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Clear Filters */}
+        {(itemFilter || godownFilter || typeFilter || fromDate || toDate) && (
+          <button
+            type="button"
+            onClick={() => { setItemFilter(''); setGodownFilter(''); setTypeFilter(''); setFromDate(''); setToDate(''); setPage(1); }}
+            className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-600/50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+          >
+            Clear Filters
+          </button>
+        )}
+      </FilterPanel>
     </div>
   );
 }

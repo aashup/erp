@@ -17,7 +17,8 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const itemSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -40,12 +41,25 @@ export default function Items() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [skuFilter, setSkuFilter] = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [unitFilter, setUnitFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editItem, setEditItem] = useState<Item | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['items', page, search],
-    queryFn: () => itemsApi.list({ page: String(page), search, per_page: '25' }),
+    queryKey: ['items', page, search, skuFilter, groupFilter, statusFilter, unitFilter],
+    queryFn: () => itemsApi.list({
+      page: String(page),
+      search,
+      per_page: '25',
+      ...(skuFilter ? { sku: skuFilter } : {}),
+      ...(groupFilter ? { item_group_id: groupFilter } : {}),
+      ...(statusFilter ? { is_active: statusFilter === 'active' ? '1' : '0' } : {}),
+      ...(unitFilter ? { unit: unitFilter } : {}),
+    }),
     select: (res) => res.data,
   });
 
@@ -213,26 +227,21 @@ export default function Items() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Items</h1>
-        <Button onClick={openCreate} disabled={isUnitsLoading || unitOptions.length === 0}>
-          <Plus className="mr-2 h-4 w-4" /> Add Item
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilterPanel(!showFilterPanel)}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+          </button>
+          <Button onClick={openCreate} disabled={isUnitsLoading || unitOptions.length === 0}>
+            <Plus className="mr-2 h-4 w-4" /> Add Item
+          </Button>
+        </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 pl-10 pr-4 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              placeholder="Search items..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-        </CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
         {data && (
           <Pagination
@@ -301,6 +310,26 @@ export default function Items() {
           </div>
         </form>
       </Modal>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        open={showFilterPanel}
+        onClose={() => setShowFilterPanel(false)}
+      >
+        {/* Search */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Search
+          </label>
+          <input
+            type="text"
+            placeholder="Search items..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+      </FilterPanel>
     </div>
   );
 }

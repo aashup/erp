@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -28,6 +29,7 @@ export default function Godowns() {
   usePageTitle('Godowns');
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editGodown, setEditGodown] = useState<Godown | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -91,10 +93,18 @@ export default function Godowns() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Godowns / Warehouses</h1>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Godown</Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilterPanel(!showFilterPanel)}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+          </button>
+          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Godown</Button>
+        </div>
       </div>
       <Card>
-        <CardHeader><p className="text-sm text-gray-500 dark:text-gray-400">Manage your warehouses and storage locations</p></CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
       </Card>
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editGodown ? 'Edit Godown' : 'New Godown'}>
@@ -112,6 +122,16 @@ export default function Godowns() {
           </div>
         </form>
       </Modal>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        open={showFilterPanel}
+        onClose={() => setShowFilterPanel(false)}
+      >
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          <p>No additional filters available. All godowns are displayed.</p>
+        </div>
+      </FilterPanel>
     </div>
   );
 }

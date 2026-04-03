@@ -18,7 +18,8 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
@@ -56,148 +57,6 @@ const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
   cancelled: 'danger',
 };
 
-// ---------------------------------------------------------------------------
-// Filter Panel (right slide-over)
-// ---------------------------------------------------------------------------
-
-interface FilterPanelProps {
-  open: boolean;
-  onClose: () => void;
-  search: string;
-  setSearch: (v: string) => void;
-  dateFrom: string;
-  setDateFrom: (v: string) => void;
-  dateTo: string;
-  setDateTo: (v: string) => void;
-  vendorFilter: string;
-  setVendorFilter: (v: string) => void;
-  statusFilter: string;
-  setStatusFilter: (v: string) => void;
-}
-
-function FilterPanel({
-  open,
-  onClose,
-  search,
-  setSearch,
-  dateFrom,
-  setDateFrom,
-  dateTo,
-  setDateTo,
-  vendorFilter,
-  setVendorFilter,
-  statusFilter,
-  setStatusFilter,
-}: FilterPanelProps) {
-  return (
-    <>
-      {/* Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 transition-opacity"
-          onClick={onClose}
-        />
-      )}
-      {/* Slide-over panel */}
-      <div
-        className={`fixed inset-y-0 right-0 z-50 w-80 transform border-l border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-900 ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h3>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-            {/* Search */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Search
-              </label>
-              <input
-                type="text"
-                placeholder="Search invoice..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-              />
-            </div>
-
-            {/* Date Range */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Date Range
-              </label>
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">From Date</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">To Date</label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Vendor Filter */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Filter by Vendor
-              </label>
-              <SlideSelect
-                name="vendorFilter"
-                placeholder="All Vendors"
-                panelTitle="Filter by Vendor"
-                value={vendorFilter}
-                onChange={setVendorFilter}
-                queryKey={['parties-all']}
-                queryFn={(params) => partiesApi.list({ ...params, per_page: '500', type: 'vendor' })}
-                mapFn={(p: any) => ({ value: p.id, label: p.name })}
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Filter by Status
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 export default function PurchaseInvoices() {
   usePageTitle('Purchase Invoices');
@@ -572,17 +431,82 @@ export default function PurchaseInvoices() {
       <FilterPanel
         open={showFilterPanel}
         onClose={() => setShowFilterPanel(false)}
-        search={search}
-        setSearch={(val) => { setSearch(val); setPage(1); }}
-        dateFrom={dateFrom}
-        setDateFrom={(val) => { setDateFrom(val); setPage(1); }}
-        dateTo={dateTo}
-        setDateTo={(val) => { setDateTo(val); setPage(1); }}
-        vendorFilter={vendorFilter}
-        setVendorFilter={(val) => { setVendorFilter(val); setPage(1); }}
-        statusFilter={statusFilter}
-        setStatusFilter={(val) => { setStatusFilter(val); setPage(1); }}
-      />
+      >
+        {/* Search */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Search
+          </label>
+          <input
+            type="text"
+            placeholder="Search invoice..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Date Range */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Date Range
+          </label>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">From Date</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">To Date</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Vendor Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Vendor
+          </label>
+          <SlideSelect
+            name="vendorFilter"
+            placeholder="All Vendors"
+            panelTitle="Filter by Vendor"
+            value={vendorFilter}
+            onChange={(val) => { setVendorFilter(val); setPage(1); }}
+            queryKey={['parties-all']}
+            queryFn={(params) => partiesApi.list({ ...params, per_page: '500', type: 'vendor' })}
+            mapFn={(p: any) => ({ value: p.id, label: p.name })}
+          />
+        </div>
+
+        {/* Status Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Status
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Status</option>
+            <option value="draft">Draft</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </FilterPanel>
     </div>
   );
 }
