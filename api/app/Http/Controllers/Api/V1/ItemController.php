@@ -17,8 +17,10 @@ class ItemController extends Controller
 
         $items = Item::with(['batches', 'itemGroup'])
             ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%"))
+            ->when($request->sku, fn ($q, $s) => $q->where('sku', 'like', "%{$s}%"))
             ->when($request->item_group_id, fn ($q, $g) => $q->where('item_group_id', $g))
-            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
+            ->when($request->filled('is_active'), fn ($q) => $q->where('is_active', $request->boolean('is_active')))
+            ->when($request->unit, fn ($q, $u) => $q->where('unit', $u))
             ->orderBy('name')
             ->paginate($request->per_page ?? 25);
 

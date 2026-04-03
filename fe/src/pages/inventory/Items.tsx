@@ -329,6 +329,81 @@ export default function Items() {
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
+
+        {/* SKU Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by SKU
+          </label>
+          <input
+            type="text"
+            placeholder="Search by SKU..."
+            value={skuFilter}
+            onChange={(e) => { setSkuFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Group Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Group
+          </label>
+          <select
+            value={groupFilter}
+            onChange={(e) => { setGroupFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Groups</option>
+            {itemGroupsData?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+        </div>
+
+        {/* Status Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Status
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+
+        {/* Unit Filter */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Unit
+          </label>
+          <select
+            value={unitFilter}
+            onChange={(e) => { setUnitFilter(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Units</option>
+            {unitOptions.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+          </select>
+        </div>
+
+        {/* Clear Filters Button */}
+        <button
+          onClick={() => {
+            setSearch('');
+            setSkuFilter('');
+            setGroupFilter('');
+            setStatusFilter('');
+            setUnitFilter('');
+            setPage(1);
+          }}
+          className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Clear Filters
+        </button>
       </FilterPanel>
     </div>
   );
