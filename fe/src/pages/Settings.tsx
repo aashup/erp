@@ -1,48 +1,152 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { useAuthStore } from '@/store/authStore';
-import { useTheme } from '@/contexts/ThemeContext';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { SlideSelect } from '@/components/ui/SlideSelect';
-import { Modal } from '@/components/ui/Modal';
-import api from '@/lib/axios';
-import { invoiceTemplatesApi, companySettingsApi } from '@/api/settings';
-import type { User } from '@/types';
-import { Pencil, Sun, Moon, FileText, Check, Database, Lock } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useAuthStore } from "@/store/authStore";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { SlideSelect } from "@/components/ui/SlideSelect";
+import { Modal } from "@/components/ui/Modal";
+import api from "@/lib/axios";
+import { invoiceTemplatesApi, companySettingsApi } from "@/api/settings";
+import type { User } from "@/types";
+import {
+  Pencil,
+  Sun,
+  Moon,
+  FileText,
+  Check,
+  Database,
+  Lock,
+  Palette,
+  Monitor,
+} from "lucide-react";
+import type {
+  ThemeAccentColorOptions,
+  ThemeSurfaceColorOptions,
+} from "@/store/themeStore";
+
+const accentOptions: ThemeAccentColorOptions[] = [
+  { value: "blue", label: "Blue", color: "bg-blue-500", ring: "ring-blue-500" },
+  {
+    value: "indigo",
+    label: "Indigo",
+    color: "bg-indigo-500",
+    ring: "ring-indigo-500",
+  },
+  {
+    value: "violet",
+    label: "Violet",
+    color: "bg-violet-500",
+    ring: "ring-violet-500",
+  },
+  { value: "pink", label: "Pink", color: "bg-pink-500", ring: "ring-pink-500" },
+  { value: "rose", label: "Rose", color: "bg-rose-500", ring: "ring-rose-500" },
+  {
+    value: "amber",
+    label: "Amber",
+    color: "bg-amber-500",
+    ring: "ring-amber-500",
+  },
+  {
+    value: "emerald",
+    label: "Emerald",
+    color: "bg-emerald-500",
+    ring: "ring-emerald-500",
+  },
+  { value: "teal", label: "Teal", color: "bg-teal-500", ring: "ring-teal-500" },
+];
+
+const surfaceOptions: {
+  light: ThemeSurfaceColorOptions[];
+  dark: ThemeSurfaceColorOptions[];
+} = {
+  light: [
+    {
+      value: "cream",
+      label: "Cream",
+      swatch: "bg-amber-200",
+      ring: "ring-amber-300",
+    },
+    { value: "sky", label: "Sky", swatch: "bg-sky-300", ring: "ring-sky-400" },
+    {
+      value: "sage",
+      label: "Sage",
+      swatch: "bg-green-300",
+      ring: "ring-green-400",
+    },
+    {
+      value: "lavender",
+      label: "Lavender",
+      swatch: "bg-purple-300",
+      ring: "ring-purple-400",
+    },
+  ],
+  dark: [
+    {
+      value: "gray",
+      label: "Gray",
+      swatch: "bg-gray-500",
+      ring: "ring-gray-500",
+    },
+    {
+      value: "slate",
+      label: "Slate",
+      swatch: "bg-slate-500",
+      ring: "ring-slate-500",
+    },
+    {
+      value: "zinc",
+      label: "Zinc",
+      swatch: "bg-zinc-500",
+      ring: "ring-zinc-500",
+    },
+    {
+      value: "neutral",
+      label: "Neutral",
+      swatch: "bg-neutral-500",
+      ring: "ring-neutral-500",
+    },
+    {
+      value: "stone",
+      label: "Stone",
+      swatch: "bg-stone-500",
+      ring: "ring-stone-500",
+    },
+  ],
+};
+import toast from "react-hot-toast";
 
 const INDIAN_STATES = [
-  { value: '01', label: 'Jammu & Kashmir (01)' },
-  { value: '02', label: 'Himachal Pradesh (02)' },
-  { value: '03', label: 'Punjab (03)' },
-  { value: '05', label: 'Uttarakhand (05)' },
-  { value: '06', label: 'Haryana (06)' },
-  { value: '07', label: 'Delhi (07)' },
-  { value: '08', label: 'Rajasthan (08)' },
-  { value: '09', label: 'Uttar Pradesh (09)' },
-  { value: '10', label: 'Bihar (10)' },
-  { value: '18', label: 'Assam (18)' },
-  { value: '19', label: 'West Bengal (19)' },
-  { value: '21', label: 'Odisha (21)' },
-  { value: '23', label: 'Madhya Pradesh (23)' },
-  { value: '24', label: 'Gujarat (24)' },
-  { value: '27', label: 'Maharashtra (27)' },
-  { value: '29', label: 'Karnataka (29)' },
-  { value: '32', label: 'Kerala (32)' },
-  { value: '33', label: 'Tamil Nadu (33)' },
-  { value: '36', label: 'Telangana (36)' },
-  { value: '37', label: 'Andhra Pradesh (37)' },
+  { value: "01", label: "Jammu & Kashmir (01)" },
+  { value: "02", label: "Himachal Pradesh (02)" },
+  { value: "03", label: "Punjab (03)" },
+  { value: "05", label: "Uttarakhand (05)" },
+  { value: "06", label: "Haryana (06)" },
+  { value: "07", label: "Delhi (07)" },
+  { value: "08", label: "Rajasthan (08)" },
+  { value: "09", label: "Uttar Pradesh (09)" },
+  { value: "10", label: "Bihar (10)" },
+  { value: "18", label: "Assam (18)" },
+  { value: "19", label: "West Bengal (19)" },
+  { value: "21", label: "Odisha (21)" },
+  { value: "23", label: "Madhya Pradesh (23)" },
+  { value: "24", label: "Gujarat (24)" },
+  { value: "27", label: "Maharashtra (27)" },
+  { value: "29", label: "Karnataka (29)" },
+  { value: "32", label: "Kerala (32)" },
+  { value: "33", label: "Tamil Nadu (33)" },
+  { value: "36", label: "Telangana (36)" },
+  { value: "37", label: "Andhra Pradesh (37)" },
 ];
 
 const companySchema = z.object({
-  name: z.string().min(1, 'Company name is required'),
+  name: z.string().min(1, "Company name is required"),
   gstin: z.string().optional(),
   pan: z.string().optional(),
   address: z.string().optional(),
@@ -51,144 +155,163 @@ const companySchema = z.object({
   state_code: z.string().optional(),
   pincode: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
 });
 
 const profileSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email'),
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email"),
   phone: z.string().optional(),
 });
 
-const passwordSchema = z.object({
-  current_password: z.string().min(1, 'Current password is required'),
-  password: z.string().min(8, 'Min 8 characters'),
-  password_confirmation: z.string().min(1, 'Confirm your password'),
-}).refine((d) => d.password === d.password_confirmation, {
-  message: 'Passwords do not match',
-  path: ['password_confirmation'],
-});
+const passwordSchema = z
+  .object({
+    current_password: z.string().min(1, "Current password is required"),
+    password: z.string().min(8, "Min 8 characters"),
+    password_confirmation: z.string().min(1, "Confirm your password"),
+  })
+  .refine((d) => d.password === d.password_confirmation, {
+    message: "Passwords do not match",
+    path: ["password_confirmation"],
+  });
 
 type CompanyForm = z.infer<typeof companySchema>;
 type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 export default function Settings() {
-  usePageTitle('Settings');
+  usePageTitle("Settings");
   const { user, updateUser } = useAuthStore();
-  const { theme, setTheme } = useTheme();
+  const { theme, accent, surface, setTheme, setAccent, setSurface } =
+    useTheme();
   const queryClient = useQueryClient();
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState("");
   // Invoice template queries
   const { data: templatesData } = useQuery({
-    queryKey: ['invoice-templates'],
+    queryKey: ["invoice-templates"],
     queryFn: () => invoiceTemplatesApi.list(),
     select: (res) => res.data.data,
   });
 
   const { data: companySettings } = useQuery({
-    queryKey: ['company-settings'],
+    queryKey: ["company-settings"],
     queryFn: () => companySettingsApi.get(),
     select: (res) => res.data.data,
   });
 
   const templateMutation = useMutation({
-    mutationFn: (slug: string) => companySettingsApi.update({ default_invoice_template: slug }),
+    mutationFn: (slug: string) =>
+      companySettingsApi.update({ default_invoice_template: slug }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings'] });
-      toast.success('Default invoice template updated');
+      queryClient.invalidateQueries({ queryKey: ["company-settings"] });
+      toast.success("Default invoice template updated");
     },
   });
 
-  const currentTemplate = companySettings?.default_invoice_template ?? 'pharma-distributor';
+  const currentTemplate =
+    companySettings?.default_invoice_template ?? "pharma-distributor";
   const defaultGroupsLoaded = companySettings?.default_groups_loaded ?? null;
 
   const loadDefaultsMutation = useMutation({
-    mutationFn: (preset: 'tally' | 'marg') => api.post('/accounting-groups/load-defaults', { preset }),
+    mutationFn: (preset: "tally" | "marg") =>
+      api.post("/accounting-groups/load-defaults", { preset }),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['accounting-groups'] });
-      toast.success(res.data.message || 'Default groups loaded successfully');
+      queryClient.invalidateQueries({ queryKey: ["company-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-groups"] });
+      toast.success(res.data.message || "Default groups loaded successfully");
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Failed to load default groups');
+      toast.error(
+        err?.response?.data?.message || "Failed to load default groups",
+      );
     },
   });
 
   // Company form
-  const companyForm = useForm<CompanyForm>({ resolver: zodResolver(companySchema) });
+  const companyForm = useForm<CompanyForm>({
+    resolver: zodResolver(companySchema),
+  });
   const companyMutation = useMutation({
-    mutationFn: (data: CompanyForm) => api.put(`/companies/${user?.company?.id}`, data),
+    mutationFn: (data: CompanyForm) =>
+      api.put(`/companies/${user?.company?.id}`, data),
     onSuccess: (res) => {
       if (user) {
         updateUser({ ...user, company: res.data.data ?? res.data } as User);
       }
       setShowCompanyModal(false);
-      setSuccessMsg('Company updated successfully');
-      setTimeout(() => setSuccessMsg(''), 3000);
+      setSuccessMsg("Company updated successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
     },
   });
 
   // Profile form
-  const profileForm = useForm<ProfileForm>({ resolver: zodResolver(profileSchema) });
+  const profileForm = useForm<ProfileForm>({
+    resolver: zodResolver(profileSchema),
+  });
   const profileMutation = useMutation({
-    mutationFn: (data: ProfileForm) => api.put('/auth/profile', data),
+    mutationFn: (data: ProfileForm) => api.put("/auth/profile", data),
     onSuccess: (res) => {
       if (user) {
         const updated = res.data.data ?? res.data;
         updateUser({ ...user, ...updated } as User);
       }
       setShowProfileModal(false);
-      setSuccessMsg('Profile updated successfully');
-      setTimeout(() => setSuccessMsg(''), 3000);
+      setSuccessMsg("Profile updated successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
     },
   });
 
   // Password form
-  const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(passwordSchema) });
+  const passwordForm = useForm<PasswordForm>({
+    resolver: zodResolver(passwordSchema),
+  });
   const passwordMutation = useMutation({
-    mutationFn: (data: PasswordForm) => api.put('/auth/password', data),
+    mutationFn: (data: PasswordForm) => api.put("/auth/password", data),
     onSuccess: () => {
       setShowPasswordModal(false);
       passwordForm.reset();
-      setSuccessMsg('Password changed successfully');
-      setTimeout(() => setSuccessMsg(''), 3000);
+      setSuccessMsg("Password changed successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
     },
   });
 
   const openCompanyEdit = () => {
     companyForm.reset({
-      name: user?.company?.name ?? '',
-      gstin: user?.company?.gstin ?? '',
-      pan: user?.company?.pan ?? '',
-      address: user?.company?.address ?? '',
-      city: user?.company?.city ?? '',
-      state: user?.company?.state ?? '',
-      state_code: user?.company?.state_code ?? '',
-      pincode: user?.company?.pincode ?? '',
-      phone: user?.company?.phone ?? '',
-      email: user?.company?.email ?? '',
+      name: user?.company?.name ?? "",
+      gstin: user?.company?.gstin ?? "",
+      pan: user?.company?.pan ?? "",
+      address: user?.company?.address ?? "",
+      city: user?.company?.city ?? "",
+      state: user?.company?.state ?? "",
+      state_code: user?.company?.state_code ?? "",
+      pincode: user?.company?.pincode ?? "",
+      phone: user?.company?.phone ?? "",
+      email: user?.company?.email ?? "",
     });
     setShowCompanyModal(true);
   };
 
   const openProfileEdit = () => {
     profileForm.reset({
-      name: user?.name ?? '',
-      email: user?.email ?? '',
-      phone: user?.phone ?? '',
+      name: user?.name ?? "",
+      email: user?.email ?? "",
+      phone: user?.phone ?? "",
     });
     setShowProfileModal(true);
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        Settings
+      </h1>
 
       {successMsg && (
-        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">{successMsg}</div>
+        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
+          {successMsg}
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -197,7 +320,10 @@ export default function Settings() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Company Info</h3>
-              <button onClick={openCompanyEdit} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <button
+                onClick={openCompanyEdit}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
                 <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
@@ -205,19 +331,21 @@ export default function Settings() {
           <CardContent>
             <dl className="space-y-3">
               {[
-                ['Company', user?.company?.name],
-                ['GSTIN', user?.company?.gstin],
-                ['PAN', user?.company?.pan],
-                ['State', user?.company?.state],
-                ['State Code', user?.company?.state_code],
-                ['City', user?.company?.city],
-                ['Address', user?.company?.address],
-                ['Phone', user?.company?.phone],
-                ['Email', user?.company?.email],
+                ["Company", user?.company?.name],
+                ["GSTIN", user?.company?.gstin],
+                ["PAN", user?.company?.pan],
+                ["State", user?.company?.state],
+                ["State Code", user?.company?.state_code],
+                ["City", user?.company?.city],
+                ["Address", user?.company?.address],
+                ["Phone", user?.company?.phone],
+                ["Email", user?.company?.email],
               ].map(([label, val]) => (
                 <div key={label as string} className="flex justify-between">
                   <dt className="text-sm text-gray-500">{label}</dt>
-                  <dd className="text-sm font-medium">{(val as string) || '—'}</dd>
+                  <dd className="text-sm font-medium">
+                    {(val as string) || "—"}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -229,7 +357,10 @@ export default function Settings() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Your Profile</h3>
-              <button onClick={openProfileEdit} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <button
+                onClick={openProfileEdit}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
                 <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
@@ -246,15 +377,24 @@ export default function Settings() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-sm text-gray-500">Phone</dt>
-                <dd className="text-sm font-medium">{user?.phone ?? '—'}</dd>
+                <dd className="text-sm font-medium">{user?.phone ?? "—"}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-sm text-gray-500">Role</dt>
-                <dd><Badge variant="info">{user?.role}</Badge></dd>
+                <dd>
+                  <Badge variant="info">{user?.role}</Badge>
+                </dd>
               </div>
             </dl>
             <div className="mt-4 pt-4 border-t">
-              <Button variant="secondary" size="sm" onClick={() => { passwordForm.reset(); setShowPasswordModal(true); }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  passwordForm.reset();
+                  setShowPasswordModal(true);
+                }}
+              >
                 Change Password
               </Button>
             </div>
@@ -267,44 +407,164 @@ export default function Settings() {
             <h3 className="text-lg font-semibold">Appearance</h3>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">Choose how the app looks for you</p>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+              Choose how the app looks for you
+            </p>
             <div className="grid grid-cols-3 gap-3">
               <button
-                onClick={() => setTheme('light')}
+                onClick={() => setTheme("light")}
                 className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition-all ${
-                  theme === 'light'
-                    ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20'
-                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                  theme === "light"
+                    ? "border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20"
+                    : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
                 }`}
               >
                 <Sun className="h-6 w-6 text-yellow-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Light</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Light
+                </span>
               </button>
               <button
-                onClick={() => setTheme('dark')}
+                onClick={() => setTheme("dark")}
                 className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition-all ${
-                  theme === 'dark'
-                    ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20'
-                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                  theme === "dark"
+                    ? "border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20"
+                    : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
                 }`}
               >
                 <Moon className="h-6 w-6 text-primary-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Dark</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Dark
+                </span>
               </button>
               <button
-                onClick={() => setTheme('system')}
+                onClick={() => setTheme("system")}
                 className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition-all ${
-                  theme === 'system'
-                    ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20'
-                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                  theme === "system"
+                    ? "border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20"
+                    : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
                 }`}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 00-1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065 1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572-1.065 1.724 1.724 0 00-1.066-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.572c-1.543-.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 00-1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065 1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572-1.065 1.724 1.724 0 00-1.066-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.572c-1.543-.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">System</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  System
+                </span>
               </button>
+            </div>
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Palette className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Secondary Color
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {accentOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setAccent(opt.value)}
+                    className="flex flex-col items-center gap-1.5"
+                  >
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full ${opt.color} ${
+                        accent === opt.value
+                          ? `ring-2 ring-offset-2 ${opt.ring} dark:ring-offset-gray-800`
+                          : ""
+                      } transition-all`}
+                    >
+                      {accent === opt.value && (
+                        <Check className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {opt.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Dark Theme Background
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {surfaceOptions.dark.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSurface(opt.value)}
+                    className="flex flex-col items-center gap-1.5"
+                  >
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full ${opt.swatch} ${
+                        surface === opt.value
+                          ? `ring-2 ring-offset-2 ${opt.ring} dark:ring-offset-gray-800`
+                          : ""
+                      } transition-all`}
+                    >
+                      {surface === opt.value && (
+                        <Check className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {opt.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Light Theme Background
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {surfaceOptions.light.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSurface(opt.value)}
+                    className="flex flex-col items-center gap-1.5"
+                  >
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full ${opt.swatch} ${
+                        surface === opt.value
+                          ? `ring-2 ring-offset-2 ${opt.ring} dark:ring-offset-gray-800`
+                          : ""
+                      } transition-all`}
+                    >
+                      {surface === opt.value && (
+                        <Check className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {opt.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
             <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
               Theme saved automatically
@@ -318,7 +578,9 @@ export default function Settings() {
             <h3 className="text-lg font-semibold">Invoice Settings</h3>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">Choose default invoice template for printing</p>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+              Choose default invoice template for printing
+            </p>
             <div className="space-y-3">
               {(templatesData ?? []).map((tpl) => (
                 <button
@@ -327,19 +589,25 @@ export default function Settings() {
                   disabled={templateMutation.isPending}
                   className={`flex w-full items-start gap-3 rounded-lg border-2 p-4 text-left transition-all ${
                     currentTemplate === tpl.slug
-                      ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20'
-                      : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                      ? "border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20"
+                      : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
                   }`}
                 >
-                  <FileText className={`mt-0.5 h-5 w-5 flex-shrink-0 ${currentTemplate === tpl.slug ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'}`} />
+                  <FileText
+                    className={`mt-0.5 h-5 w-5 flex-shrink-0 ${currentTemplate === tpl.slug ? "text-primary-600 dark:text-primary-400" : "text-gray-400"}`}
+                  />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{tpl.name}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {tpl.name}
+                      </span>
                       {currentTemplate === tpl.slug && (
                         <Check className="h-4 w-4 text-primary-600 dark:text-primary-400" />
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      {tpl.description}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -354,7 +622,9 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              Load a predefined chart of accounts group structure. This is a <strong>one-time</strong> operation — once loaded, it cannot be changed.
+              Load a predefined chart of accounts group structure. This is a{" "}
+              <strong>one-time</strong> operation — once loaded, it cannot be
+              changed.
             </p>
 
             {defaultGroupsLoaded ? (
@@ -363,7 +633,10 @@ export default function Settings() {
                   <Lock className="h-5 w-5 text-green-600 dark:text-green-400" />
                   <div>
                     <p className="text-sm font-medium text-green-800 dark:text-green-300">
-                      {defaultGroupsLoaded === 'tally' ? 'TallyPrime' : 'Marg ERP'} groups loaded
+                      {defaultGroupsLoaded === "tally"
+                        ? "TallyPrime"
+                        : "Marg ERP"}{" "}
+                      groups loaded
                     </p>
                     <p className="mt-0.5 text-xs text-green-600 dark:text-green-400">
                       Default account groups have already been configured.
@@ -375,8 +648,12 @@ export default function Settings() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   onClick={() => {
-                    if (confirm('Load TallyPrime default groups? This action cannot be undone.')) {
-                      loadDefaultsMutation.mutate('tally');
+                    if (
+                      confirm(
+                        "Load TallyPrime default groups? This action cannot be undone.",
+                      )
+                    ) {
+                      loadDefaultsMutation.mutate("tally");
                     }
                   }}
                   disabled={loadDefaultsMutation.isPending}
@@ -384,16 +661,24 @@ export default function Settings() {
                 >
                   <Database className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                   <div className="text-center">
-                    <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">TallyPrime</span>
-                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">26 groups with hierarchy</span>
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      TallyPrime
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+                      26 groups with hierarchy
+                    </span>
                   </div>
                   <Badge variant="info">Standard</Badge>
                 </button>
 
                 <button
                   onClick={() => {
-                    if (confirm('Load Marg ERP default groups? This action cannot be undone.')) {
-                      loadDefaultsMutation.mutate('marg');
+                    if (
+                      confirm(
+                        "Load Marg ERP default groups? This action cannot be undone.",
+                      )
+                    ) {
+                      loadDefaultsMutation.mutate("marg");
                     }
                   }}
                   disabled={loadDefaultsMutation.isPending}
@@ -401,8 +686,12 @@ export default function Settings() {
                 >
                   <Database className="h-8 w-8 text-orange-600 dark:text-orange-400" />
                   <div className="text-center">
-                    <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">Marg ERP</span>
-                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">13 groups · Pharma / FMCG</span>
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      Marg ERP
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+                      13 groups · Pharma / FMCG
+                    </span>
                   </div>
                   <Badge variant="warning">Trade-specific</Badge>
                 </button>
@@ -410,55 +699,173 @@ export default function Settings() {
             )}
 
             {loadDefaultsMutation.isPending && (
-              <p className="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">Loading groups…</p>
+              <p className="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                Loading groups…
+              </p>
             )}
           </CardContent>
         </Card>
       </div>
 
       {/* Company Edit Modal */}
-      <Modal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} title="Edit Company" size="lg">
-        <form onSubmit={companyForm.handleSubmit((d) => companyMutation.mutate(d))} className="space-y-4">
+      <Modal
+        open={showCompanyModal}
+        onClose={() => setShowCompanyModal(false)}
+        title="Edit Company"
+        size="lg"
+      >
+        <form
+          onSubmit={companyForm.handleSubmit((d) => companyMutation.mutate(d))}
+          className="space-y-4"
+        >
           <div className="grid grid-cols-2 gap-4">
-            <Input id="name" label="Company Name" error={companyForm.formState.errors.name?.message} {...companyForm.register('name')} />
-            <Input id="gstin" label="GSTIN" {...companyForm.register('gstin')} />
-            <Input id="pan" label="PAN" {...companyForm.register('pan')} />
-            <SlideSelect name="state_code" label="State" placeholder="Select state" panelTitle="Select State" options={INDIAN_STATES} value={companyForm.watch('state_code')} onChange={(val) => companyForm.setValue('state_code', val, { shouldValidate: true })} />
-            <Input id="city" label="City" {...companyForm.register('city')} />
-            <Input id="pincode" label="Pincode" {...companyForm.register('pincode')} />
-            <Input id="phone" label="Phone" {...companyForm.register('phone')} />
-            <Input id="email" label="Email" type="email" error={companyForm.formState.errors.email?.message} {...companyForm.register('email')} />
+            <Input
+              id="name"
+              label="Company Name"
+              error={companyForm.formState.errors.name?.message}
+              {...companyForm.register("name")}
+            />
+            <Input
+              id="gstin"
+              label="GSTIN"
+              {...companyForm.register("gstin")}
+            />
+            <Input id="pan" label="PAN" {...companyForm.register("pan")} />
+            <SlideSelect
+              name="state_code"
+              label="State"
+              placeholder="Select state"
+              panelTitle="Select State"
+              options={INDIAN_STATES}
+              value={companyForm.watch("state_code")}
+              onChange={(val) =>
+                companyForm.setValue("state_code", val, {
+                  shouldValidate: true,
+                })
+              }
+            />
+            <Input id="city" label="City" {...companyForm.register("city")} />
+            <Input
+              id="pincode"
+              label="Pincode"
+              {...companyForm.register("pincode")}
+            />
+            <Input
+              id="phone"
+              label="Phone"
+              {...companyForm.register("phone")}
+            />
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              error={companyForm.formState.errors.email?.message}
+              {...companyForm.register("email")}
+            />
           </div>
-          <Input id="address" label="Address" {...companyForm.register('address')} />
+          <Input
+            id="address"
+            label="Address"
+            {...companyForm.register("address")}
+          />
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={() => setShowCompanyModal(false)}>Cancel</Button>
-            <Button type="submit" loading={companyMutation.isPending}>Save</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowCompanyModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={companyMutation.isPending}>
+              Save
+            </Button>
           </div>
         </form>
       </Modal>
 
       {/* Profile Edit Modal */}
-      <Modal open={showProfileModal} onClose={() => setShowProfileModal(false)} title="Edit Profile">
-        <form onSubmit={profileForm.handleSubmit((d) => profileMutation.mutate(d))} className="space-y-4">
-          <Input id="name" label="Name" error={profileForm.formState.errors.name?.message} {...profileForm.register('name')} />
-          <Input id="email" label="Email" type="email" error={profileForm.formState.errors.email?.message} {...profileForm.register('email')} />
-          <Input id="phone" label="Phone" {...profileForm.register('phone')} />
+      <Modal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        title="Edit Profile"
+      >
+        <form
+          onSubmit={profileForm.handleSubmit((d) => profileMutation.mutate(d))}
+          className="space-y-4"
+        >
+          <Input
+            id="name"
+            label="Name"
+            error={profileForm.formState.errors.name?.message}
+            {...profileForm.register("name")}
+          />
+          <Input
+            id="email"
+            label="Email"
+            type="email"
+            error={profileForm.formState.errors.email?.message}
+            {...profileForm.register("email")}
+          />
+          <Input id="phone" label="Phone" {...profileForm.register("phone")} />
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={() => setShowProfileModal(false)}>Cancel</Button>
-            <Button type="submit" loading={profileMutation.isPending}>Save</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowProfileModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={profileMutation.isPending}>
+              Save
+            </Button>
           </div>
         </form>
       </Modal>
 
       {/* Password Modal */}
-      <Modal open={showPasswordModal} onClose={() => setShowPasswordModal(false)} title="Change Password">
-        <form onSubmit={passwordForm.handleSubmit((d) => passwordMutation.mutate(d))} className="space-y-4">
-          <Input id="current_password" label="Current Password" type="password" error={passwordForm.formState.errors.current_password?.message} {...passwordForm.register('current_password')} />
-          <Input id="password" label="New Password" type="password" error={passwordForm.formState.errors.password?.message} {...passwordForm.register('password')} />
-          <Input id="password_confirmation" label="Confirm Password" type="password" error={passwordForm.formState.errors.password_confirmation?.message} {...passwordForm.register('password_confirmation')} />
+      <Modal
+        open={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        title="Change Password"
+      >
+        <form
+          onSubmit={passwordForm.handleSubmit((d) =>
+            passwordMutation.mutate(d),
+          )}
+          className="space-y-4"
+        >
+          <Input
+            id="current_password"
+            label="Current Password"
+            type="password"
+            error={passwordForm.formState.errors.current_password?.message}
+            {...passwordForm.register("current_password")}
+          />
+          <Input
+            id="password"
+            label="New Password"
+            type="password"
+            error={passwordForm.formState.errors.password?.message}
+            {...passwordForm.register("password")}
+          />
+          <Input
+            id="password_confirmation"
+            label="Confirm Password"
+            type="password"
+            error={passwordForm.formState.errors.password_confirmation?.message}
+            {...passwordForm.register("password_confirmation")}
+          />
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
-            <Button type="submit" loading={passwordMutation.isPending}>Change Password</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowPasswordModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={passwordMutation.isPending}>
+              Change Password
+            </Button>
           </div>
         </form>
       </Modal>
