@@ -199,14 +199,18 @@ export default function Ledgers() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <select
-              className="rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
-              value={groupFilter}
-              onChange={(e) => { setGroupFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">All Groups</option>
-              {groupOptions.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
-            </select>
+            <div className="w-64">
+              <SlideSelect
+                name="groupFilter"
+                placeholder="All Groups"
+                panelTitle="Filter by Group"
+                value={groupFilter}
+                onChange={(val) => { setGroupFilter(val); setPage(1); }}
+                queryKey={['accounting-groups-all']}
+                queryFn={(params) => accountingGroupsApi.list({ ...params, per_page: '500' })}
+                mapFn={(g: AccountingGroup) => ({ value: g.id, label: `${g.name}` })}
+              />
+            </div>
           </div>
         </CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />

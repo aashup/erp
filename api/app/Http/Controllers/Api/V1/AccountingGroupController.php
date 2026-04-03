@@ -50,7 +50,7 @@ class AccountingGroupController extends Controller
         // Current Assets sub-groups
         ['code' => '1210', 'name' => 'Bank Accounts', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'bank_account'],
             'ledgers' => [
-                ['name' => 'Cash', 'system_key' => 'bank_account'],
+                ['name' => 'HDFC Bank', 'system_key' => 'bank_account'],
             ],
         ['code' => '1220', 'name' => 'Cash-in-hand', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'cash_account',
             'ledgers' => [
