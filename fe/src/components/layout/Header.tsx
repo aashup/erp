@@ -1,9 +1,10 @@
 import { useAuthStore } from '@/store/authStore';
 import { useFYStore } from '@/store/fyStore';
+import { useThemeStore } from '@/store/themeStore';
 import { authApi } from '@/api/auth';
 import { useSync } from '@/hooks/useSync';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings, Menu, Calendar } from 'lucide-react';
+import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings, Menu, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const { user, logout } = useAuthStore();
   const { selectedFY, allFYs, setSelectedFY } = useFYStore();
+  const { showSidebar, setSidebarVisibility } = useThemeStore();
   const companyName = user?.company?.name?.trim() || 'ERP';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -64,6 +66,16 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
         >
           <Menu className="h-5 w-5" />
         </button>
+        {/* Overlay Sidebar Toggle - appears when sidebar is hidden on desktop */}
+        {!showSidebar && (
+          <button
+            onClick={onMobileMenuToggle}
+            className="hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 md:block"
+            title="Open sidebar"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        )}
         <div>
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
             {companyName}
@@ -136,6 +148,19 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
             )}
           </div>
         )}
+
+        {/* Sidebar Toggle */}
+        <button
+          onClick={() => setSidebarVisibility(!showSidebar)}
+          className="hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300 md:block"
+          title={showSidebar ? 'Hide sidebar' : 'Show sidebar'}
+        >
+          {showSidebar ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </button>
 
         {/* Theme Toggle */}
         <button

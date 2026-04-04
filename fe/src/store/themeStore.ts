@@ -12,11 +12,13 @@ interface ThemeState {
   accent: AccentColor;
   surfaceLight: LightSurfaceColor;
   surfaceDark: DarkSurfaceColor;
+  showSidebar: boolean;
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setAccent: (accent: AccentColor) => void;
   setSurfaceLight: (surface: LightSurfaceColor) => void;
   setSurfaceDark: (surface: DarkSurfaceColor) => void;
+  setSidebarVisibility: (visible: boolean) => void;
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
@@ -24,6 +26,7 @@ export const useThemeStore = create<ThemeState>((set) => ({
   accent: (localStorage.getItem('accent') as AccentColor) || 'blue',
   surfaceLight: (localStorage.getItem('surfaceLight') as LightSurfaceColor) || 'gray',
   surfaceDark: (localStorage.getItem('surfaceDark') as DarkSurfaceColor) || 'gray',
+  showSidebar: localStorage.getItem('showSidebar') !== 'false',
   setTheme: (theme) => {
     localStorage.setItem('theme', theme);
     set({ theme });
@@ -39,6 +42,10 @@ export const useThemeStore = create<ThemeState>((set) => ({
   setSurfaceDark: (surface) => {
     localStorage.setItem('surfaceDark', surface);
     set({ surfaceDark: surface });
+  },
+  setSidebarVisibility: (visible) => {
+    localStorage.setItem('showSidebar', String(visible));
+    set({ showSidebar: visible });
   },
   toggleTheme: () =>
     set((state) => {

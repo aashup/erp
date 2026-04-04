@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuthStore } from "@/store/authStore";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useThemeStore } from "@/store/themeStore";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +26,7 @@ import {
   Lock,
   Palette,
   Monitor,
+  Menu,
 } from "lucide-react";
 import type {
   ThemeAccentColorOptions,
@@ -189,6 +191,7 @@ export default function Settings() {
   const { user, updateUser } = useAuthStore();
   const { theme, accent, surfaceLight, surfaceDark, setTheme, setAccent, setSurfaceLight, setSurfaceDark } =
     useTheme();
+  const { showSidebar, setSidebarVisibility } = useThemeStore();
   const queryClient = useQueryClient();
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -570,6 +573,22 @@ export default function Settings() {
                     </span>
                   </button>
                 ))}
+              </div>
+            </div>
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-5">
+              <div className="flex items-center gap-3">
+                <Menu className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showSidebar}
+                    onChange={(e) => setSidebarVisibility(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Show sidebar by default
+                  </span>
+                </label>
               </div>
             </div>
             <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">

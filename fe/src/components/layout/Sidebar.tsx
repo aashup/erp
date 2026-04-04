@@ -75,9 +75,10 @@ const navigation = [
 interface SidebarProps {
   mobileOpen?: boolean;
   onClose?: () => void;
+  sidebarVisible?: boolean;
 }
 
-export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
+export function Sidebar({ mobileOpen = false, onClose, sidebarVisible = true }: SidebarProps) {
   const location = useLocation();
   const companyName = useAuthStore((state) => state.user?.company?.name?.trim() || 'ERP');
   const companyInitial = companyName.charAt(0).toUpperCase();
@@ -89,10 +90,17 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Overlay - shown when sidebar overlay is open (mobile or hidden sidebar on desktop) */}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      {/* Desktop overlay when sidebar is hidden */}
+      {mobileOpen && !sidebarVisible && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 hidden md:block"
           onClick={onClose}
         />
       )}
@@ -100,7 +108,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r transition-transform duration-300 ease-in-out',
           'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          mobileOpen ? 'translate-x-0' : !sidebarVisible ? '-translate-x-full md:-translate-x-full' : '-translate-x-full md:translate-x-0'
         )}
       >
         <div className="flex h-16 items-center gap-2 border-b px-6 border-gray-200 dark:border-gray-700">
