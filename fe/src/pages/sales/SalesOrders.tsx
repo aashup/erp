@@ -380,9 +380,16 @@ export default function SalesOrders() {
       >
         {/* Search */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Search
-          </label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Search
+            </label>
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
           <input
             type="text"
             placeholder="Search SO..."
@@ -394,9 +401,16 @@ export default function SalesOrders() {
 
         {/* Date Range */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Date Range
-          </label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Date Range
+            </label>
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">From Date</label>
@@ -421,9 +435,16 @@ export default function SalesOrders() {
 
         {/* Customer Filter */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Filter by Customer
-          </label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Filter by Customer
+            </label>
+            {customerFilter && (
+              <button onClick={() => { setCustomerFilter(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
           <SlideSelect
             name="customerFilter"
             placeholder="All Customers"
@@ -438,9 +459,16 @@ export default function SalesOrders() {
 
         {/* Status Filter */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Filter by Status
-          </label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Filter by Status
+            </label>
+            {statusFilter && (
+              <button onClick={() => { setStatusFilter(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
@@ -454,6 +482,21 @@ export default function SalesOrders() {
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
+
+        {/* Clear All Filters Button */}
+        <button
+          onClick={() => {
+            setSearch('');
+            setDateFrom('');
+            setDateTo('');
+            setCustomerFilter('');
+            setStatusFilter('');
+            setPage(1);
+          }}
+          className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Clear All Filters
+        </button>
       </FilterPanel>
     </div>
   );

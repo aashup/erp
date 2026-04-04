@@ -489,6 +489,14 @@ export default function ItemGroups() {
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
+
+        {/* Clear All Filters Button */}
+        <button
+          onClick={() => setSearchTerm('')}
+          className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Clear All Filters
+        </button>
       </FilterPanel>
     </div>
   );

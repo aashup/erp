@@ -168,9 +168,16 @@ export default function Parties() {
       >
         {/* Search */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Search
-          </label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Search
+            </label>
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
           <input
             type="text"
             placeholder="Search party..."
@@ -182,9 +189,16 @@ export default function Parties() {
 
         {/* Type Filter */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Filter by Type
-          </label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Filter by Type
+            </label>
+            {typeFilter && (
+              <button onClick={() => { setTypeFilter(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
           <select
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
@@ -196,6 +210,18 @@ export default function Parties() {
             <option value="both">Both</option>
           </select>
         </div>
+
+        {/* Clear All Filters Button */}
+        <button
+          onClick={() => {
+            setSearch('');
+            setTypeFilter('');
+            setPage(1);
+          }}
+          className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Clear All Filters
+        </button>
       </FilterPanel>
     </div>
   );

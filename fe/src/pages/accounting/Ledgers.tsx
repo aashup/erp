@@ -17,7 +17,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import toast from 'react-hot-toast';
-import { Plus, Filter, X, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const ledgerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -45,85 +46,6 @@ const defaultValues: LedgerForm = {
   allow_manual_entry: true,
 };
 
-// ---------------------------------------------------------------------------
-// Filter Panel (right slide-over)
-// ---------------------------------------------------------------------------
-
-interface FilterPanelProps {
-  open: boolean;
-  onClose: () => void;
-  search: string;
-  setSearch: (v: string) => void;
-  groupFilter: string;
-  setGroupFilter: (v: string) => void;
-}
-
-function FilterPanel({ open, onClose, search, setSearch, groupFilter, setGroupFilter }: FilterPanelProps) {
-  return (
-    <>
-      {/* Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 transition-opacity"
-          onClick={onClose}
-        />
-      )}
-      {/* Slide-over panel */}
-      <div
-        className={`fixed inset-y-0 right-0 z-50 w-80 transform border-l border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-900 ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h3>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-            {/* Search */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Search
-              </label>
-              <input
-                type="text"
-                placeholder="Search ledger..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-              />
-            </div>
-
-            {/* Group Filter */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Filter by Group
-              </label>
-              <SlideSelect
-                name="groupFilter"
-                placeholder="All Groups"
-                panelTitle="Filter by Group"
-                value={groupFilter}
-                onChange={setGroupFilter}
-                queryKey={['accounting-groups-all']}
-                queryFn={(params) => accountingGroupsApi.list({ ...params, per_page: '500' })}
-                mapFn={(g: AccountingGroup) => ({ value: g.id, label: `${g.name}` })}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 export default function Ledgers() {
   usePageTitle('Ledgers');
@@ -352,11 +274,64 @@ export default function Ledgers() {
       <FilterPanel
         open={showFilterPanel}
         onClose={() => setShowFilterPanel(false)}
-        search={search}
-        setSearch={(val) => { setSearch(val); setPage(1); }}
-        groupFilter={groupFilter}
-        setGroupFilter={(val) => { setGroupFilter(val); setPage(1); }}
-      />
+      >
+        {/* Search */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Search
+            </label>
+            {search && (
+              <button onClick={() => { setSearch(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            placeholder="Search ledger..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Group Filter */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Filter by Group
+            </label>
+            {groupFilter && (
+              <button onClick={() => { setGroupFilter(''); setPage(1); }} className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                Clear
+              </button>
+            )}
+          </div>
+          <SlideSelect
+            name="groupFilter"
+            placeholder="All Groups"
+            panelTitle="Filter by Group"
+            value={groupFilter}
+            onChange={(val) => { setGroupFilter(val); setPage(1); }}
+            queryKey={['accounting-groups-all']}
+            queryFn={(params) => accountingGroupsApi.list({ ...params, per_page: '500' })}
+            mapFn={(g: AccountingGroup) => ({ value: g.id, label: `${g.name}` })}
+          />
+        </div>
+
+        {/* Clear All Filters Button */}
+        <button
+          onClick={() => {
+            setSearch('');
+            setGroupFilter('');
+            setPage(1);
+          }}
+          className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Clear All Filters
+        </button>
+      </FilterPanel>
     </div>
   );
 }

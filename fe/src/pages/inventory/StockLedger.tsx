@@ -193,16 +193,20 @@ export default function StockLedger() {
           </div>
         </div>
 
-        {/* Clear Filters */}
-        {(itemFilter || godownFilter || typeFilter || fromDate || toDate) && (
-          <button
-            type="button"
-            onClick={() => { setItemFilter(''); setGodownFilter(''); setTypeFilter(''); setFromDate(''); setToDate(''); setPage(1); }}
-            className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-600/50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
-          >
-            Clear Filters
-          </button>
-        )}
+        {/* Clear All Filters Button */}
+        <button
+          onClick={() => {
+            setItemFilter('');
+            setGodownFilter('');
+            setTypeFilter('');
+            setFromDate('');
+            setToDate('');
+            setPage(1);
+          }}
+          className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Clear All Filters
+        </button>
       </FilterPanel>
     </div>
   );

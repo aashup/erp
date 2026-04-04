@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
+import { FilterPanel } from '@/components/ui/FilterPanel';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 const schema = z.object({
@@ -30,11 +31,23 @@ export default function Branches() {
   usePageTitle('Branches');
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editBranch, setEditBranch] = useState<Branch | null>(null);
+  const [search, setSearch] = useState('');
+  const [codeFilter, setCodeFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [addressFilter, setAddressFilter] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['branches'],
-    queryFn: () => api.get<PaginatedResponse<Branch>>('/branches'),
+    queryKey: ['branches', search, codeFilter, cityFilter, addressFilter],
+    queryFn: () => api.get<PaginatedResponse<Branch>>('/branches', {
+      params: {
+        ...(search ? { search } : {}),
+        ...(codeFilter ? { code: codeFilter } : {}),
+        ...(cityFilter ? { city: cityFilter } : {}),
+        ...(addressFilter ? { address: addressFilter } : {}),
+      }
+    }),
     select: (res) => res.data,
   });
 
@@ -84,12 +97,135 @@ export default function Branches() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Branches</h1>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Branch</Button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowFilterPanel(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filters
+          </button>
+          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Branch</Button>
+        </div>
       </div>
       <Card>
         <CardHeader><p className="text-sm text-gray-500 dark:text-gray-400">Manage company branches</p></CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
       </Card>
+
+      {/* Filter Panel */}
+      <FilterPanel open={showFilterPanel} onClose={() => setShowFilterPanel(false)}>
+        {/* Search Input */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Search Name
+            </label>
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Code Filter */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Filter by Code
+            </label>
+            {codeFilter && (
+              <button
+                onClick={() => setCodeFilter('')}
+                className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            placeholder="Search by code..."
+            value={codeFilter}
+            onChange={(e) => setCodeFilter(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* City Filter */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Filter by City
+            </label>
+            {cityFilter && (
+              <button
+                onClick={() => setCityFilter('')}
+                className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            placeholder="Search by city..."
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Address Filter */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Filter by Address
+            </label>
+            {addressFilter && (
+              <button
+                onClick={() => setAddressFilter('')}
+                className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            placeholder="Search by address..."
+            value={addressFilter}
+            onChange={(e) => setAddressFilter(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Clear All Filters Button */}
+        <button
+          onClick={() => {
+            setSearch('');
+            setCodeFilter('');
+            setCityFilter('');
+            setAddressFilter('');
+          }}
+          className="mt-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Clear All Filters
+        </button>
+      </FilterPanel>
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editBranch ? 'Edit Branch' : 'New Branch'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input id="name" label="Name" error={errors.name?.message} {...register('name')} />

@@ -5,6 +5,7 @@ import { accountingGroupsApi } from '@/api/accounting';
 import type { AccountingGroup } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import toast from 'react-hot-toast';
 import {
   ChevronRight,
@@ -338,18 +339,21 @@ function FilterPanel({
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Account Type
               </label>
-              <select
+              <SlideSelect
+                name="filterType"
+                placeholder="All Types"
+                panelTitle="Select Account Type"
+                options={[
+                  { value: '', label: 'All Types' },
+                  { value: 'asset', label: 'Assets' },
+                  { value: 'liability', label: 'Liabilities' },
+                  { value: 'equity', label: 'Equity' },
+                  { value: 'income', label: 'Income' },
+                  { value: 'expense', label: 'Expenses' },
+                ]}
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="">All Types</option>
-                <option value="asset">Assets</option>
-                <option value="liability">Liabilities</option>
-                <option value="equity">Equity</option>
-                <option value="income">Income</option>
-                <option value="expense">Expenses</option>
-              </select>
+                onChange={(val) => setFilterType(val)}
+              />
             </div>
 
             {/* Visibility */}
@@ -624,16 +628,14 @@ function CreateModal({ open, allAccounts, onClose, onSave, saving }: CreateModal
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Parent Group
           </label>
-          <select
+          <SlideSelect
+            name="parentId"
+            placeholder="None (Root level)"
+            panelTitle="Select Parent Group"
+            options={[{ value: '', label: 'None (Root level)' }, ...parentOptions.map((a) => ({ value: a.id, label: a.name }))]}
             value={parentId ?? ''}
-            onChange={(e) => setParentId(e.target.value || null)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-          >
-            <option value="">None (Root level)</option>
-            {parentOptions.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
+            onChange={(val) => setParentId(val || null)}
+          />
         </div>
 
         <div>
