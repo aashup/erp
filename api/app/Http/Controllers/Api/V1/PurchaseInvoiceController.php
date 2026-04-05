@@ -21,10 +21,27 @@ class PurchaseInvoiceController extends Controller
 
         $query = PurchaseInvoice::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"))
-            ->latest('invoice_date');
+            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"));
 
-        $this->applyFYFilter($query, $request, 'invoice_date');
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'invoice_number' => $query->orderBy('purchase_invoices.invoice_number', $sortOrder),
+                'vendor_invoice_number' => $query->orderBy('purchase_invoices.vendor_invoice_number', $sortOrder),
+                'vendor' => $query->join('parties', 'purchase_invoices.party_id', '=', 'parties.id')->orderBy('parties.name', $sortOrder),
+                'invoice_date' => $query->orderBy('purchase_invoices.invoice_date', $sortOrder),
+                'grand_total' => $query->orderBy('purchase_invoices.grand_total', $sortOrder),
+                'balance_due' => $query->orderBy('purchase_invoices.balance_due', $sortOrder),
+                'status' => $query->orderBy('purchase_invoices.status', $sortOrder),
+                default => $query->latest('purchase_invoices.invoice_date'),
+            };
+        } else {
+            $query->latest('purchase_invoices.invoice_date');
+        }
+
+        $this->applyFYFilter($query, $request, 'purchase_invoices.invoice_date');
 
         $invoices = $query->paginate($request->per_page ?? 25);
 

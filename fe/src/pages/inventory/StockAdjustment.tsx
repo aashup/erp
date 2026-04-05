@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { DataTable } from '@/components/ui/DataTable';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 const adjustmentSchema = z.object({
   item_id: z.string().min(1, 'Item is required'),
@@ -30,6 +31,8 @@ export default function StockAdjustment() {
   usePageTitle('Stock Adjustment');
   const queryClient = useQueryClient();
   const [page] = useState(1);
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-all'],
@@ -44,8 +47,8 @@ export default function StockAdjustment() {
   });
 
   const { data: recentAdjustments, isLoading } = useQuery({
-    queryKey: ['stock-ledger', 'adjustments', page],
-    queryFn: () => stockLedgerApi.list({ page: String(page), per_page: '10', type: 'adjustment' }),
+    queryKey: ['stock-ledger', 'adjustments', page, sortBy, sortOrder],
+    queryFn: () => stockLedgerApi.list({ page: String(page), per_page: '10', type: 'adjustment', sort_by: sortBy, sort_order: sortOrder }),
     select: (res) => res.data,
   });
 
@@ -77,19 +80,108 @@ export default function StockAdjustment() {
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: `${i.name} (${i.sku ?? ''})`, subtitle: i.sku ?? i.hsn_code ?? '' }));
   const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name }));
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<StockLedgerEntry, unknown>[] = [
-    { accessorKey: 'created_at', header: 'Date', cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString('en-IN') },
-    { header: 'Item', cell: ({ row }) => row.original.item?.name ?? '—' },
-    { header: 'Godown', cell: ({ row }) => row.original.godown?.name ?? '—' },
     {
-      accessorKey: 'quantity', header: 'Qty',
-      cell: ({ getValue }) => {
-        const v = Number(getValue());
+      id: 'created_at',
+      header: () => (
+        <button
+          onClick={() => handleSort('created_at')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by date"
+        >
+          Date
+          {renderSortIcon('created_at')}
+        </button>
+      ),
+      cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString('en-IN'),
+    },
+    {
+      id: 'item_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('item_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by item"
+        >
+          Item
+          {renderSortIcon('item_name')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.item?.name ?? '—',
+    },
+    {
+      id: 'godown_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('godown_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by godown"
+        >
+          Godown
+          {renderSortIcon('godown_name')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.godown?.name ?? '—',
+    },
+    {
+      id: 'quantity',
+      header: () => (
+        <button
+          onClick={() => handleSort('quantity')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by quantity"
+        >
+          Qty
+          {renderSortIcon('quantity')}
+        </button>
+      ),
+      cell: ({ row }) => {
+        const v = Number(row.original.quantity);
         return <span className={v >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{v > 0 ? '+' : ''}{v}</span>;
       },
     },
-    { accessorKey: 'rate', header: 'Rate', cell: ({ getValue }) => formatCurrency(getValue() as number) },
-    { accessorKey: 'narration', header: 'Reason', cell: ({ getValue }) => (getValue() as string) ?? '—' },
+    {
+      id: 'rate',
+      header: () => (
+        <button
+          onClick={() => handleSort('rate')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by rate"
+        >
+          Rate
+          {renderSortIcon('rate')}
+        </button>
+      ),
+      cell: ({ row }) => formatCurrency(row.original.rate),
+    },
+    {
+      id: 'narration',
+      header: () => (
+        <button
+          onClick={() => handleSort('narration')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by reason"
+        >
+          Reason
+          {renderSortIcon('narration')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.narration ?? '—',
+    },
   ];
 
   return (

@@ -23,14 +23,32 @@ class StockLedgerController extends Controller
         $this->authorize('viewAny', Item::class);
 
         $query = StockLedger::with(['item:id,name,sku,unit', 'godown:id,name', 'batch:id,batch_number'])
-            ->when($request->item_id, fn ($q, $v) => $q->where('item_id', $v))
-            ->when($request->godown_id, fn ($q, $v) => $q->where('godown_id', $v))
-            ->when($request->type, fn ($q, $v) => $q->where('type', $v))
-            ->when($request->from_date, fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
-            ->when($request->to_date, fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
-            ->orderByDesc('created_at');
+            ->when($request->item_id, fn ($q, $v) => $q->where('stock_ledger.item_id', $v))
+            ->when($request->godown_id, fn ($q, $v) => $q->where('stock_ledger.godown_id', $v))
+            ->when($request->type, fn ($q, $v) => $q->where('stock_ledger.type', $v))
+            ->when($request->from_date, fn ($q, $v) => $q->whereDate('stock_ledger.created_at', '>=', $v))
+            ->when($request->to_date, fn ($q, $v) => $q->whereDate('stock_ledger.created_at', '<=', $v));
 
-        $this->applyFYFilter($query, $request, 'created_at');
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'created_at' => $query->orderBy('stock_ledger.created_at', $sortOrder),
+                'item_name' => $query->join('items', 'stock_ledger.item_id', '=', 'items.id')->orderBy('items.name', $sortOrder),
+                'godown_name' => $query->join('godowns', 'stock_ledger.godown_id', '=', 'godowns.id')->orderBy('godowns.name', $sortOrder),
+                'type' => $query->orderBy('stock_ledger.type', $sortOrder),
+                'quantity' => $query->orderBy('stock_ledger.quantity', $sortOrder),
+                'rate' => $query->orderBy('stock_ledger.rate', $sortOrder),
+                'value' => $query->orderBy('stock_ledger.value', $sortOrder),
+                'narration' => $query->orderBy('stock_ledger.narration', $sortOrder),
+                default => $query->orderByDesc('stock_ledger.created_at'),
+            };
+        } else {
+            $query->orderByDesc('stock_ledger.created_at');
+        }
+
+        $this->applyFYFilter($query, $request, 'stock_ledger.created_at');
 
         $entries = $query->paginate($request->per_page ?? 25);
 
@@ -46,18 +64,34 @@ class StockLedgerController extends Controller
 
         $companyId = $request->user()->company_id;
 
-        $query = StockLedger::select('item_id', 'godown_id', DB::raw('SUM(quantity) as current_stock'))
-            ->where('company_id', $companyId)
-            ->groupBy('item_id', 'godown_id')
-            ->having(DB::raw('SUM(quantity)'), '!=', 0);
+        $query = StockLedger::select('stock_ledger.item_id', 'stock_ledger.godown_id', DB::raw('SUM(stock_ledger.quantity) as current_stock'))
+            ->where('stock_ledger.company_id', $companyId)
+            ->groupBy('stock_ledger.item_id', 'stock_ledger.godown_id')
+            ->having(DB::raw('SUM(stock_ledger.quantity)'), '!=', 0);
 
         if ($request->godown_id) {
-            $query->where('godown_id', $request->godown_id);
+            $query->where('stock_ledger.godown_id', $request->godown_id);
         }
 
         if ($request->search) {
             $search = $request->search;
             $query->whereHas('item', fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"));
+        }
+
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'desc' ? 'desc' : 'asc';
+
+            match ($request->sort_by) {
+                'item_name' => $query->join('items', 'stock_ledger.item_id', '=', 'items.id')->orderBy('items.name', $sortOrder),
+                'sku' => $query->join('items', 'stock_ledger.item_id', '=', 'items.id')->orderBy('items.sku', $sortOrder),
+                'unit' => $query->join('items', 'stock_ledger.item_id', '=', 'items.id')->orderBy('items.unit', $sortOrder),
+                'godown_name' => $query->join('godowns', 'stock_ledger.godown_id', '=', 'godowns.id')->orderBy('godowns.name', $sortOrder),
+                'current_stock' => $query->orderBy(DB::raw('SUM(stock_ledger.quantity)'), $sortOrder),
+                'reorder_level' => $query->join('items', 'stock_ledger.item_id', '=', 'items.id')->orderBy('items.reorder_level', $sortOrder),
+                'status' => $query->join('items', 'stock_ledger.item_id', '=', 'items.id')->orderBy('items.reorder_level', $sortOrder),
+                default => null,
+            };
         }
 
         // Get paginated results with item & godown eager-loaded

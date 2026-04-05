@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -37,15 +37,19 @@ export default function Branches() {
   const [codeFilter, setCodeFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [addressFilter, setAddressFilter] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['branches', search, codeFilter, cityFilter, addressFilter],
+    queryKey: ['branches', search, codeFilter, cityFilter, addressFilter, sortBy, sortOrder],
     queryFn: () => api.get<PaginatedResponse<Branch>>('/branches', {
       params: {
         ...(search ? { search } : {}),
         ...(codeFilter ? { code: codeFilter } : {}),
         ...(cityFilter ? { city: cityFilter } : {}),
         ...(addressFilter ? { address: addressFilter } : {}),
+        sort_by: sortBy,
+        sort_order: sortOrder,
       }
     }),
     select: (res) => res.data,
@@ -76,12 +80,67 @@ export default function Branches() {
     else createMutation.mutate(formData);
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<Branch, unknown>[] = [
-    { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'code', header: 'Code' },
-    { accessorKey: 'city', header: 'City' },
-    { accessorKey: 'state', header: 'State' },
-    { accessorKey: 'is_active', header: 'Status', cell: ({ getValue }) => <Badge variant={getValue() ? 'success' : 'danger'}>{getValue() ? 'Active' : 'Inactive'}</Badge> },
+    {
+      id: 'name',
+      accessorKey: 'name',
+      header: () => (
+        <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Name {renderSortIcon('name')}
+        </button>
+      ),
+    },
+    {
+      id: 'code',
+      accessorKey: 'code',
+      header: () => (
+        <button onClick={() => handleSort('code')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Code {renderSortIcon('code')}
+        </button>
+      ),
+    },
+    {
+      id: 'city',
+      accessorKey: 'city',
+      header: () => (
+        <button onClick={() => handleSort('city')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          City {renderSortIcon('city')}
+        </button>
+      ),
+    },
+    {
+      id: 'state',
+      accessorKey: 'state',
+      header: () => (
+        <button onClick={() => handleSort('state')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          State {renderSortIcon('state')}
+        </button>
+      ),
+    },
+    {
+      id: 'is_active',
+      accessorKey: 'is_active',
+      header: () => (
+        <button onClick={() => handleSort('is_active')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Status {renderSortIcon('is_active')}
+        </button>
+      ),
+      cell: ({ getValue }) => <Badge variant={getValue() ? 'success' : 'danger'}>{getValue() ? 'Active' : 'Inactive'}</Badge>,
+    },
     {
       id: 'actions', header: '',
       cell: ({ row }) => (

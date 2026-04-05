@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Pencil, Trash2, Star, Lock, Unlock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Lock, Unlock, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const schema = z.object({
@@ -32,10 +32,12 @@ export default function FinancialYears() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editFY, setEditFY] = useState<FinancialYear | null>(null);
+  const [sortBy, setSortBy] = useState('start_date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['financial-years'],
-    queryFn: () => financialYearsApi.list({ per_page: '50' }),
+    queryKey: ['financial-years', sortBy, sortOrder],
+    queryFn: () => financialYearsApi.list({ per_page: '50', sort_by: sortBy, sort_order: sortOrder }),
     select: (res) => res.data,
   });
 
@@ -130,21 +132,58 @@ export default function FinancialYears() {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<FinancialYear, unknown>[] = [
-    { accessorKey: 'label', header: 'Financial Year' },
     {
+      id: 'label',
+      accessorKey: 'label',
+      header: () => (
+        <button onClick={() => handleSort('label')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Financial Year {renderSortIcon('label')}
+        </button>
+      ),
+    },
+    {
+      id: 'start_date',
       accessorKey: 'start_date',
-      header: 'Start Date',
+      header: () => (
+        <button onClick={() => handleSort('start_date')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Start Date {renderSortIcon('start_date')}
+        </button>
+      ),
       cell: ({ getValue }) => formatDate(getValue() as string),
     },
     {
+      id: 'end_date',
       accessorKey: 'end_date',
-      header: 'End Date',
+      header: () => (
+        <button onClick={() => handleSort('end_date')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          End Date {renderSortIcon('end_date')}
+        </button>
+      ),
       cell: ({ getValue }) => formatDate(getValue() as string),
     },
     {
+      id: 'is_current',
       accessorKey: 'is_current',
-      header: 'Default',
+      header: () => (
+        <button onClick={() => handleSort('is_current')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Default {renderSortIcon('is_current')}
+        </button>
+      ),
       cell: ({ row }) =>
         row.original.is_current ? (
           <Badge variant="success">

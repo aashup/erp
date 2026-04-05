@@ -24,10 +24,25 @@ class PurchaseOrderController extends Controller
 
         $query = PurchaseOrder::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('po_number', 'like', "%{$s}%"))
-            ->latest('po_date');
+            ->when($request->search, fn ($q, $s) => $q->where('po_number', 'like', "%{$s}%"));
 
-        $this->applyFYFilter($query, $request, 'po_date');
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'po_number' => $query->orderBy('po_number', $sortOrder),
+                'vendor_name' => $query->join('parties', 'purchase_orders.party_id', '=', 'parties.id')->orderBy('parties.name', $sortOrder),
+                'po_date' => $query->orderBy('po_date', $sortOrder),
+                'grand_total' => $query->orderBy('grand_total', $sortOrder),
+                'status' => $query->orderBy('status', $sortOrder),
+                default => $query->latest('po_date'),
+            };
+        } else {
+            $query->latest('po_date');
+        }
+
+        $this->applyFYFilter($query, $request, 'purchase_orders.po_date');
 
         $orders = $query->paginate($request->per_page ?? 25);
 

@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const schema = z.object({
@@ -49,10 +49,12 @@ export default function Parties() {
   const [showModal, setShowModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editParty, setEditParty] = useState<Party | null>(null);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['parties', page, search, typeFilter],
-    queryFn: () => partiesApi.list({ page: String(page), search, ...(typeFilter ? { type: typeFilter } : {}) }),
+    queryKey: ['parties', page, search, typeFilter, sortBy, sortOrder],
+    queryFn: () => partiesApi.list({ page: String(page), search, sort_by: sortBy, sort_order: sortOrder, ...(typeFilter ? { type: typeFilter } : {}) }),
     select: (res) => res.data,
   });
 
@@ -88,13 +90,109 @@ export default function Parties() {
 
   const typeColor: Record<string, 'info' | 'success' | 'warning'> = { customer: 'info', vendor: 'success', both: 'warning' };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<Party, unknown>[] = [
-    { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'type', header: 'Type', cell: ({ getValue }) => { const t = getValue() as string; return <Badge variant={typeColor[t]}>{t}</Badge>; } },
-    { accessorKey: 'gstin', header: 'GSTIN' },
-    { accessorKey: 'city', header: 'City' },
-    { accessorKey: 'phone', header: 'Phone' },
-    { accessorKey: 'credit_limit', header: 'Credit Limit', cell: ({ getValue }) => { const v = getValue() as number | null; return v ? formatCurrency(v) : '—'; } },
+    {
+      id: 'name',
+      header: () => (
+        <button
+          onClick={() => handleSort('name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by name"
+        >
+          Name
+          {renderSortIcon('name')}
+        </button>
+      ),
+      accessorKey: 'name',
+    },
+    {
+      id: 'type',
+      header: () => (
+        <button
+          onClick={() => handleSort('type')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by type"
+        >
+          Type
+          {renderSortIcon('type')}
+        </button>
+      ),
+      cell: ({ row }) => <Badge variant={typeColor[row.original.type]}>{row.original.type}</Badge>,
+    },
+    {
+      id: 'gstin',
+      header: () => (
+        <button
+          onClick={() => handleSort('gstin')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by GSTIN"
+        >
+          GSTIN
+          {renderSortIcon('gstin')}
+        </button>
+      ),
+      accessorKey: 'gstin',
+    },
+    {
+      id: 'city',
+      header: () => (
+        <button
+          onClick={() => handleSort('city')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by city"
+        >
+          City
+          {renderSortIcon('city')}
+        </button>
+      ),
+      accessorKey: 'city',
+    },
+    {
+      id: 'phone',
+      header: () => (
+        <button
+          onClick={() => handleSort('phone')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by phone"
+        >
+          Phone
+          {renderSortIcon('phone')}
+        </button>
+      ),
+      accessorKey: 'phone',
+    },
+    {
+      id: 'credit_limit',
+      header: () => (
+        <button
+          onClick={() => handleSort('credit_limit')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by credit limit"
+        >
+          Credit Limit
+          {renderSortIcon('credit_limit')}
+        </button>
+      ),
+      cell: ({ row }) => {
+        const v = row.original.credit_limit;
+        return v ? formatCurrency(v) : '—';
+      },
+    },
     {
       id: 'actions', header: '',
       cell: ({ row }) => (

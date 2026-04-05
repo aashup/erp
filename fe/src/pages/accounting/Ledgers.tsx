@@ -17,7 +17,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import toast from 'react-hot-toast';
-import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const ledgerSchema = z.object({
@@ -53,13 +53,15 @@ export default function Ledgers() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showModal, setShowModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editItem, setEditItem] = useState<Ledger | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['ledgers', page, search, groupFilter],
-    queryFn: () => ledgersApi.list({ page: String(page), search, ...(groupFilter ? { group_id: groupFilter } : {}) }),
+    queryKey: ['ledgers', page, search, groupFilter, sortBy, sortOrder],
+    queryFn: () => ledgersApi.list({ page: String(page), search, ...(groupFilter ? { group_id: groupFilter } : {}), sort_by: sortBy, sort_order: sortOrder }),
     select: (res) => res.data,
   });
 
@@ -146,26 +148,77 @@ export default function Ledgers() {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<Ledger, unknown>[] = [
-    { accessorKey: 'name', header: 'Name', cell: ({ row }) => (
-      <div>
-        <span className="font-medium">{row.original.name}</span>
-        {row.original.alias && <span className="ml-2 text-xs text-gray-400">({row.original.alias})</span>}
-      </div>
-    )},
-    { accessorKey: 'group', header: 'Group', cell: ({ row }) => (
-      <span className="text-sm">{row.original.group?.name ?? '—'}</span>
-    )},
-    { accessorKey: 'opening_balance', header: 'Opening Balance', cell: ({ row }) => (
-      <span className="text-sm">
-        {row.original.opening_balance > 0
-          ? `${formatCurrency(row.original.opening_balance)} ${row.original.opening_type.toUpperCase()}`
-          : '—'}
-      </span>
-    )},
-    { accessorKey: 'is_system', header: 'Type', cell: ({ getValue }) => (
-      <Badge variant={getValue() ? 'info' : 'default'}>{getValue() ? 'System' : 'Manual'}</Badge>
-    )},
+    {
+      id: 'name',
+      accessorKey: 'name',
+      header: () => (
+        <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Name {renderSortIcon('name')}
+        </button>
+      ),
+      cell: ({ row }) => (
+        <div>
+          <span className="font-medium">{row.original.name}</span>
+          {row.original.alias && <span className="ml-2 text-xs text-gray-400">({row.original.alias})</span>}
+        </div>
+      )
+    },
+    {
+      id: 'group',
+      accessorKey: 'group',
+      header: () => (
+        <button onClick={() => handleSort('group')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Group {renderSortIcon('group')}
+        </button>
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.group?.name ?? '—'}</span>
+      )
+    },
+    {
+      id: 'opening_balance',
+      accessorKey: 'opening_balance',
+      header: () => (
+        <button onClick={() => handleSort('opening_balance')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Opening Balance {renderSortIcon('opening_balance')}
+        </button>
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm">
+          {row.original.opening_balance > 0
+            ? `${formatCurrency(row.original.opening_balance)} ${row.original.opening_type.toUpperCase()}`
+            : '—'}
+        </span>
+      )
+    },
+    {
+      id: 'is_system',
+      accessorKey: 'is_system',
+      header: () => (
+        <button onClick={() => handleSort('is_system')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Type {renderSortIcon('is_system')}
+        </button>
+      ),
+      cell: ({ getValue }) => (
+        <Badge variant={getValue() ? 'info' : 'default'}>{getValue() ? 'System' : 'Manual'}</Badge>
+      )
+    },
     {
       id: 'actions',
       header: '',

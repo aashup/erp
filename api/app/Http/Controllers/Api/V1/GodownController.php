@@ -14,9 +14,25 @@ class GodownController extends Controller
         $this->authorize('viewAny', Godown::class);
 
         $godowns = Godown::with('branch')
-            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
-            ->orderBy('name')
-            ->paginate($request->per_page ?? 25);
+            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true));
+
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'desc' ? 'desc' : 'asc';
+
+            match ($request->sort_by) {
+                'name' => $godowns->orderBy('name', $sortOrder),
+                'code' => $godowns->orderBy('code', $sortOrder),
+                'address' => $godowns->orderBy('address', $sortOrder),
+                'is_default' => $godowns->orderBy('is_default', $sortOrder),
+                'is_active' => $godowns->orderBy('is_active', $sortOrder),
+                default => $godowns->orderBy('name'),
+            };
+        } else {
+            $godowns->orderBy('name');
+        }
+
+        $godowns = $godowns->paginate($request->per_page ?? 25);
 
         return response()->json($godowns);
     }

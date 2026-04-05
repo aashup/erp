@@ -24,10 +24,25 @@ class SalesOrderController extends Controller
 
         $query = SalesOrder::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('so_number', 'like', "%{$s}%"))
-            ->latest('so_date');
+            ->when($request->search, fn ($q, $s) => $q->where('so_number', 'like', "%{$s}%"));
 
-        $this->applyFYFilter($query, $request, 'so_date');
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'so_number' => $query->orderBy('sales_orders.so_number', $sortOrder),
+                'customer' => $query->join('parties', 'sales_orders.party_id', '=', 'parties.id')->orderBy('parties.name', $sortOrder),
+                'so_date' => $query->orderBy('sales_orders.so_date', $sortOrder),
+                'grand_total' => $query->orderBy('sales_orders.grand_total', $sortOrder),
+                'status' => $query->orderBy('sales_orders.status', $sortOrder),
+                default => $query->latest('sales_orders.so_date'),
+            };
+        } else {
+            $query->latest('sales_orders.so_date');
+        }
+
+        $this->applyFYFilter($query, $request, 'sales_orders.so_date');
 
         $orders = $query->paginate($request->per_page ?? 25);
 

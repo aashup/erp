@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Filter } from 'lucide-react';
+import { Filter, ArrowUp, ArrowDown } from 'lucide-react';
 
 export default function StockSummary() {
   usePageTitle('Stock Summary');
@@ -19,10 +19,12 @@ export default function StockSummary() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [search, setSearch] = useState('');
   const [godownFilter, setGodownFilter] = useState('');
+  const [sortBy, setSortBy] = useState('item_name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['stock-summary', page, search, godownFilter],
-    queryFn: () => stockLedgerApi.summary({ page: String(page), search, per_page: '25', ...(godownFilter ? { godown_id: godownFilter } : {}) }),
+    queryKey: ['stock-summary', page, search, godownFilter, sortBy, sortOrder],
+    queryFn: () => stockLedgerApi.summary({ page: String(page), search, per_page: '25', sort_by: sortBy, sort_order: sortOrder, ...(godownFilter ? { godown_id: godownFilter } : {}) }),
     select: (res) => res.data,
   });
 
@@ -32,26 +34,121 @@ export default function StockSummary() {
     select: (res) => res.data,
   });
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<StockSummaryRow, unknown>[] = [
-    { header: 'Item', cell: ({ row }) => row.original.item?.name ?? '—' },
-    { header: 'SKU', cell: ({ row }) => row.original.item?.sku ?? '—' },
-    { header: 'Unit', cell: ({ row }) => row.original.item?.unit ?? '—' },
-    { header: 'Godown', cell: ({ row }) => row.original.godown?.name ?? '—' },
     {
-      accessorKey: 'current_stock',
-      header: 'Current Stock',
+      id: 'item_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('item_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by item name"
+        >
+          Item
+          {renderSortIcon('item_name')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.item?.name ?? '—',
+    },
+    {
+      id: 'sku',
+      header: () => (
+        <button
+          onClick={() => handleSort('sku')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by SKU"
+        >
+          SKU
+          {renderSortIcon('sku')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.item?.sku ?? '—',
+    },
+    {
+      id: 'unit',
+      header: () => (
+        <button
+          onClick={() => handleSort('unit')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by unit"
+        >
+          Unit
+          {renderSortIcon('unit')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.item?.unit ?? '—',
+    },
+    {
+      id: 'godown_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('godown_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by godown"
+        >
+          Godown
+          {renderSortIcon('godown_name')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.godown?.name ?? '—',
+    },
+    {
+      id: 'current_stock',
+      header: () => (
+        <button
+          onClick={() => handleSort('current_stock')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by current stock"
+        >
+          Current Stock
+          {renderSortIcon('current_stock')}
+        </button>
+      ),
       cell: ({ getValue }) => {
         const v = getValue() as number;
         return <span className="font-semibold">{Number(v).toFixed(2)}</span>;
       },
     },
     {
-      header: 'Reorder Level',
+      id: 'reorder_level',
+      header: () => (
+        <button
+          onClick={() => handleSort('reorder_level')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by reorder level"
+        >
+          Reorder Level
+          {renderSortIcon('reorder_level')}
+        </button>
+      ),
       cell: ({ row }) => row.original.item?.reorder_level ?? '—',
     },
     {
       id: 'status',
-      header: 'Status',
+      header: () => (
+        <button
+          onClick={() => handleSort('status')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by status"
+        >
+          Status
+          {renderSortIcon('status')}
+        </button>
+      ),
       cell: ({ row }) => {
         const reorder = row.original.item?.reorder_level;
         const stock = Number(row.original.current_stock);

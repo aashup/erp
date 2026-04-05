@@ -16,9 +16,26 @@ class PartyController extends Controller
         $parties = Party::query()
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))
             ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('gstin', 'like', "%{$s}%"))
-            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
-            ->orderBy('name')
-            ->paginate($request->per_page ?? 25);
+            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true));
+
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'desc' ? 'desc' : 'asc';
+
+            match ($request->sort_by) {
+                'name' => $parties->orderBy('name', $sortOrder),
+                'type' => $parties->orderBy('type', $sortOrder),
+                'gstin' => $parties->orderBy('gstin', $sortOrder),
+                'city' => $parties->orderBy('city', $sortOrder),
+                'phone' => $parties->orderBy('phone', $sortOrder),
+                'credit_limit' => $parties->orderBy('credit_limit', $sortOrder),
+                default => $parties->orderBy('name'),
+            };
+        } else {
+            $parties->orderBy('name');
+        }
+
+        $parties = $parties->paginate($request->per_page ?? 25);
 
         return response()->json($parties);
     }

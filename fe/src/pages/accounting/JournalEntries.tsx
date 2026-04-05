@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Search, Eye, X } from 'lucide-react';
+import { Plus, Search, Eye, X, ArrowUp, ArrowDown } from 'lucide-react';
 
 const journalLineSchema = z.object({
   ledger_id: z.string().min(1, 'Ledger required'),
@@ -47,12 +47,14 @@ export default function JournalEntries() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('voucher_date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState<Voucher | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['vouchers', page, search],
-    queryFn: () => vouchersApi.list({ page: String(page), search }),
+    queryKey: ['vouchers', page, search, sortBy, sortOrder],
+    queryFn: () => vouchersApi.list({ page: String(page), search, sort_by: sortBy, sort_order: sortOrder }),
     select: (res) => res.data,
   });
 
@@ -113,14 +115,73 @@ export default function JournalEntries() {
     } as unknown as Record<string, unknown>);
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const ledgerOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name ?? '' }));
 
   const columns: ColumnDef<Voucher, unknown>[] = [
-    { accessorKey: 'voucher_number', header: 'Voucher #' },
-    { accessorKey: 'voucher_date', header: 'Date', cell: ({ getValue }) => formatDate(getValue() as string) },
-    { accessorKey: 'voucher_type', header: 'Type', cell: ({ getValue }) => <Badge>{getValue() as string}</Badge> },
-    { accessorKey: 'narration', header: 'Narration', cell: ({ getValue }) => <span className="truncate max-w-[200px] block">{(getValue() as string) ?? '—'}</span> },
-    { accessorKey: 'is_posted', header: 'Status', cell: ({ getValue }) => <Badge variant={getValue() ? 'success' : 'warning'}>{getValue() ? 'Posted' : 'Draft'}</Badge> },
+    {
+      id: 'voucher_number',
+      accessorKey: 'voucher_number',
+      header: () => (
+        <button onClick={() => handleSort('voucher_number')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Voucher # {renderSortIcon('voucher_number')}
+        </button>
+      ),
+    },
+    {
+      id: 'voucher_date',
+      accessorKey: 'voucher_date',
+      header: () => (
+        <button onClick={() => handleSort('voucher_date')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Date {renderSortIcon('voucher_date')}
+        </button>
+      ),
+      cell: ({ getValue }) => formatDate(getValue() as string),
+    },
+    {
+      id: 'voucher_type',
+      accessorKey: 'voucher_type',
+      header: () => (
+        <button onClick={() => handleSort('voucher_type')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Type {renderSortIcon('voucher_type')}
+        </button>
+      ),
+      cell: ({ getValue }) => <Badge>{getValue() as string}</Badge>,
+    },
+    {
+      id: 'narration',
+      accessorKey: 'narration',
+      header: () => (
+        <button onClick={() => handleSort('narration')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Narration {renderSortIcon('narration')}
+        </button>
+      ),
+      cell: ({ getValue }) => <span className="truncate max-w-[200px] block">{(getValue() as string) ?? '—'}</span>,
+    },
+    {
+      id: 'is_posted',
+      accessorKey: 'is_posted',
+      header: () => (
+        <button onClick={() => handleSort('is_posted')} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400">
+          Status {renderSortIcon('is_posted')}
+        </button>
+      ),
+      cell: ({ getValue }) => <Badge variant={getValue() ? 'success' : 'warning'}>{getValue() ? 'Posted' : 'Draft'}</Badge>,
+    },
     {
       id: 'actions',
       header: '',

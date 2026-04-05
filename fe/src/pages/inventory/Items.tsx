@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const itemSchema = z.object({
@@ -48,13 +48,17 @@ export default function Items() {
   const [showModal, setShowModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editItem, setEditItem] = useState<Item | null>(null);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['items', page, search, skuFilter, groupFilter, statusFilter, unitFilter],
+    queryKey: ['items', page, search, skuFilter, groupFilter, statusFilter, unitFilter, sortBy, sortOrder],
     queryFn: () => itemsApi.list({
       page: String(page),
       search,
       per_page: '25',
+      sort_by: sortBy,
+      sort_order: sortOrder,
       ...(skuFilter ? { sku: skuFilter } : {}),
       ...(groupFilter ? { item_group_id: groupFilter } : {}),
       ...(statusFilter ? { is_active: statusFilter === 'active' ? '1' : '0' } : {}),
@@ -170,35 +174,138 @@ export default function Items() {
       ? [...unitOptions, { value: editItem.unit, label: `${editItem.unit} (current)` }]
       : unitOptions;
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<Item, unknown>[] = [
-    { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'sku', header: 'SKU' },
-    { accessorKey: 'hsn_code', header: 'HSN' },
-    { accessorKey: 'unit', header: 'Unit' },
     {
-      accessorKey: 'item_group',
-      header: 'Group',
+      id: 'name',
+      header: () => (
+        <button
+          onClick={() => handleSort('name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by name"
+        >
+          Name
+          {renderSortIcon('name')}
+        </button>
+      ),
+      accessorKey: 'name',
+    },
+    {
+      id: 'sku',
+      header: () => (
+        <button
+          onClick={() => handleSort('sku')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by SKU"
+        >
+          SKU
+          {renderSortIcon('sku')}
+        </button>
+      ),
+      accessorKey: 'sku',
+    },
+    {
+      id: 'hsn_code',
+      header: () => (
+        <button
+          onClick={() => handleSort('hsn_code')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by HSN"
+        >
+          HSN
+          {renderSortIcon('hsn_code')}
+        </button>
+      ),
+      accessorKey: 'hsn_code',
+    },
+    {
+      id: 'unit',
+      header: () => (
+        <button
+          onClick={() => handleSort('unit')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by unit"
+        >
+          Unit
+          {renderSortIcon('unit')}
+        </button>
+      ),
+      accessorKey: 'unit',
+    },
+    {
+      id: 'group_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('group_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by group"
+        >
+          Group
+          {renderSortIcon('group_name')}
+        </button>
+      ),
       cell: ({ row }) => row.original.item_group?.name ?? '—',
     },
     {
-      accessorKey: 'gst_rate',
-      header: 'GST %',
-      cell: ({ getValue }) => `${getValue()}%`,
+      id: 'gst_rate',
+      header: () => (
+        <button
+          onClick={() => handleSort('gst_rate')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by GST rate"
+        >
+          GST %
+          {renderSortIcon('gst_rate')}
+        </button>
+      ),
+      cell: ({ row }) => `${row.original.gst_rate}%`,
     },
     {
-      accessorKey: 'selling_price',
-      header: 'Price',
-      cell: ({ getValue }) => {
-        const v = getValue() as number | null;
+      id: 'selling_price',
+      header: () => (
+        <button
+          onClick={() => handleSort('selling_price')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by price"
+        >
+          Price
+          {renderSortIcon('selling_price')}
+        </button>
+      ),
+      cell: ({ row }) => {
+        const v = row.original.selling_price;
         return v ? formatCurrency(v) : '—';
       },
     },
     {
-      accessorKey: 'is_active',
-      header: 'Status',
-      cell: ({ getValue }) => (
-        <Badge variant={getValue() ? 'success' : 'danger'}>
-          {getValue() ? 'Active' : 'Inactive'}
+      id: 'is_active',
+      header: () => (
+        <button
+          onClick={() => handleSort('is_active')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by status"
+        >
+          Status
+          {renderSortIcon('is_active')}
+        </button>
+      ),
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_active ? 'success' : 'danger'}>
+          {row.original.is_active ? 'Active' : 'Inactive'}
         </Badge>
       ),
     },

@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const schema = z.object({
@@ -31,10 +31,12 @@ export default function Godowns() {
   const [showModal, setShowModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editGodown, setEditGodown] = useState<Godown | null>(null);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['godowns'],
-    queryFn: () => godownsApi.list(),
+    queryKey: ['godowns', sortBy, sortOrder],
+    queryFn: () => godownsApi.list({ sort_by: sortBy, sort_order: sortOrder }),
     select: (res) => res.data,
   });
 
@@ -63,19 +65,90 @@ export default function Godowns() {
     else createMutation.mutate(formData);
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<Godown, unknown>[] = [
-    { accessorKey: 'name', header: 'Name' },
-    { accessorKey: 'code', header: 'Code' },
-    { accessorKey: 'address', header: 'Address' },
     {
-      accessorKey: 'is_default',
-      header: 'Default',
-      cell: ({ getValue }) => getValue() ? <Badge variant="info">Default</Badge> : '—',
+      id: 'name',
+      header: () => (
+        <button
+          onClick={() => handleSort('name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by name"
+        >
+          Name
+          {renderSortIcon('name')}
+        </button>
+      ),
+      accessorKey: 'name',
     },
     {
-      accessorKey: 'is_active',
-      header: 'Status',
-      cell: ({ getValue }) => <Badge variant={getValue() ? 'success' : 'danger'}>{getValue() ? 'Active' : 'Inactive'}</Badge>,
+      id: 'code',
+      header: () => (
+        <button
+          onClick={() => handleSort('code')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by code"
+        >
+          Code
+          {renderSortIcon('code')}
+        </button>
+      ),
+      accessorKey: 'code',
+    },
+    {
+      id: 'address',
+      header: () => (
+        <button
+          onClick={() => handleSort('address')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by address"
+        >
+          Address
+          {renderSortIcon('address')}
+        </button>
+      ),
+      accessorKey: 'address',
+    },
+    {
+      id: 'is_default',
+      header: () => (
+        <button
+          onClick={() => handleSort('is_default')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by default"
+        >
+          Default
+          {renderSortIcon('is_default')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.is_default ? <Badge variant="info">Default</Badge> : '—',
+    },
+    {
+      id: 'is_active',
+      header: () => (
+        <button
+          onClick={() => handleSort('is_active')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by status"
+        >
+          Status
+          {renderSortIcon('is_active')}
+        </button>
+      ),
+      cell: ({ row }) => <Badge variant={row.original.is_active ? 'success' : 'danger'}>{row.original.is_active ? 'Active' : 'Inactive'}</Badge>,
     },
     {
       id: 'actions',

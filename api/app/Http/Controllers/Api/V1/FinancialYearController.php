@@ -14,9 +14,24 @@ class FinancialYearController extends Controller
     {
         $this->authorize('viewAny', FinancialYear::class);
 
-        $years = FinancialYear::query()
-            ->orderByDesc('start_date')
-            ->paginate($request->per_page ?? 50);
+        $query = FinancialYear::query();
+
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'label' => $query->orderBy('financial_years.label', $sortOrder),
+                'start_date' => $query->orderBy('financial_years.start_date', $sortOrder),
+                'end_date' => $query->orderBy('financial_years.end_date', $sortOrder),
+                'is_current' => $query->orderBy('financial_years.is_current', $sortOrder),
+                default => $query->orderByDesc('financial_years.start_date'),
+            };
+        } else {
+            $query->orderByDesc('financial_years.start_date');
+        }
+
+        $years = $query->paginate($request->per_page ?? 50);
 
         return response()->json($years);
     }

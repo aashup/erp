@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Filter } from 'lucide-react';
+import { Filter, ArrowUp, ArrowDown } from 'lucide-react';
 
 const typeVariant: Record<string, 'info' | 'success' | 'warning' | 'danger' | 'default'> = {
   purchase: 'info',
@@ -43,12 +43,16 @@ export default function StockLedger() {
   const [typeFilter, setTypeFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['stock-ledger', page, itemFilter, godownFilter, typeFilter, fromDate, toDate],
+    queryKey: ['stock-ledger', page, itemFilter, godownFilter, typeFilter, fromDate, toDate, sortBy, sortOrder],
     queryFn: () => stockLedgerApi.list({
       page: String(page),
       per_page: '25',
+      sort_by: sortBy,
+      sort_order: sortOrder,
       ...(itemFilter ? { item_id: itemFilter } : {}),
       ...(godownFilter ? { godown_id: godownFilter } : {}),
       ...(typeFilter ? { type: typeFilter } : {}),
@@ -70,33 +74,140 @@ export default function StockLedger() {
     select: (res) => res.data,
   });
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<StockLedgerEntry, unknown>[] = [
     {
-      accessorKey: 'created_at',
-      header: 'Date',
-      cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString('en-IN'),
+      id: 'created_at',
+      header: () => (
+        <button
+          onClick={() => handleSort('created_at')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by date"
+        >
+          Date
+          {renderSortIcon('created_at')}
+        </button>
+      ),
+      cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString('en-IN'),
     },
-    { header: 'Item', cell: ({ row }) => row.original.item?.name ?? '—' },
-    { header: 'Godown', cell: ({ row }) => row.original.godown?.name ?? '—' },
     {
-      accessorKey: 'type',
-      header: 'Type',
-      cell: ({ getValue }) => {
-        const t = getValue() as string;
+      id: 'item_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('item_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by item"
+        >
+          Item
+          {renderSortIcon('item_name')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.item?.name ?? '—',
+    },
+    {
+      id: 'godown_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('godown_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by godown"
+        >
+          Godown
+          {renderSortIcon('godown_name')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.godown?.name ?? '—',
+    },
+    {
+      id: 'type',
+      header: () => (
+        <button
+          onClick={() => handleSort('type')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by type"
+        >
+          Type
+          {renderSortIcon('type')}
+        </button>
+      ),
+      cell: ({ row }) => {
+        const t = row.original.type;
         return <Badge variant={typeVariant[t] ?? 'default'}>{typeLabel[t] ?? t}</Badge>;
       },
     },
     {
-      accessorKey: 'quantity',
-      header: 'Qty',
-      cell: ({ getValue }) => {
-        const v = Number(getValue());
+      id: 'quantity',
+      header: () => (
+        <button
+          onClick={() => handleSort('quantity')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by quantity"
+        >
+          Qty
+          {renderSortIcon('quantity')}
+        </button>
+      ),
+      cell: ({ row }) => {
+        const v = Number(row.original.quantity);
         return <span className={v >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{v > 0 ? '+' : ''}{v}</span>;
       },
     },
-    { accessorKey: 'rate', header: 'Rate', cell: ({ getValue }) => formatCurrency(getValue() as number) },
-    { accessorKey: 'value', header: 'Value', cell: ({ getValue }) => formatCurrency(getValue() as number) },
-    { accessorKey: 'narration', header: 'Narration', cell: ({ getValue }) => <span className="max-w-[200px] truncate block">{(getValue() as string) ?? '—'}</span> },
+    {
+      id: 'rate',
+      header: () => (
+        <button
+          onClick={() => handleSort('rate')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by rate"
+        >
+          Rate
+          {renderSortIcon('rate')}
+        </button>
+      ),
+      cell: ({ row }) => formatCurrency(row.original.rate),
+    },
+    {
+      id: 'value',
+      header: () => (
+        <button
+          onClick={() => handleSort('value')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by value"
+        >
+          Value
+          {renderSortIcon('value')}
+        </button>
+      ),
+      cell: ({ row }) => formatCurrency(row.original.value),
+    },
+    {
+      id: 'narration',
+      header: () => (
+        <button
+          onClick={() => handleSort('narration')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by narration"
+        >
+          Narration
+          {renderSortIcon('narration')}
+        </button>
+      ),
+      cell: ({ row }) => <span className="max-w-[200px] truncate block">{row.original.narration ?? '—'}</span>,
+    },
   ];
 
   return (

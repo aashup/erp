@@ -14,7 +14,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Plus, Filter, Pencil, Trash2, Printer, Download } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
@@ -46,13 +46,17 @@ export default function SalesInvoices() {
   const [dateTo, setDateTo] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState('invoice_date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['sales-invoices', page, search, dateFrom, dateTo, customerFilter, statusFilter],
+    queryKey: ['sales-invoices', page, search, dateFrom, dateTo, customerFilter, statusFilter, sortBy, sortOrder],
     queryFn: () => salesInvoicesApi.list({
       page: String(page),
       search,
+      sort_by: sortBy,
+      sort_order: sortOrder,
       ...(dateFrom ? { date_from: dateFrom } : {}),
       ...(dateTo ? { date_to: dateTo } : {}),
       ...(customerFilter ? { party_id: customerFilter } : {}),
@@ -127,15 +131,104 @@ export default function SalesInvoices() {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<SalesInvoice, unknown>[] = [
-    { accessorKey: 'invoice_number', header: 'Invoice #' },
-    { header: 'Customer', cell: ({ row }) => row.original.party?.name ?? '—' },
-    { accessorKey: 'invoice_date', header: 'Date', cell: ({ getValue }) => formatDate(getValue() as string) },
-    { accessorKey: 'grand_total', header: 'Total', cell: ({ getValue }) => formatCurrency(getValue() as number) },
-    { accessorKey: 'balance_due', header: 'Balance', cell: ({ getValue }) => formatCurrency(getValue() as number) },
     {
-      accessorKey: 'status',
-      header: 'Status',
+      id: 'invoice_number',
+      header: () => (
+        <button
+          onClick={() => handleSort('invoice_number')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by invoice number"
+        >
+          Invoice #
+          {renderSortIcon('invoice_number')}
+        </button>
+      ),
+      accessorKey: 'invoice_number',
+    },
+    {
+      id: 'customer',
+      header: () => (
+        <button
+          onClick={() => handleSort('customer')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by customer"
+        >
+          Customer
+          {renderSortIcon('customer')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.party?.name ?? '—',
+    },
+    {
+      id: 'invoice_date',
+      header: () => (
+        <button
+          onClick={() => handleSort('invoice_date')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by date"
+        >
+          Date
+          {renderSortIcon('invoice_date')}
+        </button>
+      ),
+      cell: ({ row }) => formatDate(row.original.invoice_date),
+    },
+    {
+      id: 'grand_total',
+      header: () => (
+        <button
+          onClick={() => handleSort('grand_total')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by total"
+        >
+          Total
+          {renderSortIcon('grand_total')}
+        </button>
+      ),
+      cell: ({ row }) => formatCurrency(row.original.grand_total),
+    },
+    {
+      id: 'balance_due',
+      header: () => (
+        <button
+          onClick={() => handleSort('balance_due')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by balance"
+        >
+          Balance
+          {renderSortIcon('balance_due')}
+        </button>
+      ),
+      cell: ({ row }) => formatCurrency(row.original.balance_due),
+    },
+    {
+      id: 'status',
+      header: () => (
+        <button
+          onClick={() => handleSort('status')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by status"
+        >
+          Status
+          {renderSortIcon('status')}
+        </button>
+      ),
       cell: ({ row }) => {
         const currentStatus = row.original.status ?? 'draft';
         const transitions = allowedTransitions[currentStatus] ?? [];

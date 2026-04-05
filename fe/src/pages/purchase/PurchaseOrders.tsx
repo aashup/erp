@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const lineSchema = z.object({
@@ -79,12 +79,16 @@ export default function PurchaseOrders() {
   const [showModal, setShowModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editPo, setEditPo] = useState<PurchaseOrder | null>(null);
+  const [sortBy, setSortBy] = useState('po_date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['purchase-orders', page, search, dateFrom, dateTo, vendorFilter, statusFilter],
+    queryKey: ['purchase-orders', page, search, dateFrom, dateTo, vendorFilter, statusFilter, sortBy, sortOrder],
     queryFn: () => purchaseOrdersApi.list({
       page: String(page),
       search,
+      sort_by: sortBy,
+      sort_order: sortOrder,
       ...(dateFrom ? { date_from: dateFrom } : {}),
       ...(dateTo ? { date_to: dateTo } : {}),
       ...(vendorFilter ? { party_id: vendorFilter } : {}),
@@ -225,14 +229,90 @@ export default function PurchaseOrders() {
   const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type ?? 'vendor' }));
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const renderSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  };
+
   const columns: ColumnDef<PurchaseOrder, unknown>[] = [
-    { accessorKey: 'po_number', header: 'PO #' },
-    { header: 'Vendor', cell: ({ row }) => row.original.party?.name ?? '—' },
-    { accessorKey: 'po_date', header: 'Date', cell: ({ getValue }) => formatDate(getValue() as string) },
-    { accessorKey: 'grand_total', header: 'Total', cell: ({ getValue }) => formatCurrency(getValue() as number) },
     {
-      accessorKey: 'status',
-      header: 'Status',
+      id: 'po_number',
+      header: () => (
+        <button
+          onClick={() => handleSort('po_number')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by PO number"
+        >
+          PO #
+          {renderSortIcon('po_number')}
+        </button>
+      ),
+      accessorKey: 'po_number',
+    },
+    {
+      id: 'vendor_name',
+      header: () => (
+        <button
+          onClick={() => handleSort('vendor_name')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by vendor"
+        >
+          Vendor
+          {renderSortIcon('vendor_name')}
+        </button>
+      ),
+      cell: ({ row }) => row.original.party?.name ?? '—',
+    },
+    {
+      id: 'po_date',
+      header: () => (
+        <button
+          onClick={() => handleSort('po_date')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by date"
+        >
+          Date
+          {renderSortIcon('po_date')}
+        </button>
+      ),
+      cell: ({ row }) => formatDate(row.original.po_date),
+    },
+    {
+      id: 'grand_total',
+      header: () => (
+        <button
+          onClick={() => handleSort('grand_total')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by total"
+        >
+          Total
+          {renderSortIcon('grand_total')}
+        </button>
+      ),
+      cell: ({ row }) => formatCurrency(row.original.grand_total),
+    },
+    {
+      id: 'status',
+      header: () => (
+        <button
+          onClick={() => handleSort('status')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by status"
+        >
+          Status
+          {renderSortIcon('status')}
+        </button>
+      ),
       cell: ({ row }) => {
         const po = row.original;
         const currentStatus = po.status;

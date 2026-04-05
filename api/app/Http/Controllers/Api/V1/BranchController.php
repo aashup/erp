@@ -13,10 +13,26 @@ class BranchController extends Controller
     {
         $this->authorize('viewAny', Branch::class);
 
-        $branches = Branch::query()
-            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
-            ->orderBy('name')
-            ->paginate($request->per_page ?? 25);
+        $query = Branch::query()
+            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true));
+
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'name' => $query->orderBy('branches.name', $sortOrder),
+                'code' => $query->orderBy('branches.code', $sortOrder),
+                'city' => $query->orderBy('branches.city', $sortOrder),
+                'state' => $query->orderBy('branches.state', $sortOrder),
+                'is_active' => $query->orderBy('branches.is_active', $sortOrder),
+                default => $query->orderBy('branches.name', 'asc'),
+            };
+        } else {
+            $query->orderBy('branches.name', 'asc');
+        }
+
+        $branches = $query->paginate($request->per_page ?? 25);
 
         return response()->json($branches);
     }

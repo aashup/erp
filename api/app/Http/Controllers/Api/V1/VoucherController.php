@@ -19,10 +19,25 @@ class VoucherController extends Controller
 
         $query = Voucher::with('lines.ledger.group')
             ->when($request->voucher_type, fn ($q, $t) => $q->where('voucher_type', $t))
-            ->when($request->search, fn ($q, $s) => $q->where('voucher_number', 'like', "%{$s}%"))
-            ->latest('voucher_date');
+            ->when($request->search, fn ($q, $s) => $q->where('voucher_number', 'like', "%{$s}%"));
 
-        $this->applyFYFilter($query, $request, 'voucher_date');
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'voucher_number' => $query->orderBy('vouchers.voucher_number', $sortOrder),
+                'voucher_date' => $query->orderBy('vouchers.voucher_date', $sortOrder),
+                'voucher_type' => $query->orderBy('vouchers.voucher_type', $sortOrder),
+                'narration' => $query->orderBy('vouchers.narration', $sortOrder),
+                'is_posted' => $query->orderBy('vouchers.is_posted', $sortOrder),
+                default => $query->latest('vouchers.voucher_date'),
+            };
+        } else {
+            $query->latest('vouchers.voucher_date');
+        }
+
+        $this->applyFYFilter($query, $request, 'vouchers.voucher_date');
 
         $entries = $query->paginate($request->per_page ?? 25);
 

@@ -25,10 +25,26 @@ class SalesInvoiceController extends Controller
 
         $query = SalesInvoice::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"))
-            ->latest('invoice_date');
+            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"));
 
-        $this->applyFYFilter($query, $request, 'invoice_date');
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'invoice_number' => $query->orderBy('sales_invoices.invoice_number', $sortOrder),
+                'customer' => $query->join('parties', 'sales_invoices.party_id', '=', 'parties.id')->orderBy('parties.name', $sortOrder),
+                'invoice_date' => $query->orderBy('sales_invoices.invoice_date', $sortOrder),
+                'grand_total' => $query->orderBy('sales_invoices.grand_total', $sortOrder),
+                'balance_due' => $query->orderBy('sales_invoices.balance_due', $sortOrder),
+                'status' => $query->orderBy('sales_invoices.status', $sortOrder),
+                default => $query->latest('sales_invoices.invoice_date'),
+            };
+        } else {
+            $query->latest('sales_invoices.invoice_date');
+        }
+
+        $this->applyFYFilter($query, $request, 'sales_invoices.invoice_date');
 
         $invoices = $query->paginate($request->per_page ?? 25);
 

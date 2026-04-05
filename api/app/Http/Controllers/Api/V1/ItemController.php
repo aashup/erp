@@ -20,11 +20,30 @@ class ItemController extends Controller
             ->when($request->sku, fn ($q, $s) => $q->where('sku', 'like', "%{$s}%"))
             ->when($request->item_group_id, fn ($q, $g) => $q->where('item_group_id', $g))
             ->when($request->filled('is_active'), fn ($q) => $q->where('is_active', $request->boolean('is_active')))
-            ->when($request->unit, fn ($q, $u) => $q->where('unit', $u))
-            ->orderBy('name')
-            ->paginate($request->per_page ?? 25);
+            ->when($request->unit, fn ($q, $u) => $q->where('unit', $u));
 
-        return response()->json($items);
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'desc' ? 'desc' : 'asc';
+
+            match ($request->sort_by) {
+                'name' => $items->orderBy('name', $sortOrder),
+                'sku' => $items->orderBy('sku', $sortOrder),
+                'hsn_code' => $items->orderBy('hsn_code', $sortOrder),
+                'unit' => $items->orderBy('unit', $sortOrder),
+                'group_name' => $items->join('item_groups', 'items.item_group_id', '=', 'item_groups.id')->orderBy('item_groups.name', $sortOrder),
+                'gst_rate' => $items->orderBy('gst_rate', $sortOrder),
+                'selling_price' => $items->orderBy('selling_price', $sortOrder),
+                'is_active' => $items->orderBy('is_active', $sortOrder),
+                default => $items->orderBy('name'),
+            };
+        } else {
+            $items->orderBy('name');
+        }
+
+        $paginated = $items->paginate($request->per_page ?? 25);
+
+        return response()->json($paginated);
     }
 
     public function store(Request $request): JsonResponse

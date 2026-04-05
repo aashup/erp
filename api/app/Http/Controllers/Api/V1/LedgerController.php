@@ -18,8 +18,22 @@ class LedgerController extends Controller
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
                     ->orWhere('alias', 'like', "%{$s}%");
-            }))
-            ->orderBy('name');
+            }));
+
+        // Sorting
+        if ($request->sort_by) {
+            $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
+
+            match ($request->sort_by) {
+                'name' => $query->orderBy('ledgers.name', $sortOrder),
+                'group' => $query->join('accounting_groups', 'ledgers.group_id', '=', 'accounting_groups.id')->orderBy('accounting_groups.name', $sortOrder),
+                'opening_balance' => $query->orderBy('ledgers.opening_balance', $sortOrder),
+                'is_system' => $query->orderBy('ledgers.is_system', $sortOrder),
+                default => $query->orderBy('ledgers.name', 'asc'),
+            };
+        } else {
+            $query->orderBy('ledgers.name', 'asc');
+        }
 
         $ledgers = $query->paginate($request->per_page ?? 25);
 
