@@ -20,6 +20,8 @@ import {
   ClipboardEdit,
   Scale,
   TrendingUp,
+  Palette,
+  FileText,
 } from 'lucide-react';
 
 const navigation = [
@@ -65,6 +67,8 @@ const navigation = [
     name: 'Settings',
     children: [
       { name: 'Base Settings', href: '/settings/base', icon: Settings },
+      { name: 'Theme', href: '/settings/theme', icon: Palette },
+      { name: 'Invoice Settings', href: '/settings/invoice', icon: FileText },
       { name: 'Inventory', href: '/settings/inventory', icon: Package },
       { name: 'Units', href: '/settings/units', icon: Ruler },
       { name: 'Financial Years', href: '/settings/financial-years', icon: Calendar },

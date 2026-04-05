@@ -37,6 +37,8 @@ import Settings from '@/pages/Settings';
 import FinancialYears from '@/pages/settings/FinancialYears';
 import Units from '@/pages/settings/Units';
 import InventorySettings from '@/pages/settings/InventorySettings';
+import InvoiceSettings from '@/pages/settings/InvoiceSettings';
+import Theme from '@/pages/settings/Theme';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -129,6 +131,8 @@ export default function App() {
 
             {/* Settings */}
             <Route path="/settings/base" element={<Settings />} />
+            <Route path="/settings/theme" element={<Theme />} />
+            <Route path="/settings/invoice" element={<InvoiceSettings />} />
             <Route path="/settings/financial-years" element={<FinancialYears />} />
             <Route path="/settings/units" element={<Units />} />
             <Route path="/settings/inventory" element={<InventorySettings />} />
