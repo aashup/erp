@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
 use App\Http\Controllers\Api\V1\StockLedgerController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\VoucherController;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sync/pull', [SyncController::class, 'pull']);
 
     // Inventory
+    Route::apiResource('units', UnitController::class);
     Route::apiResource('item-groups', ItemGroupController::class);
     Route::apiResource('items', ItemController::class);
     Route::apiResource('godowns', GodownController::class);

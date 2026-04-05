@@ -9,6 +9,25 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('units', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->string('value'); // PCS, KG, BOX, etc.
+            $table->string('label'); // Pieces, Kilograms, Box, etc.
+            $table->enum('status', ['active', 'inactive'])->default('active');
+
+            // Sync columns
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
+            $table->timestamp('synced_at')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
+            $table->timestamps();
+            $table->softDeletes();
+
+            // Unique constraint scoped by company
+            $table->unique(['company_id', 'value']);
+        });
+
         Schema::create('item_groups', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
@@ -55,5 +74,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('items');
         Schema::dropIfExists('item_groups');
+        Schema::dropIfExists('units');
     }
 };

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             FinancialYearSeeder::class,
             AccountingGroupSeeder::class,
             LedgerSeeder::class,
+            UnitSeeder::class,
 
             // Inventory
             GodownSeeder::class,

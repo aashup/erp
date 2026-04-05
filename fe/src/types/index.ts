@@ -109,6 +109,14 @@ export interface Godown extends SyncColumns {
   branch?: Branch;
 }
 
+export interface Unit extends SyncColumns {
+  id: string;
+  company_id: string;
+  value: string;
+  label: string;
+  status: 'active' | 'inactive';
+}
+
 export interface Party extends SyncColumns {
   id: string;
   company_id: string;

@@ -5,9 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { itemsApi, itemGroupsApi } from '@/api/inventory';
-import { companySettingsApi } from '@/api/settings';
-import type { Item, ItemGroup, UnitOption } from '@/types';
+import { itemsApi, itemGroupsApi, unitsApi } from '@/api/inventory';
+import type { Item, ItemGroup, Unit } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -67,10 +66,10 @@ export default function Items() {
     select: (res) => res.data,
   });
 
-  const { data: companySettings, isLoading: isUnitsLoading } = useQuery({
-    queryKey: ['company-settings'],
-    queryFn: () => companySettingsApi.get(),
-    select: (res) => res.data.data,
+  const { data: unitsData, isLoading: isUnitsLoading } = useQuery({
+    queryKey: ['units'],
+    queryFn: () => unitsApi.list({ per_page: '500', status: 'active' }),
+    select: (res) => res.data,
   });
 
   const { data: itemGroupsData } = useQuery({
@@ -168,7 +167,10 @@ export default function Items() {
     }
   };
 
-  const unitOptions = (companySettings?.item_units ?? []) as UnitOption[];
+  const unitOptions = (unitsData?.data ?? []).map((unit: Unit) => ({
+    value: unit.value,
+    label: unit.label,
+  }));
   const formUnitOptions =
     editItem && !unitOptions.some((unit) => unit.value === editItem.unit)
       ? [...unitOptions, { value: editItem.unit, label: `${editItem.unit} (current)` }]

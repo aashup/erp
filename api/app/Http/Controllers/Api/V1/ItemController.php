@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\CompanySetting;
 use App\Models\Item;
+use App\Models\Unit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -50,11 +51,16 @@ class ItemController extends Controller
     {
         $this->authorize('create', Item::class);
 
+        $activeUnitValues = Unit::where('company_id', $request->user()->company_id)
+            ->where('status', 'active')
+            ->pluck('value')
+            ->toArray();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'nullable|string|max:100',
             'hsn_code' => 'nullable|string|max:10',
-            'unit' => ['required', 'string', 'max:20', Rule::in(CompanySetting::getItemUnitValues($request->user()->company_id))],
+            'unit' => ['required', 'string', 'max:20', Rule::in($activeUnitValues)],
             'item_group_id' => 'nullable|uuid|exists:item_groups,id',
             'gst_rate' => 'required|numeric|min:0',
             'mrp' => 'nullable|numeric|min:0',
@@ -80,11 +86,16 @@ class ItemController extends Controller
     {
         $this->authorize('update', $item);
 
+        $activeUnitValues = Unit::where('company_id', $request->user()->company_id)
+            ->where('status', 'active')
+            ->pluck('value')
+            ->toArray();
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'sku' => 'nullable|string|max:100',
             'hsn_code' => 'nullable|string|max:10',
-            'unit' => ['sometimes', 'string', 'max:20', Rule::in(CompanySetting::getItemUnitValues($request->user()->company_id))],
+            'unit' => ['sometimes', 'string', 'max:20', Rule::in($activeUnitValues)],
             'item_group_id' => 'nullable|uuid|exists:item_groups,id',
             'gst_rate' => 'sometimes|numeric|min:0',
             'mrp' => 'nullable|numeric|min:0',
