@@ -98,18 +98,20 @@ type ThemeContextType = {
   surfaceLight: LightSurfaceColor;
   surfaceDark: DarkSurfaceColor;
   fontFamily: FontFamily;
+  fontSizeScale: number;
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setAccent: (accent: AccentColor) => void;
   setSurfaceLight: (surface: LightSurfaceColor) => void;
   setSurfaceDark: (surface: DarkSurfaceColor) => void;
   setFontFamily: (font: FontFamily) => void;
+  setFontSizeScale: (scale: number) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { theme, accent, surfaceLight, surfaceDark, fontFamily, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily } = useThemeStore();
+  const { theme, accent, surfaceLight, surfaceDark, fontFamily, fontSizeScale, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily, setFontSizeScale } = useThemeStore();
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -173,8 +175,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--font-family', font);
   }, [fontFamily]);
 
+  // Apply font size scale
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--font-size-scale', String(fontSizeScale / 100));
+  }, [fontSizeScale]);
+
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, accent, surfaceLight, surfaceDark, fontFamily, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, accent, surfaceLight, surfaceDark, fontFamily, fontSizeScale, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily, setFontSizeScale }}>
       {children}
     </ThemeContext.Provider>
   );

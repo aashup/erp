@@ -17,6 +17,8 @@
 
 :root {
   --font-family: system-ui, -apple-system, sans-serif;
+  --font-size-scale: 1;
+  font-size: calc(16px * var(--font-size-scale));
 }
 
 body {

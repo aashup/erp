@@ -1,4 +1,4 @@
-import { Check, Menu, Monitor, Palette, Sun, Moon, Type } from "lucide-react";
+import { Check, Menu, Monitor, Palette, Sun, Moon, Type, ZoomIn, RotateCcw } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useThemeStore } from "@/store/themeStore";
@@ -74,7 +74,7 @@ const surfaceOptions: {
   dark: [
     {
       value: "gray",
-      label: "Gray",
+      label: "Default",
       swatch: "bg-gray-500",
       ring: "ring-gray-500",
     },
@@ -118,9 +118,21 @@ const fontOptions: FontFamilyOption[] = [
 
 export default function Theme() {
   usePageTitle("Theme");
-  const { theme, accent, surfaceLight, surfaceDark, fontFamily, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily } =
+  const { theme, accent, surfaceLight, surfaceDark, fontFamily, fontSizeScale, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily, setFontSizeScale } =
     useTheme();
   const { showSidebar, setSidebarVisibility } = useThemeStore();
+
+  const handleResetToDefaults = () => {
+    if (confirm("Reset all theme settings to defaults? This cannot be undone.")) {
+      setTheme("system");
+      setAccent("blue");
+      setSurfaceLight("gray");
+      setSurfaceDark("gray");
+      setFontFamily("sans");
+      setFontSizeScale(100);
+      setSidebarVisibility(true);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -377,9 +389,59 @@ export default function Theme() {
               </div>
             </div>
           </div>
+          <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-5">
+            <div className="mb-4 flex items-center gap-2">
+              <ZoomIn className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Font Size
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">75%</span>
+                <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">{fontSizeScale}%</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">150%</span>
+              </div>
+              <input
+                type="range"
+                min="75"
+                max="150"
+                step="1"
+                value={fontSizeScale}
+                onChange={(e) => setFontSizeScale(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Adjust the base font size for better readability
+              </p>
+            </div>
+          </div>
           <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
             Theme saved automatically
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Reset to Defaults */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Reset to Defaults
+              </h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Restore all theme settings to their original defaults
+              </p>
+            </div>
+            <button
+              onClick={handleResetToDefaults}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset All
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>

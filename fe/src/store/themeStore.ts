@@ -15,6 +15,7 @@ interface ThemeState {
   surfaceLight: LightSurfaceColor;
   surfaceDark: DarkSurfaceColor;
   fontFamily: FontFamily;
+  fontSizeScale: number;
   showSidebar: boolean;
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -22,6 +23,7 @@ interface ThemeState {
   setSurfaceLight: (surface: LightSurfaceColor) => void;
   setSurfaceDark: (surface: DarkSurfaceColor) => void;
   setFontFamily: (font: FontFamily) => void;
+  setFontSizeScale: (scale: number) => void;
   setSidebarVisibility: (visible: boolean) => void;
 }
 
@@ -31,6 +33,7 @@ export const useThemeStore = create<ThemeState>((set) => ({
   surfaceLight: (localStorage.getItem('surfaceLight') as LightSurfaceColor) || 'gray',
   surfaceDark: (localStorage.getItem('surfaceDark') as DarkSurfaceColor) || 'gray',
   fontFamily: (localStorage.getItem('fontFamily') as FontFamily) || 'sans',
+  fontSizeScale: parseInt(localStorage.getItem('fontSizeScale') || '100', 10),
   showSidebar: localStorage.getItem('showSidebar') !== 'false',
   setTheme: (theme) => {
     localStorage.setItem('theme', theme);
@@ -51,6 +54,10 @@ export const useThemeStore = create<ThemeState>((set) => ({
   setFontFamily: (font) => {
     localStorage.setItem('fontFamily', font);
     set({ fontFamily: font });
+  },
+  setFontSizeScale: (scale) => {
+    localStorage.setItem('fontSizeScale', String(scale));
+    set({ fontSizeScale: scale });
   },
   setSidebarVisibility: (visible) => {
     localStorage.setItem('showSidebar', String(visible));
