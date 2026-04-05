@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
 use App\Http\Controllers\Api\V1\StockLedgerController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\ThermalTemplateController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\VoucherController;
 use Illuminate\Support\Facades\Route;
@@ -101,6 +102,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Invoice Templates & Company Settings
     Route::get('invoice-templates', [InvoiceTemplateController::class, 'index']);
+    Route::patch('thermal-templates/{thermal_template}/set-default', [ThermalTemplateController::class, 'setDefault']);
+    Route::apiResource('thermal-templates', ThermalTemplateController::class);
     Route::get('company-settings', [CompanySettingController::class, 'index']);
     Route::put('company-settings', [CompanySettingController::class, 'update']);
 

@@ -6,7 +6,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { salesInvoicesApi } from '@/api/sales';
 import { partiesApi } from '@/api/parties';
 import { companySettingsApi } from '@/api/settings';
-import type { SalesInvoice, Party } from '@/types';
+import { thermalTemplatesApi } from '@/api/thermalTemplates';
+import type { SalesInvoice, Party, ThermalTemplate } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -55,6 +56,12 @@ export default function SalesInvoices() {
     queryKey: ['company-settings'],
     queryFn: () => companySettingsApi.get(),
     select: (res) => res.data.data,
+  });
+
+  const { data: thermalTemplates } = useQuery({
+    queryKey: ['thermal-templates'],
+    queryFn: () => thermalTemplatesApi.list({ per_page: '100' }),
+    select: (res) => res.data.data ?? [],
   });
 
   const { data, isLoading } = useQuery({
@@ -121,8 +128,29 @@ export default function SalesInvoices() {
 
   const thermalPaperSize = (companySettings?.thermal_printer_paper_size ?? '2inch') as '2inch' | '3inch';
 
+  const getThermalTemplate = () => {
+    // Check if custom template exists for this paper size
+    const customTemplate = (thermalTemplates ?? []).find(
+      (t: ThermalTemplate) => t.paper_size === thermalPaperSize && t.is_default
+    );
+    return customTemplate;
+  };
+
   const thermalPreviewMutation = useMutation({
-    mutationFn: (id: string) => salesInvoicesApi.getThermalHtml(id, thermalPaperSize),
+    mutationFn: (id: string) => {
+      const customTemplate = getThermalTemplate();
+      if (customTemplate) {
+        // Use custom template
+        return fetch(`/api/v1/sales-invoices/${id}/html?template=thermal-custom&paper_size=${thermalPaperSize}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }).then(res => res.text()).then(data => ({ data }));
+      } else {
+        // Use built-in thermal template
+        return salesInvoicesApi.getThermalHtml(id, thermalPaperSize);
+      }
+    },
     onSuccess: (response) => {
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
@@ -139,7 +167,20 @@ export default function SalesInvoices() {
   });
 
   const thermalPrintMutation = useMutation({
-    mutationFn: (id: string) => salesInvoicesApi.getThermalHtml(id, thermalPaperSize),
+    mutationFn: (id: string) => {
+      const customTemplate = getThermalTemplate();
+      if (customTemplate) {
+        // Use custom template
+        return fetch(`/api/v1/sales-invoices/${id}/html?template=thermal-custom&paper_size=${thermalPaperSize}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }).then(res => res.text()).then(data => ({ data }));
+      } else {
+        // Use built-in thermal template
+        return salesInvoicesApi.getThermalHtml(id, thermalPaperSize);
+      }
+    },
     onSuccess: (response) => {
       const printWindow = window.open('', '_blank');
       if (!printWindow) {

@@ -69,6 +69,7 @@ const navigation = [
       { name: 'Base Settings', href: '/settings/base', icon: Settings },
       { name: 'Theme', href: '/settings/theme', icon: Palette },
       { name: 'Invoice Settings', href: '/settings/invoice', icon: FileText },
+      { name: 'Thermal Templates', href: '/settings/thermal-templates', icon: FileText },
       { name: 'Inventory', href: '/settings/inventory', icon: Package },
       { name: 'Units', href: '/settings/units', icon: Ruler },
       { name: 'Financial Years', href: '/settings/financial-years', icon: Calendar },

@@ -394,6 +394,17 @@ export interface CompanySettings {
   thermal_printer_paper_size?: '2inch' | '3inch' | null;
 }
 
+export interface ThermalTemplate extends SyncColumns {
+  id: string;
+  company_id: string;
+  name: string;
+  html_content: string;
+  paper_size: '2inch' | '3inch';
+  is_default: boolean;
+  created_by: string;
+  updated_by?: string | null;
+}
+
 // Stock / Inventory
 export interface StockLedgerEntry {
   id: string;

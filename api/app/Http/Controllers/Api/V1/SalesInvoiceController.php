@@ -371,10 +371,29 @@ class SalesInvoiceController extends Controller
         $this->authorize('view', $salesInvoice);
 
         $templateSlug = $request->query('template');
-        $paperSize = $request->query('paper_size');
+        $paperSize = $request->query('paper_size') ?? '2inch';
 
-        $service = app(InvoicePdfService::class);
-        $html = $service->generateHtml($salesInvoice, $templateSlug, $paperSize);
+        // Check if using custom thermal template
+        if ($templateSlug === 'thermal-custom') {
+            $company = $salesInvoice->company ?? \App\Models\Company::find($salesInvoice->company_id);
+            $customTemplate = \App\Models\ThermalTemplate::where('company_id', $salesInvoice->company_id)
+                ->where('paper_size', $paperSize)
+                ->where('is_default', true)
+                ->first();
+
+            if ($customTemplate) {
+                $renderer = app(\App\Services\ThermalTemplateRenderer::class);
+                $html = $renderer->render($customTemplate, $salesInvoice, $company);
+            } else {
+                // Fall back to built-in thermal template if no custom found
+                $service = app(InvoicePdfService::class);
+                $html = $service->generateHtml($salesInvoice, 'thermal', $paperSize);
+            }
+        } else {
+            // Use default behavior
+            $service = app(InvoicePdfService::class);
+            $html = $service->generateHtml($salesInvoice, $templateSlug, $paperSize);
+        }
 
         // Mark as printed on first view
         if (! $salesInvoice->is_printed) {
