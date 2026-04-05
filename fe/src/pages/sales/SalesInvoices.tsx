@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { salesInvoicesApi } from '@/api/sales';
 import { partiesApi } from '@/api/parties';
+import { companySettingsApi } from '@/api/settings';
 import type { SalesInvoice, Party } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -14,7 +15,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
@@ -49,6 +50,12 @@ export default function SalesInvoices() {
   const [sortBy, setSortBy] = useState('invoice_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+
+  const { data: companySettings } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => companySettingsApi.get(),
+    select: (res) => res.data.data,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales-invoices', page, search, dateFrom, dateTo, customerFilter, statusFilter, sortBy, sortOrder],
@@ -109,6 +116,46 @@ export default function SalesInvoices() {
     },
     onError: () => {
       toast.error('Failed to open print preview');
+    },
+  });
+
+  const thermalPaperSize = (companySettings?.thermal_printer_paper_size ?? '2inch') as '2inch' | '3inch';
+
+  const thermalPreviewMutation = useMutation({
+    mutationFn: (id: string) => salesInvoicesApi.getThermalHtml(id, thermalPaperSize),
+    onSuccess: (response) => {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Pop-up blocked. Please allow pop-ups for printing.');
+        return;
+      }
+      printWindow.document.write(response.data);
+      printWindow.document.close();
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+    },
+    onError: () => {
+      toast.error('Failed to open thermal preview');
+    },
+  });
+
+  const thermalPrintMutation = useMutation({
+    mutationFn: (id: string) => salesInvoicesApi.getThermalHtml(id, thermalPaperSize),
+    onSuccess: (response) => {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Pop-up blocked. Please allow pop-ups for printing.');
+        return;
+      }
+      printWindow.document.write(response.data);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+      };
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+    },
+    onError: () => {
+      toast.error('Failed to print thermal invoice');
     },
   });
 
@@ -285,6 +332,32 @@ export default function SalesInvoices() {
               </button>
               <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
                 Print Invoice
+              </span>
+            </div>
+            <div className="group relative">
+              <button
+                onClick={() => thermalPreviewMutation.mutate(row.original.id)}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Thermal Preview"
+                disabled={thermalPreviewMutation.isPending}
+              >
+                <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </button>
+              <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+                Thermal Preview
+              </span>
+            </div>
+            <div className="group relative">
+              <button
+                onClick={() => thermalPrintMutation.mutate(row.original.id)}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Print to Thermal"
+                disabled={thermalPrintMutation.isPending}
+              >
+                <Printer className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </button>
+              <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+                Print to Thermal
               </span>
             </div>
             {isDraft && (

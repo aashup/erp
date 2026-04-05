@@ -63,7 +63,7 @@ class InvoicePdfService
     /**
      * Generate rendered HTML string for the given sales invoice.
      */
-    public function generateHtml(SalesInvoice $invoice, ?string $templateSlug = null): string
+    public function generateHtml(SalesInvoice $invoice, ?string $templateSlug = null, ?string $paperSize = null): string
     {
         // Load relationships
         $invoice->loadMissing([
@@ -103,6 +103,7 @@ class InvoicePdfService
             'amountInWords' => NumberToWords::convert($roundedTotal),
             'roundOff' => $roundOff,
             'netPayable' => $roundedTotal,
+            'paperSize' => $paperSize ?? '2inch',
         ];
 
         return view($viewName, $data)->render();

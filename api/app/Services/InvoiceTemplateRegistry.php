@@ -17,6 +17,12 @@ class InvoiceTemplateRegistry
             'description' => 'GST invoice with MRP column, GST class-wise summary, bank details, and Marg ERP-style layout. Ideal for pharma wholesalers and distributors.',
             'view' => 'invoices.templates.aidway-biotech',
         ],
+        [
+            'slug' => 'thermal',
+            'name' => 'Thermal Printer',
+            'description' => 'Compact thermal receipt format for 58mm and 80mm thermal printers.',
+            'view' => 'invoices.templates.thermal',
+        ],
     ];
 
     /**

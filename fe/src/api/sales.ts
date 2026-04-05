@@ -49,4 +49,10 @@ export const salesInvoicesApi = {
       params: template ? { template } : {},
       responseType: 'text',
     }),
+
+  getThermalHtml: (id: string, paperSize: '2inch' | '3inch') =>
+    api.get<string>(`/sales-invoices/${id}/html`, {
+      params: { template: 'thermal', paper_size: paperSize },
+      responseType: 'text',
+    }),
 };

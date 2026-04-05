@@ -371,9 +371,10 @@ class SalesInvoiceController extends Controller
         $this->authorize('view', $salesInvoice);
 
         $templateSlug = $request->query('template');
+        $paperSize = $request->query('paper_size');
 
         $service = app(InvoicePdfService::class);
-        $html = $service->generateHtml($salesInvoice, $templateSlug);
+        $html = $service->generateHtml($salesInvoice, $templateSlug, $paperSize);
 
         // Mark as printed on first view
         if (! $salesInvoice->is_printed) {

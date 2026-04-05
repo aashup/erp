@@ -391,6 +391,7 @@ export interface CompanySettings {
   [key: string]: string | UnitOption[] | null | undefined;
   default_invoice_template?: string | null;
   item_units?: UnitOption[];
+  thermal_printer_paper_size?: '2inch' | '3inch' | null;
 }
 
 // Stock / Inventory
