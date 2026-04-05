@@ -390,12 +390,12 @@ export default function ThermalTemplateEditor() {
       .replace(/{{invoice_date_formatted}}/g, formatDate(invoice.invoice_date))
       .replace(/{{customer_name}}/g, invoice.party?.name || 'Sample Customer')
       .replace(/{{customer_gstin}}/g, invoice.party?.gstin || 'GSTIN')
-      .replace(/{{subtotal}}/g, invoice.total_amount?.toFixed(2) || '0.00')
-      .replace(/{{cgst_total}}/g, invoice.cgst_total?.toFixed(2) || '0.00')
-      .replace(/{{sgst_total}}/g, invoice.sgst_total?.toFixed(2) || '0.00')
-      .replace(/{{igst_total}}/g, invoice.igst_total?.toFixed(2) || '0.00')
-      .replace(/{{grand_total}}/g, invoice.grand_total?.toFixed(0) || '0')
-      .replace(/{{balance_due}}/g, invoice.balance_due?.toFixed(2) || '0.00')
+      .replace(/{{subtotal}}/g, Number(invoice.total_amount || 0).toFixed(2))
+      .replace(/{{cgst_total}}/g, Number(invoice.cgst_total || 0).toFixed(2))
+      .replace(/{{sgst_total}}/g, Number(invoice.sgst_total || 0).toFixed(2))
+      .replace(/{{igst_total}}/g, Number(invoice.igst_total || 0).toFixed(2))
+      .replace(/{{grand_total}}/g, Number(invoice.grand_total || 0).toFixed(0))
+      .replace(/{{balance_due}}/g, Number(invoice.balance_due || 0).toFixed(2))
       .replace(/{{paper_width}}/g, getPaperWidth());
 
     // Build simple items table
@@ -410,8 +410,8 @@ export default function ThermalTemplateEditor() {
     invoice.lines?.forEach((line) => {
       itemsTable += `<tr style="border-bottom: 1px dotted #ccc;">
         <td style="padding: 2px; font-size: 9px;">${line.item?.name || 'Item'}</td>
-        <td style="text-align: center; padding: 2px; font-size: 9px;">${line.quantity.toFixed(2)}</td>
-        <td style="text-align: right; padding: 2px; font-size: 9px;">${line.line_total.toFixed(0)}</td>
+        <td style="text-align: center; padding: 2px; font-size: 9px;">${Number(line.quantity || 0).toFixed(2)}</td>
+        <td style="text-align: right; padding: 2px; font-size: 9px;">${Number(line.line_total || 0).toFixed(0)}</td>
       </tr>`;
     });
 

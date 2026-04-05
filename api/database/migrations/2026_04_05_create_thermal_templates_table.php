@@ -22,7 +22,7 @@ return new class extends Migration
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
             $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
-            $table->timestamp('updated_at_local');
+            $table->timestamp('updated_at_local')->useCurrent();
 
             $table->timestamps();
             $table->softDeletes();
