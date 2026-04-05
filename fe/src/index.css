@@ -15,9 +15,13 @@
   --color-primary-900: #1e3a8a;
 }
 
+:root {
+  --font-family: system-ui, -apple-system, sans-serif;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-family);
   -webkit-font-smoothing: antialiased;
 }
 

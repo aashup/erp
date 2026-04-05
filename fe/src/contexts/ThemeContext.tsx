@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useThemeStore, type AccentColor, type LightSurfaceColor, type DarkSurfaceColor } from '@/store/themeStore';
+import { useThemeStore, type AccentColor, type LightSurfaceColor, type DarkSurfaceColor, type FontFamily } from '@/store/themeStore';
 
 const accentPalettes: Record<Exclude<AccentColor, 'blue'>, Record<string, string>> = {
   emerald: {
@@ -77,6 +77,17 @@ const surfacePalettes: Record<Exclude<SurfaceColor, 'gray'>, Record<string, stri
   },
 };
 
+const fontPalettes: Record<FontFamily, string> = {
+  sans: 'system-ui, -apple-system, sans-serif',
+  serif: 'Georgia, serif',
+  monospace: "'Courier New', monospace",
+  inter: '"Inter", sans-serif',
+  roboto: '"Roboto", sans-serif',
+  poppins: '"Poppins", sans-serif',
+  openSans: '"Open Sans", sans-serif',
+  merriweather: '"Merriweather", serif',
+};
+
 const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
 const grayShades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
 
@@ -86,17 +97,19 @@ type ThemeContextType = {
   accent: AccentColor;
   surfaceLight: LightSurfaceColor;
   surfaceDark: DarkSurfaceColor;
+  fontFamily: FontFamily;
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setAccent: (accent: AccentColor) => void;
   setSurfaceLight: (surface: LightSurfaceColor) => void;
   setSurfaceDark: (surface: DarkSurfaceColor) => void;
+  setFontFamily: (font: FontFamily) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { theme, accent, surfaceLight, surfaceDark, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark } = useThemeStore();
+  const { theme, accent, surfaceLight, surfaceDark, fontFamily, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily } = useThemeStore();
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -153,8 +166,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [surfaceLight, surfaceDark, resolvedTheme]);
 
+  // Apply font family
+  useEffect(() => {
+    const root = document.documentElement;
+    const font = fontPalettes[fontFamily];
+    root.style.setProperty('--font-family', font);
+  }, [fontFamily]);
+
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, accent, surfaceLight, surfaceDark, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, accent, surfaceLight, surfaceDark, fontFamily, toggleTheme, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily }}>
       {children}
     </ThemeContext.Provider>
   );

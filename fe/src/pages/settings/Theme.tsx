@@ -1,4 +1,4 @@
-import { Check, Menu, Monitor, Palette, Sun, Moon } from "lucide-react";
+import { Check, Menu, Monitor, Palette, Sun, Moon, Type } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useThemeStore } from "@/store/themeStore";
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import type {
   ThemeAccentColorOptions,
   ThemeSurfaceColorOptions,
+  FontFamilyOption,
 } from "@/store/themeStore";
 
 const accentOptions: ThemeAccentColorOptions[] = [
@@ -104,9 +105,20 @@ const surfaceOptions: {
   ],
 };
 
+const fontOptions: FontFamilyOption[] = [
+  { value: "sans", label: "Sans", category: "system" },
+  { value: "serif", label: "Serif", category: "system" },
+  { value: "monospace", label: "Monospace", category: "system" },
+  { value: "inter", label: "Inter", category: "web" },
+  { value: "roboto", label: "Roboto", category: "web" },
+  { value: "poppins", label: "Poppins", category: "web" },
+  { value: "openSans", label: "Open Sans", category: "web" },
+  { value: "merriweather", label: "Merriweather", category: "web" },
+];
+
 export default function Theme() {
   usePageTitle("Theme");
-  const { theme, accent, surfaceLight, surfaceDark, setTheme, setAccent, setSurfaceLight, setSurfaceDark } =
+  const { theme, accent, surfaceLight, surfaceDark, fontFamily, setTheme, setAccent, setSurfaceLight, setSurfaceDark, setFontFamily } =
     useTheme();
   const { showSidebar, setSidebarVisibility } = useThemeStore();
 
@@ -295,6 +307,74 @@ export default function Theme() {
                   Show sidebar by default
                 </span>
               </label>
+            </div>
+          </div>
+          <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Type className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Typography
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="mb-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">System Fonts</p>
+                <div className="flex flex-wrap gap-3">
+                  {fontOptions.filter(f => f.category === 'system').map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFontFamily(opt.value)}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <div
+                        className={`flex h-10 w-20 items-center justify-center rounded-lg border-2 text-sm font-medium transition-all ${
+                          fontFamily === opt.value
+                            ? "border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20"
+                            : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                        }`}
+                        style={{ fontFamily: opt.value === 'sans' ? 'system-ui' : opt.value === 'serif' ? 'Georgia' : "'Courier New'" }}
+                      >
+                        Aa
+                      </div>
+                      {fontFamily === opt.value && (
+                        <Check className="h-3 w-3 text-primary-600 dark:text-primary-400" />
+                      )}
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Web Fonts</p>
+                <div className="flex flex-wrap gap-3">
+                  {fontOptions.filter(f => f.category === 'web').map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFontFamily(opt.value)}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <div
+                        className={`flex h-10 w-20 items-center justify-center rounded-lg border-2 text-sm font-medium transition-all ${
+                          fontFamily === opt.value
+                            ? "border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20"
+                            : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                        }`}
+                        style={{ fontFamily: `"${opt.label}"` }}
+                      >
+                        Aa
+                      </div>
+                      {fontFamily === opt.value && (
+                        <Check className="h-3 w-3 text-primary-600 dark:text-primary-400" />
+                      )}
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
