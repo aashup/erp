@@ -371,7 +371,7 @@ export default function PurchaseInvoiceFormPage() {
                     <div className="col-span-3">Item</div>
                     <div className="col-span-2">Godown</div>
                     <div className="col-span-1">Qty</div>
-                    <div className="col-span-2">Taxable (₹)</div>
+                    <div className="col-span-2">Rate (₹)</div>
                     <div className="col-span-2">Disc %</div>
                     <div className="col-span-1 text-right">Total</div>
                     <div className="col-span-1"></div>
