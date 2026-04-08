@@ -8,6 +8,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { partiesApi } from '@/api/parties';
 import type { Party } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { INDIAN_STATES } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -234,8 +235,17 @@ export default function Parties() {
             <Input id="email" label="Email" {...register('email')} />
             <Input id="address" label="Address" {...register('address')} />
             <Input id="city" label="City" {...register('city')} />
-            <Input id="state" label="State" {...register('state')} />
-            <Input id="state_code" label="State Code" {...register('state_code')} />
+            <SlideSelect
+              name="state_code"
+              label="State"
+              placeholder="Select state"
+              panelTitle="Select State"
+              options={INDIAN_STATES}
+              value={watch('state_code')}
+              onChange={(val) =>
+                setValue('state_code', val, { shouldValidate: true })
+              }
+            />
             <Input id="pincode" label="Pincode" {...register('pincode')} />
             <Input id="contact_person" label="Contact Person" {...register('contact_person')} />
             <Input id="credit_limit" label="Credit Limit" type="number" step="0.01" {...register('credit_limit')} />

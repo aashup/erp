@@ -7,9 +7,11 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import api from '@/lib/axios';
 import type { Branch, PaginatedResponse, ApiResponse } from '@/types';
+import { INDIAN_STATES } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
@@ -70,7 +72,7 @@ export default function Branches() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['branches'] }),
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<BranchForm>({ resolver: zodResolver(schema) });
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<BranchForm>({ resolver: zodResolver(schema) });
 
   const openCreate = () => { setEditBranch(null); reset({ name: '' }); setShowModal(true); };
   const openEdit = (b: Branch) => { setEditBranch(b); reset({ name: b.name, code: b.code ?? '', address: b.address ?? '', city: b.city ?? '', state: b.state ?? '', state_code: b.state_code ?? '' }); setShowModal(true); };
@@ -292,9 +294,18 @@ export default function Branches() {
           <Input id="address" label="Address" {...register('address')} />
           <div className="grid grid-cols-2 gap-4">
             <Input id="city" label="City" {...register('city')} />
-            <Input id="state" label="State" {...register('state')} />
+            <SlideSelect
+              name="state_code"
+              label="State"
+              placeholder="Select state"
+              panelTitle="Select State"
+              options={INDIAN_STATES}
+              value={watch('state_code')}
+              onChange={(val) =>
+                setValue('state_code', val, { shouldValidate: true })
+              }
+            />
           </div>
-          <Input id="state_code" label="State Code" {...register('state_code')} />
           <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>{editBranch ? 'Update' : 'Create'}</Button>

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { SlideSelect } from "@/components/ui/SlideSelect";
 import { Modal } from "@/components/ui/Modal";
 import api from "@/lib/axios";
+import { INDIAN_STATES } from "@/lib/constants";
 import { companySettingsApi } from "@/api/settings";
 import type { User } from "@/types";
 import {
@@ -21,29 +22,6 @@ import {
   Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
-
-const INDIAN_STATES = [
-  { value: "01", label: "Jammu & Kashmir (01)" },
-  { value: "02", label: "Himachal Pradesh (02)" },
-  { value: "03", label: "Punjab (03)" },
-  { value: "05", label: "Uttarakhand (05)" },
-  { value: "06", label: "Haryana (06)" },
-  { value: "07", label: "Delhi (07)" },
-  { value: "08", label: "Rajasthan (08)" },
-  { value: "09", label: "Uttar Pradesh (09)" },
-  { value: "10", label: "Bihar (10)" },
-  { value: "18", label: "Assam (18)" },
-  { value: "19", label: "West Bengal (19)" },
-  { value: "21", label: "Odisha (21)" },
-  { value: "23", label: "Madhya Pradesh (23)" },
-  { value: "24", label: "Gujarat (24)" },
-  { value: "27", label: "Maharashtra (27)" },
-  { value: "29", label: "Karnataka (29)" },
-  { value: "32", label: "Kerala (32)" },
-  { value: "33", label: "Tamil Nadu (33)" },
-  { value: "36", label: "Telangana (36)" },
-  { value: "37", label: "Andhra Pradesh (37)" },
-];
 
 const companySchema = z.object({
   name: z.string().min(1, "Company name is required"),

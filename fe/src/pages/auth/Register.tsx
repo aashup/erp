@@ -10,33 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-
-const INDIAN_STATES = [
-  { value: '01', label: 'Jammu & Kashmir' },
-  { value: '02', label: 'Himachal Pradesh' },
-  { value: '03', label: 'Punjab' },
-  { value: '05', label: 'Uttarakhand' },
-  { value: '06', label: 'Haryana' },
-  { value: '07', label: 'Delhi' },
-  { value: '08', label: 'Rajasthan' },
-  { value: '09', label: 'Uttar Pradesh' },
-  { value: '10', label: 'Bihar' },
-  { value: '12', label: 'Arunachal Pradesh' },
-  { value: '18', label: 'Assam' },
-  { value: '19', label: 'West Bengal' },
-  { value: '20', label: 'Jharkhand' },
-  { value: '21', label: 'Odisha' },
-  { value: '22', label: 'Chattisgarh' },
-  { value: '23', label: 'Madhya Pradesh' },
-  { value: '24', label: 'Gujarat' },
-  { value: '27', label: 'Maharashtra' },
-  { value: '29', label: 'Karnataka' },
-  { value: '30', label: 'Goa' },
-  { value: '32', label: 'Kerala' },
-  { value: '33', label: 'Tamil Nadu' },
-  { value: '36', label: 'Telangana' },
-  { value: '37', label: 'Andhra Pradesh' },
-];
+import { INDIAN_STATES } from '@/lib/constants';
 
 const schema = z
   .object({
@@ -73,10 +47,12 @@ export default function Register() {
   const onSubmit = async (data: FormData) => {
     try {
       setError('');
-      const state = INDIAN_STATES.find((s) => s.value === data.state_code);
+      const stateObj = INDIAN_STATES.find((s) => s.value === data.state_code);
+      // Extract state name without the code (e.g., "Jammu & Kashmir (01)" -> "Jammu & Kashmir")
+      const stateName = stateObj?.label?.replace(/\s*\(\d+\)\s*$/, '') ?? '';
       const res = await authApi.register({
         ...data,
-        state: state?.label ?? '',
+        state: stateName,
         gstin: data.gstin || undefined,
       });
       setAuth(res.data.data.user, res.data.data.token);

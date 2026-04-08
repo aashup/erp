@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -115,8 +115,18 @@ export default function Items() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ItemForm>({
     resolver: zodResolver(itemSchema) as any,
-    defaultValues: { igst: 0, sgst: 9, cgst: 9, reorder_level: 0 },
+    defaultValues: { igst: 18, sgst: 9, cgst: 9, reorder_level: 0 },
   });
+
+  const igstValue = watch('igst');
+
+  // Auto-calculate SGST and CGST from IGST
+  useEffect(() => {
+    const sgstValue = igstValue / 2;
+    const cgstValue = igstValue / 2;
+    setValue('sgst', Number(sgstValue.toFixed(2)), { shouldDirty: false });
+    setValue('cgst', Number(cgstValue.toFixed(2)), { shouldDirty: false });
+  }, [igstValue, setValue]);
 
   const openCreate = () => {
     setEditItem(null);
@@ -126,7 +136,7 @@ export default function Items() {
       hsn_code: '',
       unit: unitOptions[0]?.value ?? '',
       item_group_id: '',
-      igst: 0,
+      igst: 18,
       sgst: 9,
       cgst: 9,
       reorder_level: 0,
@@ -432,8 +442,14 @@ export default function Items() {
               onChange={(val) => setValue('item_group_id', val)}
             />
             <Input id="igst" label="IGST (%)" type="number" step="0.01" error={errors.igst?.message} {...register('igst', { valueAsNumber: true })} />
-            <Input id="sgst" label="SGST (%)" type="number" step="0.01" error={errors.sgst?.message} {...register('sgst', { valueAsNumber: true })} />
-            <Input id="cgst" label="CGST (%)" type="number" step="0.01" error={errors.cgst?.message} {...register('cgst', { valueAsNumber: true })} />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SGST (%) <span className="text-xs text-gray-500">(Auto-calculated)</span></label>
+              <input type="number" step="0.01" value={watch('sgst')} disabled className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-600 cursor-not-allowed" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CGST (%) <span className="text-xs text-gray-500">(Auto-calculated)</span></label>
+              <input type="number" step="0.01" value={watch('cgst')} disabled className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-600 cursor-not-allowed" />
+            </div>
             <Input id="mrp" label="MRP" type="number" step="0.01" error={errors.mrp?.message} {...register('mrp', { valueAsNumber: true })} />
             <Input id="purchase_price" label="Purchase Price" type="number" step="0.01" error={errors.purchase_price?.message} {...register('purchase_price', { valueAsNumber: true })} />
             <Input id="selling_price" label="Selling Price" type="number" step="0.01" error={errors.selling_price?.message} {...register('selling_price', { valueAsNumber: true })} />
