@@ -21,7 +21,7 @@ const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
   godown_id: z.string().min(1, 'Godown required'),
   quantity: z.coerce.number().min(1, 'Min 1'),
-  line_total: z.coerce.number().min(0, 'Taxable amount required'),
+  rate: z.coerce.number().min(0, 'Rate required'),
   discount_percent: z.coerce.number().min(0).max(100).optional().default(0),
   gst_rate: z.coerce.number().min(0).optional().default(18),
 });
@@ -43,7 +43,7 @@ const makeEmptyLine = (defaultGodownId = ''): InvoiceForm['lines'][number] => ({
   item_id: '',
   godown_id: defaultGodownId,
   quantity: 1,
-  line_total: 0,
+  rate: 0,
   discount_percent: 0,
   gst_rate: 18,
 });
@@ -141,7 +141,7 @@ export default function PurchaseInvoiceFormPage() {
         item_id: line.item_id,
         godown_id: (line as unknown as { godown_id?: string }).godown_id ?? defaultGodownId,
         quantity: line.quantity,
-        line_total: line.taxable_amount ?? 0,
+        rate: line.rate ?? 0,
         discount_percent: line.discount_percent,
         gst_rate: line.gst_rate,
       })) ?? [makeEmptyLine(defaultGodownId)],
@@ -196,7 +196,7 @@ export default function PurchaseInvoiceFormPage() {
 
   const getLineGSTInfo = (lineIndex: number) => {
     const line = watchedLines?.[lineIndex];
-    if (!line?.item_id || !line?.line_total) return null;
+    if (!line?.item_id || !line?.rate) return null;
 
     const selectedItem = itemMap.get(line.item_id);
     if (!selectedItem) return null;
@@ -229,11 +229,9 @@ export default function PurchaseInvoiceFormPage() {
       return;
     }
 
-    // Set default rate to purchase_price
+    // Autofill rate from purchase_price
     if (selectedItem.purchase_price) {
-      const quantity = watchedLines?.[index]?.quantity ?? 1;
-      const lineTotalAmount = selectedItem.purchase_price * quantity;
-      setValue(`lines.${index}.line_total`, lineTotalAmount, { shouldDirty: true, shouldValidate: true });
+      setValue(`lines.${index}.rate`, selectedItem.purchase_price, { shouldDirty: true, shouldValidate: true });
     }
 
     // Select appropriate GST rate based on vendor and item state
@@ -250,12 +248,14 @@ export default function PurchaseInvoiceFormPage() {
     const igst = selectedItem.igst ?? 0;
     const sgst = selectedItem.sgst ?? 0;
     const cgst = selectedItem.cgst ?? 0;
-    const gstRate = lineIsInterState ? (igst || 18) : ((sgst + cgst) || 18);
-    setValue(`lines.${index}.gst_rate`, Number(gstRate), { shouldDirty: true, shouldValidate: true });
+    const gstRate = lineIsInterState ? (igst > 0 ? igst : 18) : ((sgst + cgst) > 0 ? (sgst + cgst) : 18);
+    setValue(`lines.${index}.gst_rate`, gstRate, { shouldDirty: true, shouldValidate: true });
   };
 
-  const calcLineTaxable = (line: InvoiceForm['lines'][number]) =>
-    line.line_total * (1 - (line.discount_percent ?? 0) / 100);
+  const calcLineTaxable = (line: InvoiceForm['lines'][number]) => {
+    const lineAmount = (line.rate ?? 0) * (line.quantity ?? 1);
+    return lineAmount * (1 - (line.discount_percent ?? 0) / 100);
+  };
 
   const calcLineTotal = (line: InvoiceForm['lines'][number]) => {
     const taxable = calcLineTaxable(line);
@@ -283,7 +283,7 @@ export default function PurchaseInvoiceFormPage() {
       ...formData,
       lines: formData.lines.map((line) => ({
         ...line,
-        rate: line.quantity > 0 ? line.line_total / line.quantity : 0,
+        line_total: calcLineTaxable(line),
       })),
     } as Record<string, unknown>;
 
@@ -380,7 +380,7 @@ export default function PurchaseInvoiceFormPage() {
                     <div className="col-span-1">Qty</div>
                     <div className="col-span-2">Rate (₹)</div>
                     <div className="col-span-2">Disc %</div>
-                    <div className="col-span-1 text-right">Total</div>
+                    <div className="col-span-1 text-right">Taxable</div>
                     <div className="col-span-1"></div>
                   </div>
 
@@ -408,8 +408,8 @@ export default function PurchaseInvoiceFormPage() {
                             min="0"
                             step="0.01"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                            placeholder="Taxable amount"
-                            {...register(`lines.${index}.line_total`)}
+                            placeholder="0.00"
+                            {...register(`lines.${index}.rate`)}
                           />
                         </div>
                         <div className="col-span-2">
@@ -423,7 +423,7 @@ export default function PurchaseInvoiceFormPage() {
                           />
                         </div>
                         <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
-                          {formatCurrency(calcLineTotal(watchedLines?.[index] ?? { item_id: '', godown_id: '', quantity: 0, line_total: 0, discount_percent: 0, gst_rate: 0 }))}
+                          {formatCurrency(calcLineTaxable(watchedLines?.[index] ?? { item_id: '', godown_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
                         </div>
                         <div className="col-span-1 flex items-center justify-center">
                           {fields.length > 1 && (
@@ -445,9 +445,9 @@ export default function PurchaseInvoiceFormPage() {
                 {/* GST Totals */}
                 <div className="mt-4 border-t dark:border-gray-700 pt-3 space-y-1 text-sm text-right">
                   <div><span className="text-gray-500">Taxable: </span><span className="font-medium">{formatCurrency(totals.taxable)}</span></div>
-                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400 line-through'}>CGST: </span><span className={`font-medium ${isInterState ? 'text-gray-400' : ''}`}>{formatCurrency(totals.cgst)}</span></div>
-                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400 line-through'}>SGST: </span><span className={`font-medium ${isInterState ? 'text-gray-400' : ''}`}>{formatCurrency(totals.sgst)}</span></div>
-                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400 line-through'}>IGST: </span><span className={`font-medium ${isInterState ? '' : 'text-gray-400'}`}>{formatCurrency(totals.igst)}</span></div>
+                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400'}>CGST: </span><span className={`font-medium ${isInterState ? 'text-gray-400' : ''}`}>{formatCurrency(totals.cgst)}</span></div>
+                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400'}>SGST: </span><span className={`font-medium ${isInterState ? 'text-gray-400' : ''}`}>{formatCurrency(totals.sgst)}</span></div>
+                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400'}>IGST: </span><span className={`font-medium ${isInterState ? '' : 'text-gray-400'}`}>{formatCurrency(totals.igst)}</span></div>
                   <div className="text-base"><span className="text-gray-500 dark:text-gray-400">Grand Total: </span><span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totals.grand)}</span></div>
                 </div>
               </div>
