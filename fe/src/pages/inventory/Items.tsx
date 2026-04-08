@@ -135,7 +135,7 @@ export default function Items() {
       sku: '',
       hsn_code: '',
       unit: unitOptions[0]?.value ?? '',
-      item_group_id: '',
+      item_group_id: (itemGroupsData ?? [])[0]?.id ?? '',
       igst: 18,
       sgst: 9,
       cgst: 9,
@@ -437,7 +437,7 @@ export default function Items() {
               label="Item Group"
               placeholder="Select group"
               panelTitle="Select Item Group"
-              options={[{ value: '', label: 'None' }, ...(itemGroupsData ?? []).map((g) => ({ value: g.id, label: g.name }))]}
+              options={(itemGroupsData ?? []).map((g) => ({ value: g.id, label: g.name }))}
               value={watch('item_group_id')}
               onChange={(val) => setValue('item_group_id', val)}
             />

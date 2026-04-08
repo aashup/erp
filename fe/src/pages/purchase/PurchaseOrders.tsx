@@ -99,7 +99,13 @@ export default function PurchaseOrders() {
 
   const { data: vendorsData } = useQuery({
     queryKey: ['parties-vendors'],
-    queryFn: () => partiesApi.list({ per_page: '500', type: 'vendor' }),
+    queryFn: async () => {
+      const [vendors, both] = await Promise.all([
+        partiesApi.list({ per_page: '500', type: 'vendor' }),
+        partiesApi.list({ per_page: '500', type: 'both' }),
+      ]);
+      return { ...vendors, data: [...vendors.data, ...both.data] };
+    },
     select: (res) => res.data,
   });
 
@@ -230,7 +236,7 @@ export default function PurchaseOrders() {
     }
   };
 
-  const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type ?? 'vendor' }));
+  const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: `${p.name} (${p.type ?? 'vendor'})`, subtitle: p.state_code ?? '' }));
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
 
   const handleSort = (column: string) => {

@@ -57,7 +57,13 @@ export default function PurchaseInvoiceFormPage() {
 
   const { data: vendorsData } = useQuery({
     queryKey: ['parties-vendors'],
-    queryFn: () => partiesApi.list({ per_page: '500', type: 'vendor' }),
+    queryFn: async () => {
+      const [vendors, both] = await Promise.all([
+        partiesApi.list({ per_page: '500', type: 'vendor' }),
+        partiesApi.list({ per_page: '500', type: 'both' }),
+      ]);
+      return { ...vendors, data: [...vendors.data, ...both.data] };
+    },
     select: (res) => res.data,
   });
 
@@ -103,6 +109,7 @@ export default function PurchaseInvoiceFormPage() {
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
   const watchedLines = watch('lines');
   const isInterState = watch('is_inter_state');
+  const company = useAuthStore((state) => state.user?.company);
 
   useEffect(() => {
     if (isEditMode || !defaultGodownId) {
@@ -192,8 +199,6 @@ export default function PurchaseInvoiceFormPage() {
   const vendorOptions = (vendorsData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type ?? 'vendor' }));
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
   const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name, subtitle: g.is_default ? 'Default' : '' }));
-
-  const company = useAuthStore((state) => state.user?.company);
 
   const getLineGSTInfo = (lineIndex: number) => {
     const line = watchedLines?.[lineIndex];
