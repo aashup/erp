@@ -229,6 +229,13 @@ export default function PurchaseInvoiceFormPage() {
       return;
     }
 
+    // Set default rate to purchase_price
+    if (selectedItem.purchase_price) {
+      const quantity = watchedLines?.[index]?.quantity ?? 1;
+      const lineTotalAmount = selectedItem.purchase_price * quantity;
+      setValue(`lines.${index}.line_total`, lineTotalAmount, { shouldDirty: true, shouldValidate: true });
+    }
+
     // Select appropriate GST rate based on vendor and item state
     const vendorId = watch('party_id');
     let lineIsInterState = isInterState;
