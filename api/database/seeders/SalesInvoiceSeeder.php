@@ -59,11 +59,21 @@ class SalesInvoiceSeeder extends Seeder
                 $qty = rand(1, 20);
                 $rate = $item->selling_price ?? rand(100, 2000);
                 $taxable = $qty * $rate;
-                $gstAmt = $taxable * $item->gst_rate / 100;
 
-                $cgst = $isInterState ? 0 : $gstAmt / 2;
-                $sgst = $isInterState ? 0 : $gstAmt / 2;
-                $igst = $isInterState ? $gstAmt : 0;
+                // Calculate GST based on inter-state or intra-state
+                if ($isInterState) {
+                    $gstRate = $item->igst ?? 0;
+                    $cgst = 0;
+                    $sgst = 0;
+                    $igst = $taxable * $gstRate / 100;
+                } else {
+                    $gstRate = ($item->sgst ?? 0) + ($item->cgst ?? 0);
+                    $gstAmt = $taxable * $gstRate / 100;
+                    $cgst = $gstAmt / 2;
+                    $sgst = $gstAmt / 2;
+                    $igst = 0;
+                }
+                $gstAmt = $cgst + $sgst + $igst;
 
                 SalesInvoiceLine::create([
                     'sales_invoice_id' => $invoice->id,
@@ -72,7 +82,7 @@ class SalesInvoiceSeeder extends Seeder
                     'rate' => $rate,
                     'discount_percent' => 0,
                     'taxable_amount' => $taxable,
-                    'gst_rate' => $item->gst_rate,
+                    'gst_rate' => $gstRate,
                     'cgst' => $cgst,
                     'sgst' => $sgst,
                     'igst' => $igst,

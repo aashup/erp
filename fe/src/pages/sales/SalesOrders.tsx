@@ -219,7 +219,11 @@ export default function SalesOrders() {
     const item = itemMap.get(itemId);
     if (item) {
       setValue(`lines.${index}.rate`, item.selling_price ?? 0);
-      setValue(`lines.${index}.gst_rate`, item.gst_rate ?? 18);
+      // Use SGST + CGST for intra-state (default for SOs)
+      const sgst = item.sgst ?? 0;
+      const cgst = item.cgst ?? 0;
+      const gstRate = (sgst + cgst) || 18;
+      setValue(`lines.${index}.gst_rate`, Number(gstRate));
     }
   };
 

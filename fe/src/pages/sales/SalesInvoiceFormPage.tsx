@@ -183,7 +183,13 @@ export default function SalesInvoiceFormPage() {
 
     const rate = selectedItem.selling_price ?? selectedItem.mrp ?? selectedItem.purchase_price ?? 0;
     setValue(`lines.${index}.rate`, Number(rate), { shouldDirty: true, shouldValidate: true });
-    setValue(`lines.${index}.gst_rate`, Number(selectedItem.gst_rate ?? 0), { shouldDirty: true, shouldValidate: true });
+
+    // Select appropriate GST rate based on transaction type
+    const igst = selectedItem.igst ?? 0;
+    const sgst = selectedItem.sgst ?? 0;
+    const cgst = selectedItem.cgst ?? 0;
+    const gstRate = isInterState ? (igst || 18) : ((sgst + cgst) || 18);
+    setValue(`lines.${index}.gst_rate`, Number(gstRate), { shouldDirty: true, shouldValidate: true });
   };
 
   const calcLineTaxable = (line: InvoiceForm['lines'][number]) =>

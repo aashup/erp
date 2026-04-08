@@ -53,7 +53,10 @@ class PurchaseOrderSeeder extends Seeder
                 $qty = rand(10, 100);
                 $rate = $item->purchase_price ?? rand(50, 500);
                 $taxable = $qty * $rate;
-                $gst = $taxable * $item->gst_rate / 100;
+
+                // Calculate GST rate from item (intra-state: sgst + cgst)
+                $gstRate = ($item->sgst ?? 0) + ($item->cgst ?? 0);
+                $gst = $taxable * $gstRate / 100;
 
                 PoLine::create([
                     'purchase_order_id' => $po->id,
@@ -62,7 +65,7 @@ class PurchaseOrderSeeder extends Seeder
                     'rate' => $rate,
                     'discount_percent' => 0,
                     'taxable_amount' => $taxable,
-                    'gst_rate' => $item->gst_rate,
+                    'gst_rate' => $gstRate,
                     'cgst' => $gst / 2,
                     'sgst' => $gst / 2,
                     'igst' => 0,

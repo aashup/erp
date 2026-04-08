@@ -76,7 +76,9 @@ export interface Item extends SyncColumns {
   sku: string | null;
   hsn_code: string | null;
   unit: string;
-  gst_rate: number;
+  igst: number;
+  sgst: number;
+  cgst: number;
   mrp: number | null;
   purchase_price: number | null;
   selling_price: number | null;

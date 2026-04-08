@@ -20,6 +20,7 @@ class ItemFactory extends Factory
     {
         $gstRates = [0, 5, 12, 18, 28];
         $units = ['pcs', 'kg', 'gm', 'litre', 'meter', 'box', 'packet'];
+        $selectedRate = fake()->randomElement($gstRates);
 
         return [
             'company_id' => Company::factory(),
@@ -28,7 +29,9 @@ class ItemFactory extends Factory
             'hsn_code' => fake()->regexify('[0-9]{4}[0-9]{2}[0-9]{2}'),
             'unit' => fake()->randomElement($units),
             'item_group_id' => null,
-            'gst_rate' => fake()->randomElement($gstRates),
+            'igst' => $selectedRate,
+            'sgst' => $selectedRate / 2,
+            'cgst' => $selectedRate / 2,
             'mrp' => fake()->randomFloat(2, 10, 1000),
             'purchase_price' => fake()->randomFloat(2, 5, 800),
             'selling_price' => fake()->randomFloat(2, 8, 900),

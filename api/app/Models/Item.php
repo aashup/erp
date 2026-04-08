@@ -22,7 +22,9 @@ class Item extends Model
         'sku',
         'hsn_code',
         'unit',
-        'gst_rate',
+        'igst',
+        'sgst',
+        'cgst',
         'mrp',
         'purchase_price',
         'selling_price',
@@ -34,7 +36,9 @@ class Item extends Model
     protected function casts(): array
     {
         return [
-            'gst_rate' => 'decimal:2',
+            'igst' => 'decimal:2',
+            'sgst' => 'decimal:2',
+            'cgst' => 'decimal:2',
             'mrp' => 'decimal:2',
             'purchase_price' => 'decimal:2',
             'selling_price' => 'decimal:2',

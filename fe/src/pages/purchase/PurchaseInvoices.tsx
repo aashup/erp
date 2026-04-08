@@ -214,7 +214,12 @@ export default function PurchaseInvoices() {
     const item = itemMap.get(itemId);
     if (item) {
       setValue(`lines.${index}.rate`, item.purchase_price ?? 0);
-      setValue(`lines.${index}.gst_rate`, item.gst_rate ?? 18);
+      // Select appropriate GST rate based on transaction type
+      const igst = item.igst ?? 0;
+      const sgst = item.sgst ?? 0;
+      const cgst = item.cgst ?? 0;
+      const gstRate = isInterState ? (igst || 18) : ((sgst + cgst) || 18);
+      setValue(`lines.${index}.gst_rate`, Number(gstRate));
     }
   };
 

@@ -52,7 +52,9 @@ return new class extends Migration
             $table->string('sku')->nullable();
             $table->string('hsn_code')->nullable();
             $table->string('unit'); // e.g. PCS, KG, BOX, STRIP
-            $table->decimal('gst_rate', 5, 2)->default(0);
+            $table->decimal('igst', 5, 2)->default(0);
+            $table->decimal('sgst', 5, 2)->default(0);
+            $table->decimal('cgst', 5, 2)->default(0);
             $table->decimal('mrp', 15, 2)->nullable();
             $table->decimal('purchase_price', 15, 2)->nullable();
             $table->decimal('selling_price', 15, 2)->nullable();

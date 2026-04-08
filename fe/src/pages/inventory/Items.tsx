@@ -25,7 +25,9 @@ const itemSchema = z.object({
   hsn_code: z.string().optional(),
   unit: z.string().min(1, 'Unit is required'),
   item_group_id: z.string().optional(),
-  gst_rate: z.coerce.number().min(0),
+  igst: z.coerce.number().min(0),
+  sgst: z.coerce.number().min(0),
+  cgst: z.coerce.number().min(0),
   mrp: z.union([z.coerce.number(), z.nan()]).transform((val) => (isNaN(val) ? undefined : val)).optional(),
   purchase_price: z.coerce.number().min(0).optional(),
   selling_price: z.coerce.number().min(0).optional(),
@@ -113,7 +115,7 @@ export default function Items() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ItemForm>({
     resolver: zodResolver(itemSchema) as any,
-    defaultValues: { gst_rate: 18, reorder_level: 0 },
+    defaultValues: { igst: 0, sgst: 9, cgst: 9, reorder_level: 0 },
   });
 
   const openCreate = () => {
@@ -124,7 +126,9 @@ export default function Items() {
       hsn_code: '',
       unit: unitOptions[0]?.value ?? '',
       item_group_id: '',
-      gst_rate: 18,
+      igst: 0,
+      sgst: 9,
+      cgst: 9,
       reorder_level: 0,
       is_batch_tracked: false,
     });
@@ -139,7 +143,9 @@ export default function Items() {
       hsn_code: item.hsn_code ?? '',
       unit: item.unit,
       item_group_id: item.item_group_id ?? '',
-      gst_rate: item.gst_rate,
+      igst: item.igst,
+      sgst: item.sgst,
+      cgst: item.cgst,
       mrp: item.mrp ?? undefined,
       purchase_price: item.purchase_price ?? undefined,
       selling_price: item.selling_price ?? undefined,
@@ -263,18 +269,46 @@ export default function Items() {
       cell: ({ row }) => row.original.item_group?.name ?? '—',
     },
     {
-      id: 'gst_rate',
+      id: 'igst',
       header: () => (
         <button
-          onClick={() => handleSort('gst_rate')}
+          onClick={() => handleSort('igst')}
           className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
-          title="Click to sort by GST rate"
+          title="Click to sort by IGST"
         >
-          GST %
-          {renderSortIcon('gst_rate')}
+          IGST %
+          {renderSortIcon('igst')}
         </button>
       ),
-      cell: ({ row }) => `${row.original.gst_rate}%`,
+      cell: ({ row }) => `${row.original.igst}%`,
+    },
+    {
+      id: 'sgst',
+      header: () => (
+        <button
+          onClick={() => handleSort('sgst')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by SGST"
+        >
+          SGST %
+          {renderSortIcon('sgst')}
+        </button>
+      ),
+      cell: ({ row }) => `${row.original.sgst}%`,
+    },
+    {
+      id: 'cgst',
+      header: () => (
+        <button
+          onClick={() => handleSort('cgst')}
+          className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400"
+          title="Click to sort by CGST"
+        >
+          CGST %
+          {renderSortIcon('cgst')}
+        </button>
+      ),
+      cell: ({ row }) => `${row.original.cgst}%`,
     },
     {
       id: 'selling_price',
@@ -397,7 +431,9 @@ export default function Items() {
               value={watch('item_group_id')}
               onChange={(val) => setValue('item_group_id', val)}
             />
-            <Input id="gst_rate" label="GST Rate (%)" type="number" step="0.01" error={errors.gst_rate?.message} {...register('gst_rate', { valueAsNumber: true })} />
+            <Input id="igst" label="IGST (%)" type="number" step="0.01" error={errors.igst?.message} {...register('igst', { valueAsNumber: true })} />
+            <Input id="sgst" label="SGST (%)" type="number" step="0.01" error={errors.sgst?.message} {...register('sgst', { valueAsNumber: true })} />
+            <Input id="cgst" label="CGST (%)" type="number" step="0.01" error={errors.cgst?.message} {...register('cgst', { valueAsNumber: true })} />
             <Input id="mrp" label="MRP" type="number" step="0.01" error={errors.mrp?.message} {...register('mrp', { valueAsNumber: true })} />
             <Input id="purchase_price" label="Purchase Price" type="number" step="0.01" error={errors.purchase_price?.message} {...register('purchase_price', { valueAsNumber: true })} />
             <Input id="selling_price" label="Selling Price" type="number" step="0.01" error={errors.selling_price?.message} {...register('selling_price', { valueAsNumber: true })} />
