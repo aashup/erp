@@ -99,13 +99,7 @@ export default function PurchaseOrders() {
 
   const { data: vendorsData } = useQuery({
     queryKey: ['parties-vendors'],
-    queryFn: async () => {
-      const [vendors, both] = await Promise.all([
-        partiesApi.list({ per_page: '500', type: 'vendor' }),
-        partiesApi.list({ per_page: '500', type: 'both' }),
-      ]);
-      return { ...vendors, data: [...vendors.data, ...both.data] };
-    },
+    queryFn: () => partiesApi.list({ per_page: '500', type: 'vendor' }),
     select: (res) => res.data,
   });
 
