@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { accountingGroupsApi } from '@/api/accounting';
-import type { AccountingGroup } from '@/types';
+import type { AccountingGroup, Ledger } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { SlideSelect } from '@/components/ui/SlideSelect';
@@ -66,7 +66,8 @@ const typeColor: Record<string, 'info' | 'success' | 'warning' | 'danger' | 'def
 interface TreeNode {
   account: AccountingGroup;
   children: TreeNode[];
-  childCount: number; // total descendant ledger (non-group) count
+  ledgers: Ledger[];
+  childCount: number; // total descendant ledger count
 }
 
 function buildTree(accounts: AccountingGroup[]): Map<string, TreeNode[]> {
@@ -83,11 +84,9 @@ function buildTree(accounts: AccountingGroup[]): Map<string, TreeNode[]> {
 
   function makeNode(account: AccountingGroup): TreeNode {
     const kids = (childrenOf.get(account.id) ?? []).map(makeNode);
-    const isGroup = parentIds.has(account.id) || kids.length > 0;
-    const childCount = isGroup
-      ? kids.reduce((s, k) => s + k.childCount, 0)
-      : 1; // leaf = 1 account
-    return { account, children: kids, childCount };
+    const ledgers = account.ledgers ?? [];
+    const childCount = kids.reduce((s, k) => s + k.childCount, 0) + ledgers.length;
+    return { account, children: kids, ledgers, childCount };
   }
 
   // Group root nodes by type
@@ -108,6 +107,7 @@ function matchesSearch(node: TreeNode, term: string): boolean {
     node.account.code.toLowerCase().includes(lower)
   )
     return true;
+  if (node.ledgers.some((l) => l.name.toLowerCase().includes(lower))) return true;
   return node.children.some((c) => matchesSearch(c, lower));
 }
 
@@ -119,11 +119,43 @@ function hasActiveAccounts(node: TreeNode): boolean {
 // Collect all group IDs in a tree
 function collectGroupIds(nodes: TreeNode[], ids: Set<string>) {
   for (const n of nodes) {
-    if (n.children.length > 0) {
+    if (n.children.length > 0 || n.ledgers.length > 0) {
       ids.add(n.account.id);
       collectGroupIds(n.children, ids);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// LedgerRow component (leaf node for actual ledger accounts)
+// ---------------------------------------------------------------------------
+
+function LedgerRow({ ledger, depth }: { ledger: Ledger; depth: number }) {
+  const paddingLeft = 16 + depth * 24;
+  return (
+    <tr className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+      <td className="py-2.5 pr-4" style={{ paddingLeft }}>
+        <div className="flex items-center gap-2">
+          <span className="w-5 flex-shrink-0" />
+          <FileText className="h-3.5 w-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
+          <span className="truncate text-gray-700 dark:text-gray-300">{ledger.name}</span>
+          {ledger.is_system && (
+            <span className="ml-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">(System)</span>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-2.5 text-center">
+        <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${
+          ledger.opening_type === 'dr'
+            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+            : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+        }`}>
+          {ledger.opening_type === 'dr' ? 'Debit' : 'Credit'}
+        </span>
+      </td>
+      <td className="px-4 py-2.5" />
+    </tr>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -151,8 +183,8 @@ function CollapsibleRow({
   onEdit,
   onDelete,
 }: RowProps) {
-  const { account, children } = node;
-  const isGroup = children.length > 0;
+  const { account, children, ledgers } = node;
+  const isGroup = children.length > 0 || ledgers.length > 0;
   const isExpanded = expandedSet.has(account.id);
 
   // Search filter
@@ -246,20 +278,26 @@ function CollapsibleRow({
       </tr>
 
       {/* Children */}
-      {isExpanded &&
-        children.map((child) => (
-          <CollapsibleRow
-            key={child.account.id}
-            node={child}
-            depth={depth + 1}
-            expandedSet={expandedSet}
-            toggleExpand={toggleExpand}
-            hideInactive={hideInactive}
-            searchTerm={searchTerm}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
+      {isExpanded && (
+        <>
+          {children.map((child) => (
+            <CollapsibleRow
+              key={child.account.id}
+              node={child}
+              depth={depth + 1}
+              expandedSet={expandedSet}
+              toggleExpand={toggleExpand}
+              hideInactive={hideInactive}
+              searchTerm={searchTerm}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+          {ledgers.map((ledger) => (
+            <LedgerRow key={ledger.id} ledger={ledger} depth={depth + 1} />
+          ))}
+        </>
+      )}
     </>
   );
 }
@@ -781,12 +819,9 @@ export default function AccountingGroups() {
     let ledgers = 0;
     function count(nodes: TreeNode[]) {
       for (const n of nodes) {
-        if (n.children.length > 0) {
-          groups++;
-          count(n.children);
-        } else {
-          ledgers++;
-        }
+        groups++;
+        ledgers += n.ledgers.length;
+        count(n.children);
       }
     }
     treeByType.forEach((nodes) => count(nodes));

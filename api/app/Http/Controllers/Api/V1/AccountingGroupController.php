@@ -176,7 +176,7 @@ class AccountingGroupController extends Controller
     {
         $this->authorize('viewAny', AccountingGroup::class);
 
-        $accounts = AccountingGroup::with('children')
+        $accounts = AccountingGroup::with(['children', 'ledgers'])
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))
             ->when($request->boolean('root_only'), fn ($q) => $q->whereNull('parent_id'))
             ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))

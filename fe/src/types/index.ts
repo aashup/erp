@@ -317,6 +317,7 @@ export interface AccountingGroup extends SyncColumns {
   balance_type: 'dr' | 'cr';
   children?: AccountingGroup[];
   parent?: AccountingGroup;
+  ledgers?: Ledger[];
 }
 
 export interface Voucher extends SyncColumns {
