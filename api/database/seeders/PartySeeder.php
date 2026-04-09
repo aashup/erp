@@ -29,34 +29,21 @@ class PartySeeder extends Seeder
             'pan' => 'AABCU1234F',
             'email' => 'accounts@supplierone.in',
             'credit_limit' => 100000,
-            'opening_balance' => 50000,
-            'balance_type' => 'cr',
-            'is_active' => true,
-        ]);
-
-        Party::factory()->create([
-            'company_id' => $company->id,
-            'type' => 'vendor',
-            'name' => 'Wholesale Distributors',
-            'gstin' => '29XYZDE5678G2Z6',
-            'pan' => 'XYZDE5678G',
-            'email' => 'orders@wholesaledist.com',
-            'credit_limit' => 200000,
             'opening_balance' => 0,
-            'balance_type' => 'dr',
+            'balance_type' => 'cr',
             'is_active' => true,
         ]);
 
         // Create some customers
         Party::factory()->create([
             'company_id' => $company->id,
-            'type' => 'customer',
+            'type' => 'both',
             'name' => 'Retail Store ABC',
             'gstin' => '27PQRST9012H3Z7',
             'pan' => 'PQRST9012H',
             'email' => 'billing@retailstoreabc.com',
             'credit_limit' => 50000,
-            'opening_balance' => 25000,
+            'opening_balance' => 0,
             'balance_type' => 'dr',
             'is_active' => true,
         ]);

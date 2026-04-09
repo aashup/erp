@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useAuthStore } from '@/store/authStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi } from '@/api/inventory';
 import { salesInvoicesApi } from '@/api/sales';
@@ -100,6 +101,7 @@ export default function SalesInvoiceFormPage() {
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
   const watchedLines = watch('lines');
   const isInterState = watch('is_inter_state');
+  const company = useAuthStore((state) => state.user?.company);
 
   useEffect(() => {
     if (isEditMode || !defaultGodownId) {
@@ -143,6 +145,22 @@ export default function SalesInvoiceFormPage() {
     });
   }, [defaultGodownId, invoiceData, navigate, reset]);
 
+  // Auto-detect inter-state based on customer state
+  useEffect(() => {
+    const customerId = watch('party_id');
+    if (!customerId || !company) {
+      return;
+    }
+
+    const customer = (customersData?.data ?? []).find((c) => c.id === customerId);
+    if (!customer) {
+      return;
+    }
+
+    const autoIsInterState = company.state_code !== (customer.state_code ?? company.state_code);
+    setValue('is_inter_state', autoIsInterState, { shouldDirty: true });
+  }, [watch('party_id'), company, customersData, setValue]);
+
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => salesInvoicesApi.create(data),
     onSuccess: () => {
@@ -173,6 +191,33 @@ export default function SalesInvoiceFormPage() {
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
   const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name, subtitle: g.is_default ? 'Default' : '' }));
 
+  const getLineGSTInfo = (lineIndex: number) => {
+    const line = watchedLines?.[lineIndex];
+    if (!line?.item_id || !line?.rate) return null;
+
+    const selectedItem = itemMap.get(line.item_id);
+    if (!selectedItem) return null;
+
+    const customerId = watch('party_id');
+    if (!customerId) return null;
+
+    const customer = (customersData?.data ?? []).find((c) => c.id === customerId);
+    if (!customer || !company) return null;
+
+    const lineIsInterState = company.state_code !== (customer.state_code ?? company.state_code);
+
+    const taxable = calcLineTaxable(line);
+    const gst = calcGST(taxable, line.gst_rate ?? 18, lineIsInterState);
+
+    if (lineIsInterState) {
+      const igst = selectedItem.igst ?? 0;
+      return `Applicable GST IGST = ${igst}% (₹${gst.igst.toFixed(2)})`;
+    }
+    const cgst = selectedItem.cgst ?? 0;
+    const sgst = selectedItem.sgst ?? 0;
+    return `Applicable GST CGST = ${cgst}% (₹${gst.cgst.toFixed(2)}) and SGST = ${sgst}% (₹${gst.sgst.toFixed(2)})`;
+  };
+
   const handleItemSelect = (index: number, itemId: string) => {
     setValue(`lines.${index}.item_id`, itemId, { shouldDirty: true, shouldValidate: true });
 
@@ -184,11 +229,21 @@ export default function SalesInvoiceFormPage() {
     const rate = selectedItem.selling_price ?? selectedItem.mrp ?? selectedItem.purchase_price ?? 0;
     setValue(`lines.${index}.rate`, Number(rate), { shouldDirty: true, shouldValidate: true });
 
-    // Select appropriate GST rate based on transaction type
+    // Select appropriate GST rate based on customer and item state
+    const customerId = watch('party_id');
+    let lineIsInterState = isInterState;
+
+    if (customerId && company) {
+      const customer = (customersData?.data ?? []).find((c) => c.id === customerId);
+      if (customer) {
+        lineIsInterState = company.state_code !== (customer.state_code ?? company.state_code);
+      }
+    }
+
     const igst = selectedItem.igst ?? 0;
     const sgst = selectedItem.sgst ?? 0;
     const cgst = selectedItem.cgst ?? 0;
-    const gstRate = isInterState ? (igst || 18) : ((sgst + cgst) || 18);
+    const gstRate = lineIsInterState ? (igst > 0 ? igst : 18) : ((sgst + cgst) > 0 ? (sgst + cgst) : 18);
     setValue(`lines.${index}.gst_rate`, Number(gstRate), { shouldDirty: true, shouldValidate: true });
   };
 
@@ -217,7 +272,13 @@ export default function SalesInvoiceFormPage() {
   );
 
   const onSubmit = (formData: InvoiceForm) => {
-    const payload = { ...formData } as Record<string, unknown>;
+    const payload = {
+      ...formData,
+      lines: formData.lines.map((line) => ({
+        ...line,
+        line_total: calcLineTaxable(line),
+      })),
+    } as Record<string, unknown>;
 
     if (isEditMode && invoiceId) {
       updateMutation.mutate({ id: invoiceId, data: payload });
@@ -311,78 +372,73 @@ export default function SalesInvoiceFormPage() {
                     <div className="col-span-1">Qty</div>
                     <div className="col-span-2">Rate (₹)</div>
                     <div className="col-span-2">Disc %</div>
-                    <div className="col-span-1 text-right">Total</div>
+                    <div className="col-span-1 text-right">Taxable</div>
                     <div className="col-span-1"></div>
                   </div>
 
                   {fields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-12 items-start gap-2">
-                      <div className="col-span-3">
-                        <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemSelect(index, val)} />
+                    <div key={field.id} className="space-y-2">
+                      <div className="grid grid-cols-12 items-start gap-2">
+                        <div className="col-span-3">
+                          <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemSelect(index, val)} />
+                        </div>
+                        <div className="col-span-2">
+                          <SlideSelect name={`lines.${index}.godown_id`} placeholder="Select godown" panelTitle="Select Godown" options={godownOptions} value={watch(`lines.${index}.godown_id`)} onChange={(val) => setValue(`lines.${index}.godown_id`, val, { shouldValidate: true })} />
+                        </div>
+                        <div className="col-span-1">
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                            {...register(`lines.${index}.quantity`)}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                            placeholder="0.00"
+                            {...register(`lines.${index}.rate`)}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                            {...register(`lines.${index}.discount_percent`)}
+                          />
+                        </div>
+                        <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
+                          {formatCurrency(calcLineTaxable(watchedLines?.[index] ?? { item_id: '', godown_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
+                        </div>
+                        <div className="col-span-1 flex items-center justify-center">
+                          {fields.length > 1 && (
+                            <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
+                              <X className="h-4 w-4 text-red-500" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="col-span-2">
-                        <SlideSelect name={`lines.${index}.godown_id`} placeholder="Select godown" panelTitle="Select Godown" options={godownOptions} value={watch(`lines.${index}.godown_id`)} onChange={(val) => setValue(`lines.${index}.godown_id`, val, { shouldValidate: true })} />
-                      </div>
-                      <div className="col-span-1">
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                          {...register(`lines.${index}.quantity`)}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                          {...register(`lines.${index}.rate`)}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                          {...register(`lines.${index}.discount_percent`)}
-                        />
-                      </div>
-                      <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
-                        {formatCurrency(
-                          calcLineTotal(
-                            watchedLines?.[index] ?? makeEmptyLine(defaultGodownId)
-                          )
-                        )}
-                      </div>
-                      <div className="col-span-1 flex items-center justify-center">
-                        {fields.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => remove(index)}
-                            className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30"
-                          >
-                            <X className="h-4 w-4 text-red-500" />
-                          </button>
-                        )}
-                      </div>
+                      {getLineGSTInfo(index) && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400 pl-1">
+                          {getLineGSTInfo(index)}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-4 space-y-1 border-t dark:border-gray-700 pt-3 text-right text-sm">
+                <div className="mt-4 border-t dark:border-gray-700 pt-3 space-y-1 text-sm text-right">
                   <div><span className="text-gray-500">Taxable: </span><span className="font-medium">{formatCurrency(totals.taxable)}</span></div>
-                  {isInterState ? (
-                    <div><span className="text-gray-500">IGST: </span><span className="font-medium">{formatCurrency(totals.igst)}</span></div>
-                  ) : (
-                    <>
-                      <div><span className="text-gray-500">CGST: </span><span className="font-medium">{formatCurrency(totals.cgst)}</span></div>
-                      <div><span className="text-gray-500">SGST: </span><span className="font-medium">{formatCurrency(totals.sgst)}</span></div>
-                    </>
-                  )}
+                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400'}>CGST: </span><span className={`font-medium ${isInterState ? 'text-gray-400' : ''}`}>{formatCurrency(totals.cgst)}</span></div>
+                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400'}>SGST: </span><span className={`font-medium ${isInterState ? 'text-gray-400' : ''}`}>{formatCurrency(totals.sgst)}</span></div>
+                  <div><span className={isInterState ? 'text-gray-500' : 'text-gray-400'}>IGST: </span><span className={`font-medium ${isInterState ? '' : 'text-gray-400'}`}>{formatCurrency(totals.igst)}</span></div>
                   <div className="text-base"><span className="text-gray-500 dark:text-gray-400">Grand Total: </span><span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totals.grand)}</span></div>
                 </div>
               </div>

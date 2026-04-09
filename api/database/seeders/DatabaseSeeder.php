@@ -16,7 +16,6 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             FinancialYearSeeder::class,
             AccountingGroupSeeder::class,
-            LedgerSeeder::class,
             UnitSeeder::class,
 
             // Inventory
@@ -30,18 +29,22 @@ class DatabaseSeeder extends Seeder
 
             // Purchase
             PurchaseOrderSeeder::class,
-            PurchaseInvoiceSeeder::class,
 
-            // Sales
-            SalesOrderSeeder::class,
-            SalesInvoiceSeeder::class,
-
-            // Sample Invoices
-            AidwayBiotechInvoiceSeeder::class,
-
-            // Accounting
-            PaymentReceiptSeeder::class,
-            VoucherSeeder::class,
         ]);
+
+        // Local-only seeders — dummy invoice data for development
+        if (app()->environment('local')) {
+            $this->call([
+                LedgerSeeder::class,
+
+                PurchaseInvoiceSeeder::class,
+                // Sales
+                SalesOrderSeeder::class,
+                SalesInvoiceSeeder::class,
+                AidwayBiotechInvoiceSeeder::class,
+                PaymentReceiptSeeder::class,
+                VoucherSeeder::class,
+            ]);
+        }
     }
 }

@@ -15,6 +15,12 @@ start:
 migrate:
 	$(COMPOSE) exec api php artisan migrate
 
+migrate-fresh:
+	$(COMPOSE) exec api php artisan migrate:fresh
+
+migrate-fresh-seed:
+	$(COMPOSE) exec api php artisan migrate:fresh --seed
+
 seed:
 	$(COMPOSE) exec api php artisan db:seed
 

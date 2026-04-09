@@ -123,9 +123,17 @@ class PurchaseInvoiceController extends Controller
                 'balance_due' => $invoice->lines->sum('line_total'),
             ]);
 
-            // Auto-post journal entry for purchase
+            // Auto-post journal entry for purchase (mandatory — invoice is invalid without it)
             $invoice->refresh();
-            app(AccountingService::class)->postPurchaseInvoice($invoice, $request->user()->id);
+            $voucher = app(AccountingService::class)->postPurchaseInvoice($invoice, $request->user()->id);
+
+            if (! $voucher) {
+                throw new \RuntimeException(
+                    'Purchase invoice cannot be saved: journal entry could not be created. ' .
+                    'Ensure the vendor has a creditor ledger, purchase_account ledger exists, ' .
+                    'and a financial year covers the invoice date.'
+                );
+            }
 
             return $invoice->load('lines.item', 'party');
         });

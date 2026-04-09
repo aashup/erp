@@ -18,6 +18,8 @@ class CompanySeeder extends Seeder
             'gstin' => '27ABCDE1234F1Z5',
             'pan' => 'ABCDE1234F',
             'email' => 'accounts@democompany.in',
+            'state' => 'Uttar Pradesh',
+            'state_code' => '09',
         ]);
 
         // Create additional companies if needed
