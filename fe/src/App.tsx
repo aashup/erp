@@ -31,7 +31,9 @@ import ChartOfAccounts from '@/pages/accounting/ChartOfAccounts';
 import Ledgers from '@/pages/accounting/Ledgers';
 import JournalEntries from '@/pages/accounting/JournalEntries';
 import Payments from '@/pages/accounting/Payments';
-import VouchersEntry from '@/pages/accounting/VouchersEntry';
+import VouchersHub from '@/pages/accounting/VouchersHub';
+import VoucherTypeList from '@/pages/accounting/VoucherTypeList';
+import VoucherEntryForm from '@/pages/accounting/VoucherEntryForm';
 import TrialBalance from '@/pages/accounting/TrialBalance';
 import ProfitAndLoss from '@/pages/accounting/ProfitAndLoss';
 import Settings from '@/pages/Settings';
@@ -127,7 +129,9 @@ export default function App() {
             {/* Accounting */}
             <Route path="/accounting/accounts" element={<ChartOfAccounts />} />
             <Route path="/accounting/ledgers" element={<Ledgers />} />
-            <Route path="/accounting/vouchers" element={<VouchersEntry />} />
+            <Route path="/accounting/vouchers" element={<VouchersHub />} />
+            <Route path="/accounting/vouchers/:type" element={<VoucherTypeList />} />
+            <Route path="/accounting/vouchers/:type/new" element={<VoucherEntryForm />} />
             <Route path="/accounting/journals" element={<JournalEntries />} />
             <Route path="/accounting/payments" element={<Payments />} />
             <Route path="/accounting/trial-balance" element={<TrialBalance />} />
