@@ -1,0 +1,82 @@
+name: erp
+
+services:
+
+  db:
+    image: mysql:9.6
+    container_name: db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: erp
+      MYSQL_ROOT_PASSWORD: tiger
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptiger"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./api:/var/www/html
+    ports:
+      - "8000:8000"
+      - "9003:9003"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: erp
+      DB_USERNAME: root
+      DB_PASSWORD: tiger
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      XDEBUG_MODE: develop,debug
+    env_file:
+      - ./api/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  fe:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+    container_name: fe
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./fe:/app
+      - fe_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_PROXY_TARGET: http://api:8000
+    depends_on:
+      - api
+
+volumes:
+  db_data:
+  fe_node_modules:

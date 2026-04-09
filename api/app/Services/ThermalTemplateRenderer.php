@@ -2,10 +2,11 @@
 
 namespace App\Services;
 
+use App\Helpers\NumberToWords;
 use App\Models\Company;
 use App\Models\SalesInvoice;
 use App\Models\ThermalTemplate;
-use App\Helpers\NumberToWords;
+use Carbon\Carbon;
 
 class ThermalTemplateRenderer
 {
@@ -39,7 +40,7 @@ class ThermalTemplateRenderer
             '{{company_email}}' => $company->email ?? '',
             '{{invoice_number}}' => $invoice->invoice_number,
             '{{invoice_date}}' => $invoice->invoice_date,
-            '{{invoice_date_formatted}}' => \Carbon\Carbon::parse($invoice->invoice_date)->format('d/m/Y'),
+            '{{invoice_date_formatted}}' => Carbon::parse($invoice->invoice_date)->format('d/m/Y'),
             '{{customer_name}}' => $invoice->party->name ?? '',
             '{{customer_gstin}}' => $invoice->party->gstin ?? '',
             '{{customer_address}}' => $invoice->party->address ?? '',
@@ -99,21 +100,22 @@ class ThermalTemplateRenderer
         foreach ($invoice->lines as $line) {
             $html .= '<tr style="border-bottom: 1px dotted #ccc;">
                         <td style="text-align: left; padding: 2px; font-size: 9px; font-weight: bold;">
-                            ' . htmlspecialchars($line->item->name) . '
+                            '.htmlspecialchars($line->item->name).'
                         </td>
                         <td style="text-align: center; padding: 2px; font-size: 9px;">
-                            ' . round($line->quantity, 2) . '
+                            '.round($line->quantity, 2).'
                         </td>
                         <td style="text-align: right; padding: 2px; font-size: 9px;">
-                            ' . number_format($line->rate, 0) . '
+                            '.number_format($line->rate, 0).'
                         </td>
                         <td style="text-align: right; padding: 2px; font-size: 9px;">
-                            ' . number_format($line->line_total, 0) . '
+                            '.number_format($line->line_total, 0).'
                         </td>
                       </tr>';
         }
 
         $html .= '</tbody></table>';
+
         return $html;
     }
 
@@ -127,25 +129,26 @@ class ThermalTemplateRenderer
         if ($invoice->cgst_total > 0) {
             $html .= '<div style="display: flex; justify-content: space-between; font-size: 9px; margin: 2px 0;">
                         <span>CGST:</span>
-                        <span>' . number_format($invoice->cgst_total, 0) . '</span>
+                        <span>'.number_format($invoice->cgst_total, 0).'</span>
                       </div>';
         }
 
         if ($invoice->sgst_total > 0) {
             $html .= '<div style="display: flex; justify-content: space-between; font-size: 9px; margin: 2px 0;">
                         <span>SGST:</span>
-                        <span>' . number_format($invoice->sgst_total, 0) . '</span>
+                        <span>'.number_format($invoice->sgst_total, 0).'</span>
                       </div>';
         }
 
         if ($invoice->igst_total > 0) {
             $html .= '<div style="display: flex; justify-content: space-between; font-size: 9px; margin: 2px 0;">
                         <span>IGST:</span>
-                        <span>' . number_format($invoice->igst_total, 0) . '</span>
+                        <span>'.number_format($invoice->igst_total, 0).'</span>
                       </div>';
         }
 
         $html .= '</div>';
+
         return $html;
     }
 }

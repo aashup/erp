@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\StockLedger;
+use App\Models\ThermalTemplate;
 use App\Services\AccountingService;
 use App\Services\InvoicePdfService;
+use App\Services\ThermalTemplateRenderer;
 use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -375,14 +378,14 @@ class SalesInvoiceController extends Controller
 
         // Check if using custom thermal template
         if ($templateSlug === 'thermal-custom') {
-            $company = $salesInvoice->company ?? \App\Models\Company::find($salesInvoice->company_id);
-            $customTemplate = \App\Models\ThermalTemplate::where('company_id', $salesInvoice->company_id)
+            $company = $salesInvoice->company ?? Company::find($salesInvoice->company_id);
+            $customTemplate = ThermalTemplate::where('company_id', $salesInvoice->company_id)
                 ->where('paper_size', $paperSize)
                 ->where('is_default', true)
                 ->first();
 
             if ($customTemplate) {
-                $renderer = app(\App\Services\ThermalTemplateRenderer::class);
+                $renderer = app(ThermalTemplateRenderer::class);
                 $html = $renderer->render($customTemplate, $salesInvoice, $company);
             } else {
                 // Fall back to built-in thermal template if no custom found

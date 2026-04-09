@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
 use App\Models\Ledger;
 use App\Models\Party;
@@ -357,7 +358,7 @@ class AccountingService
 
         // bank, cheque, upi, other → all go to bank ledger
         // Look for any ledger under the bank_account group
-        $bankGroup = \App\Models\AccountingGroup::findBySystemKey($companyId, 'bank_account');
+        $bankGroup = AccountingGroup::findBySystemKey($companyId, 'bank_account');
         if ($bankGroup) {
             $bankLedger = Ledger::where('company_id', $companyId)
                 ->where('group_id', $bankGroup->id)

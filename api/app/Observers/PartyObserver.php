@@ -73,11 +73,11 @@ class PartyObserver
         if ($party->isDirty('name')) {
             if ($party->debtor_ledger_id) {
                 $suffix = $party->creditor_ledger_id ? ' (Buyer)' : '';
-                $party->debtorLedger?->update(['name' => $party->name . $suffix]);
+                $party->debtorLedger?->update(['name' => $party->name.$suffix]);
             }
             if ($party->creditor_ledger_id) {
                 $suffix = $party->debtor_ledger_id ? ' (Vendor)' : '';
-                $party->creditorLedger?->update(['name' => $party->name . $suffix]);
+                $party->creditorLedger?->update(['name' => $party->name.$suffix]);
             }
         }
 

@@ -40,7 +40,7 @@ class UnitController extends Controller
         $this->authorize('create', Unit::class);
 
         $validated = $request->validate([
-            'value' => 'required|string|max:20|unique:units,value,NULL,id,company_id,' . $request->user()->company_id,
+            'value' => 'required|string|max:20|unique:units,value,NULL,id,company_id,'.$request->user()->company_id,
             'label' => 'required|string|max:255',
             'status' => 'required|in:active,inactive',
         ]);
@@ -63,7 +63,7 @@ class UnitController extends Controller
         $this->authorize('update', $unit);
 
         $validated = $request->validate([
-            'value' => "required|string|max:20|unique:units,value,{$unit->id},id,company_id," . $request->user()->company_id,
+            'value' => "required|string|max:20|unique:units,value,{$unit->id},id,company_id,".$request->user()->company_id,
             'label' => 'required|string|max:255',
             'status' => 'required|in:active,inactive',
         ]);

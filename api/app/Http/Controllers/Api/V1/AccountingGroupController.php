@@ -49,9 +49,9 @@ class AccountingGroupController extends Controller
 
         // Current Assets sub-groups
         ['code' => '1210', 'name' => 'Bank Accounts', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'bank_account'],
-            'ledgers' => [
-                ['name' => 'HDFC Bank', 'system_key' => 'bank_account'],
-            ],
+        'ledgers' => [
+            ['name' => 'HDFC Bank', 'system_key' => 'bank_account'],
+        ],
         ['code' => '1220', 'name' => 'Cash-in-hand', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'cash_account',
             'ledgers' => [
                 ['name' => 'Cash', 'system_key' => 'cash'],
@@ -68,7 +68,7 @@ class AccountingGroupController extends Controller
         ],
 
         ['code' => '1260', 'name' => 'Sundry Debtors', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'sundry_debtors'],
- 
+
         // Current Liabilities
         ['code' => '2010', 'name' => 'Duties & Taxes', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'duties_taxes',
             'ledgers' => [
@@ -82,7 +82,7 @@ class AccountingGroupController extends Controller
         ],
         ['code' => '2020', 'name' => 'Provisions', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
         ['code' => '2030', 'name' => 'Sundry Creditors', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'sundry_creditors'],
-  
+
         // Loans
         ['code' => '2110', 'name' => 'Bank OD A/c', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
         ['code' => '2120', 'name' => 'Secured Loans', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
