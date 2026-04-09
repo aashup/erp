@@ -68,44 +68,21 @@ class AccountingGroupController extends Controller
         ],
 
         ['code' => '1260', 'name' => 'Sundry Debtors', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'sundry_debtors'],
-
-        // GST Input Ledgers
-        ['code' => '1270', 'name' => 'Input CGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_cgst',
+ 
+        // Current Liabilities
+        ['code' => '2010', 'name' => 'Duties & Taxes', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'duties_taxes',
             'ledgers' => [
+                ['name' => 'Output CGST', 'system_key' => 'output_cgst'],
+                ['name' => 'Output SGST', 'system_key' => 'output_sgst'],
+                ['name' => 'Output IGST', 'system_key' => 'output_igst'],
                 ['name' => 'Input CGST', 'system_key' => 'input_cgst'],
-            ],
-        ],
-        ['code' => '1280', 'name' => 'Input SGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_sgst',
-            'ledgers' => [
                 ['name' => 'Input SGST', 'system_key' => 'input_sgst'],
-            ],
-        ],
-        ['code' => '1290', 'name' => 'Input IGST', 'type' => 'asset', 'parent_code' => '1200', 'system_key' => 'input_igst',
-            'ledgers' => [
                 ['name' => 'Input IGST', 'system_key' => 'input_igst'],
             ],
         ],
-
-        // Current Liabilities
-        ['code' => '2010', 'name' => 'Duties & Taxes', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
         ['code' => '2020', 'name' => 'Provisions', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
         ['code' => '2030', 'name' => 'Sundry Creditors', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'sundry_creditors'],
-        // GST Output Ledgers
-        ['code' => '2040', 'name' => 'Output CGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_cgst',
-            'ledgers' => [
-                ['name' => 'Output CGST', 'system_key' => 'output_cgst'],
-            ],
-        ],
-        ['code' => '2050', 'name' => 'Output SGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_sgst',
-            'ledgers' => [
-                ['name' => 'Output SGST', 'system_key' => 'output_sgst'],
-            ],
-        ],
-        ['code' => '2060', 'name' => 'Output IGST', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => 'output_igst',
-            'ledgers' => [
-                ['name' => 'Output IGST', 'system_key' => 'output_igst'],
-            ],
-        ],
+  
         // Loans
         ['code' => '2110', 'name' => 'Bank OD A/c', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
         ['code' => '2120', 'name' => 'Secured Loans', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
@@ -113,8 +90,11 @@ class AccountingGroupController extends Controller
         ['code' => '3010', 'name' => 'Reserves & Surplus', 'type' => 'equity', 'parent_code' => '3000', 'system_key' => null],
 
         // Specific mapping groups (optional redundancy avoided)
-        ['code' => '4010', 'name' => 'Sales Account', 'type' => 'income', 'parent_code' => '4000', 'system_key' => 'sales_account'],
-        ['code' => '5010', 'name' => 'Purchase Account', 'type' => 'expense', 'parent_code' => '5000', 'system_key' => 'purchase_account'],
+        ['code' => '2022', 'name' => 'Salary', 'type' => 'liability', 'parent_code' => '2020', 'system_key' => 'salary_expense',
+            'ledgers' => [
+                ['name' => 'Salary Payable', 'system_key' => 'salary_expense'],
+            ],
+        ],
     ];
 
     private array $margGroups = [
@@ -279,7 +259,7 @@ class AccountingGroupController extends Controller
             ], 422);
         }
 
-        $groups = $preset === 'tally' ? $this->tallyGroups : $this->margGroups;
+        $groups = 1 ? $this->tallyGroups : $this->margGroups;
 
         DB::transaction(function () use ($groups, $companyId) {
             // Soft-delete existing system groups not referenced by ledgers with voucher lines
