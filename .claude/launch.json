@@ -1,12 +1,14 @@
 {
   "version": "0.0.1",
+  "_note": "Access URL: http://localhost:3000/ — App runs fully in Docker (containers: api, fe, db, redis). Do NOT start locally. If the server is not running, start it with: make start",
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "/Users/aashu/.nvm/versions/node/v20.20.0/bin/node",
-      "runtimeArgs": ["/Users/aashu/erp/fe/node_modules/.bin/vite", "--port", "3000"],
+      "runtimeExecutable": "/usr/local/bin/docker",
+      "runtimeArgs": ["compose", "up", "--build"],
       "port": 3000,
-      "cwd": "fe"
+      "cwd": ".",
+      "autoPort": false
     }
   ]
 }

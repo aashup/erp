@@ -44,13 +44,6 @@ services:
       - "8000:8000"
       - "9003:9003"
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: erp
-      DB_USERNAME: root
-      DB_PASSWORD: tiger
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
       XDEBUG_MODE: develop,debug
     env_file:
       - ./api/.env
