@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('reference_number')->nullable();
             $table->string('bank_name')->nullable();
             $table->text('notes')->nullable();
+            $table->foreignUuid('purchase_invoice_id')->nullable()->constrained('purchase_invoices')->nullOnDelete();
             $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
 
             // Sync columns

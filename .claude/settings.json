@@ -41,5 +41,8 @@
       }
     }
   },
-  "spinnerTipsEnabled": false
+  "spinnerTipsEnabled": false,
+  "enabledPlugins": {
+    "hookify@claude-plugins-official": false
+  }
 }

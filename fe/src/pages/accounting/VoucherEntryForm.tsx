@@ -113,7 +113,16 @@ export default function VoucherEntryForm() {
     enabled: !isPaymentType,
   });
 
-  const ledgerSlideOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name }));
+  const isContra = voucherType === 'contra';
+
+  const allLedgerOptions = (ledgersData?.data ?? []).map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name }));
+
+  // For contra: only bank (1210) and cash (1220) accounts
+  const ledgerSlideOptions = isContra
+    ? (ledgersData?.data ?? [])
+        .filter((l) => l.group?.code === '1210' || l.group?.code === '1220')
+        .map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name }))
+    : allLedgerOptions;
 
   // ─── Party options ─────────────────────────────────────────────────────────
 
@@ -264,7 +273,7 @@ export default function VoucherEntryForm() {
                   error={paymentForm.formState.errors.party_id?.message}
                 />
 
-                <Input id="amount" label={`Amount (\u20B9)`} type="number" step="0.01" error={paymentForm.formState.errors.amount?.message} {...paymentForm.register('amount')} />
+                <Input id="amount" label={`Amount (₹)`} type="number" step="0.01" error={paymentForm.formState.errors.amount?.message} {...paymentForm.register('amount')} />
 
                 <SlideSelect
                   name="payment_mode"
@@ -303,14 +312,16 @@ export default function VoucherEntryForm() {
             <form onSubmit={journalForm.handleSubmit(onJournalSubmit)} className="space-y-5">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Input id="voucher_date" label="Voucher Date" type="date" error={journalForm.formState.errors.voucher_date?.message} {...journalForm.register('voucher_date')} />
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Voucher Type</label>
-                  <div className="flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 py-2 px-3">
-                    <Icon className={`h-4 w-4 ${config.iconColor}`} />
-                    <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
-                    <kbd className="ml-auto text-[10px] font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-500">{config.shortcut}</kbd>
+                {!isContra && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Voucher Type</label>
+                    <div className="flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 py-2 px-3">
+                      <Icon className={`h-4 w-4 ${config.iconColor}`} />
+                      <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
+                      <kbd className="ml-auto text-[10px] font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-500">{config.shortcut}</kbd>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="sm:col-span-2">
                   <Input id="narration" label="Narration" {...journalForm.register('narration')} />
                 </div>
@@ -335,64 +346,170 @@ export default function VoucherEntryForm() {
                 )}
 
                 {/* Column headers */}
-                <div className="hidden sm:grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">
-                  <div className="col-span-5">Ledger</div>
-                  <div className="col-span-2">Debit (\u20B9)</div>
-                  <div className="col-span-2">Credit (\u20B9)</div>
-                  <div className="col-span-2">Narration</div>
-                  <div className="col-span-1"></div>
-                </div>
+                {isContra ? (
+                  <div className="hidden sm:grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">
+                    <div className="col-span-2">Direction</div>
+                    <div className="col-span-5">Ledger</div>
+                    <div className="col-span-3">Amount (₹)</div>
+                    <div className="col-span-1">Note</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                ) : (
+                  <div className="hidden sm:grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">
+                    <div className="col-span-5">Ledger</div>
+                    <div className="col-span-2">Debit (₹)</div>
+                    <div className="col-span-2">Credit (₹)</div>
+                    <div className="col-span-2">Narration</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                )}
 
                 <div className="space-y-3">
-                  {journalFields.map((field, index) => (
+                  {journalFields.map((field, index) => {
+                    // For contra: hide ledgers already selected in other rows
+                    const selectedElsewhere = isContra
+                      ? new Set(watchedLines.filter((_, i) => i !== index).map((l) => l.ledger_id).filter(Boolean))
+                      : new Set<string>();
+                    const lineOptions = isContra
+                      ? ledgerSlideOptions.filter((o) => !selectedElsewhere.has(o.value))
+                      : ledgerSlideOptions;
+
+                    // Contra: derive direction from existing debit/credit values
+                    const currentCredit = Number(watchedLines[index]?.credit) || 0;
+                    const currentDebit = Number(watchedLines[index]?.debit) || 0;
+                    const contraDirection: 'from' | 'to' = currentCredit > 0 ? 'to' : 'from';
+                    const contraAmount = contraDirection === 'to' ? currentCredit : currentDebit;
+
+                    const handleContraDirectionChange = (dir: 'from' | 'to') => {
+                      const amt = contraDirection === 'to' ? currentCredit : currentDebit;
+                      if (dir === 'from') {
+                        journalForm.setValue(`lines.${index}.debit`, amt, { shouldValidate: true });
+                        journalForm.setValue(`lines.${index}.credit`, 0, { shouldValidate: true });
+                      } else {
+                        journalForm.setValue(`lines.${index}.credit`, amt, { shouldValidate: true });
+                        journalForm.setValue(`lines.${index}.debit`, 0, { shouldValidate: true });
+                      }
+                    };
+
+                    const handleContraAmountChange = (val: string) => {
+                      const num = val === '' ? 0 : Number(val);
+                      if (contraDirection === 'from') {
+                        journalForm.setValue(`lines.${index}.debit`, num, { shouldValidate: true });
+                        journalForm.setValue(`lines.${index}.credit`, 0, { shouldValidate: true });
+                      } else {
+                        journalForm.setValue(`lines.${index}.credit`, num, { shouldValidate: true });
+                        journalForm.setValue(`lines.${index}.debit`, 0, { shouldValidate: true });
+                      }
+                    };
+
+                    return (
                     <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
-                      <div className="col-span-12 sm:col-span-5">
-                        <SlideSelect
-                          name={`lines.${index}.ledger_id`}
-                          placeholder="Select ledger"
-                          panelTitle="Select Ledger"
-                          options={ledgerSlideOptions}
-                          value={journalForm.watch(`lines.${index}.ledger_id`)}
-                          onChange={(val) => journalForm.setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })}
-                          error={journalForm.formState.errors.lines?.[index]?.ledger_id?.message}
-                        />
-                      </div>
-                      <div className="col-span-5 sm:col-span-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Debit"
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
-                          {...journalForm.register(`lines.${index}.debit`)}
-                        />
-                      </div>
-                      <div className="col-span-5 sm:col-span-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Credit"
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
-                          {...journalForm.register(`lines.${index}.credit`)}
-                        />
-                      </div>
-                      <div className="col-span-10 sm:col-span-2">
-                        <input
-                          placeholder="Note"
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
-                          {...journalForm.register(`lines.${index}.narration`)}
-                        />
-                      </div>
-                      <div className="col-span-2 sm:col-span-1 flex items-center justify-center">
-                        {journalFields.length > 2 && (
-                          <button type="button" onClick={() => removeLine(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
-                            <X className="h-4 w-4 text-red-500" />
-                          </button>
-                        )}
-                      </div>
+                      {isContra ? (
+                        <>
+                          {/* Direction dropdown */}
+                          <div className="col-span-4 sm:col-span-2">
+                            <select
+                              value={contraDirection}
+                              onChange={(e) => handleContraDirectionChange(e.target.value as 'from' | 'to')}
+                              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                            >
+                              <option value="from">From</option>
+                              <option value="to">To</option>
+                            </select>
+                          </div>
+                          {/* Ledger */}
+                          <div className="col-span-8 sm:col-span-5">
+                            <SlideSelect
+                              name={`lines.${index}.ledger_id`}
+                              placeholder="Select ledger"
+                              panelTitle="Select Ledger"
+                              options={lineOptions}
+                              value={journalForm.watch(`lines.${index}.ledger_id`)}
+                              onChange={(val) => journalForm.setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })}
+                              error={journalForm.formState.errors.lines?.[index]?.ledger_id?.message}
+                            />
+                          </div>
+                          {/* Amount */}
+                          <div className="col-span-6 sm:col-span-3">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Amount"
+                              value={contraAmount || ''}
+                              onChange={(e) => handleContraAmountChange(e.target.value)}
+                              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                            />
+                          </div>
+                          {/* Note */}
+                          <div className="col-span-5 sm:col-span-1">
+                            <input
+                              placeholder="Note"
+                              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                              {...journalForm.register(`lines.${index}.narration`)}
+                            />
+                          </div>
+                          {/* Remove */}
+                          <div className="col-span-1 flex items-center justify-center">
+                            {journalFields.length > 2 && (
+                              <button type="button" onClick={() => removeLine(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                <X className="h-4 w-4 text-red-500" />
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="col-span-12 sm:col-span-5">
+                            <SlideSelect
+                              name={`lines.${index}.ledger_id`}
+                              placeholder="Select ledger"
+                              panelTitle="Select Ledger"
+                              options={lineOptions}
+                              value={journalForm.watch(`lines.${index}.ledger_id`)}
+                              onChange={(val) => journalForm.setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })}
+                              error={journalForm.formState.errors.lines?.[index]?.ledger_id?.message}
+                            />
+                          </div>
+                          <div className="col-span-5 sm:col-span-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Debit"
+                              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                              {...journalForm.register(`lines.${index}.debit`)}
+                            />
+                          </div>
+                          <div className="col-span-5 sm:col-span-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Credit"
+                              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                              {...journalForm.register(`lines.${index}.credit`)}
+                            />
+                          </div>
+                          <div className="col-span-10 sm:col-span-2">
+                            <input
+                              placeholder="Note"
+                              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                              {...journalForm.register(`lines.${index}.narration`)}
+                            />
+                          </div>
+                          <div className="col-span-2 sm:col-span-1 flex items-center justify-center">
+                            {journalFields.length > 2 && (
+                              <button type="button" onClick={() => removeLine(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                <X className="h-4 w-4 text-red-500" />
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
                 {/* Totals row */}

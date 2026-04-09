@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Party;
 use App\Models\PaymentReceipt;
+use App\Models\PurchaseInvoice;
 use App\Services\AccountingService;
 use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
@@ -44,6 +45,7 @@ class PaymentReceiptController extends Controller
             'reference_number' => 'nullable|string',
             'bank_name' => 'nullable|string',
             'notes' => 'nullable|string',
+            'purchase_invoice_id' => 'nullable|uuid|exists:purchase_invoices,id',
         ]);
 
         $receipt = PaymentReceipt::create([
@@ -81,6 +83,21 @@ class PaymentReceiptController extends Controller
                     PaymentReceipt::class,
                     $receipt->id,
                 );
+            }
+        }
+
+        // Update purchase invoice balance if linked
+        if (! empty($validated['purchase_invoice_id'])) {
+            $invoice = PurchaseInvoice::find($validated['purchase_invoice_id']);
+            if ($invoice && $validated['type'] === 'payment') {
+                $newAmountPaid = min(
+                    (float) $invoice->amount_paid + (float) $validated['amount'],
+                    (float) $invoice->grand_total
+                );
+                $invoice->update([
+                    'amount_paid' => $newAmountPaid,
+                    'balance_due' => max(0, (float) $invoice->grand_total - $newAmountPaid),
+                ]);
             }
         }
 

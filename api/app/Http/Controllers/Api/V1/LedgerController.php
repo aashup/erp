@@ -15,6 +15,7 @@ class LedgerController extends Controller
 
         $query = Ledger::with('group')
             ->when($request->group_id, fn ($q, $g) => $q->where('group_id', $g))
+            ->when($request->group_system_key, fn ($q, $k) => $q->whereHas('group', fn ($gq) => $gq->whereIn('system_key', explode(',', $k))))
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
                     ->orWhere('alias', 'like', "%{$s}%");
