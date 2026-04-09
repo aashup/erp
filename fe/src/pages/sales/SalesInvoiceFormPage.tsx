@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAuthStore } from '@/store/authStore';
 import { partiesApi } from '@/api/parties';
-import { itemsApi, godownsApi } from '@/api/inventory';
+import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
 import { salesInvoicesApi } from '@/api/sales';
 import { formatCurrency, calcGST } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -187,6 +187,21 @@ export default function SalesInvoiceFormPage() {
     [itemsData?.data]
   );
 
+  const { data: stockSummaryData } = useQuery({
+    queryKey: ['stock-summary-all'],
+    queryFn: () => stockLedgerApi.summary({ per_page: '999' }),
+    select: (res) => res.data,
+  });
+
+  const stockSummaryMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (stockSummaryData?.data ?? []).forEach((row) => {
+      const key = `${row.item_id}:${row.godown_id}`;
+      map.set(key, row.current_stock ?? 0);
+    });
+    return map;
+  }, [stockSummaryData?.data]);
+
   const customerOptions = (customersData?.data ?? []).map((p) => ({ value: p.id, label: p.name, subtitle: p.type ?? 'customer' }));
   const itemOptions = (itemsData?.data ?? []).map((i) => ({ value: i.id, label: i.name, subtitle: i.sku ?? i.hsn_code ?? '' }));
   const godownOptions = (godownsData?.data ?? []).map((g) => ({ value: g.id, label: g.name, subtitle: g.is_default ? 'Default' : '' }));
@@ -216,6 +231,18 @@ export default function SalesInvoiceFormPage() {
     const cgst = selectedItem.cgst ?? 0;
     const sgst = selectedItem.sgst ?? 0;
     return `Applicable GST CGST = ${cgst}% (₹${gst.cgst.toFixed(2)}) and SGST = ${sgst}% (₹${gst.sgst.toFixed(2)})`;
+  };
+
+  const getLineAvailableQty = (lineIndex: number) => {
+    const line = watchedLines?.[lineIndex];
+    if (!line?.item_id || !line?.godown_id) return null;
+
+    const key = `${line.item_id}:${line.godown_id}`;
+    const qty = stockSummaryMap.get(key) ?? 0;
+    const item = itemMap.get(line.item_id);
+    const unit = item?.unit ?? '';
+
+    return `${qty} ${unit}`;
   };
 
   const handleItemSelect = (index: number, itemId: string) => {
@@ -426,8 +453,9 @@ export default function SalesInvoiceFormPage() {
                         </div>
                       </div>
                       {getLineGSTInfo(index) && (
-                        <div className="text-xs text-gray-600 dark:text-gray-400 pl-1">
-                          {getLineGSTInfo(index)}
+                        <div className="text-xs text-gray-600 dark:text-gray-400 pl-1 flex justify-between items-center">
+                          <span>{getLineGSTInfo(index)}</span>
+                          {getLineAvailableQty(index) && <span className="text-right bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded text-blue-900 dark:text-blue-200 font-semibold">Available Qty: {getLineAvailableQty(index)}</span>}
                         </div>
                       )}
                     </div>
