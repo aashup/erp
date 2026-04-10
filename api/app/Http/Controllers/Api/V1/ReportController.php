@@ -415,6 +415,210 @@ class ReportController extends Controller
     }
 
     /**
+     * Cash Book — transactions of the Cash ledger.
+     */
+    public function cashBook(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Voucher::class);
+
+        $companyId = $request->user()->company_id;
+        [$dateFrom, $dateTo] = $this->resolveDateRange($request);
+
+        $ledger = Ledger::with('group')
+            ->where('company_id', $companyId)
+            ->where('system_key', 'cash')
+            ->first();
+
+        if (!$ledger) {
+            return response()->json([
+                'ledger'          => null,
+                'data'            => [],
+                'closing_balance' => 0,
+            ]);
+        }
+
+        return response()->json($this->buildLedgerBook($companyId, $ledger, $dateFrom, $dateTo));
+    }
+
+    /**
+     * Bank Book — transactions of all (or a specific) bank account ledger(s).
+     */
+    public function bankBook(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Voucher::class);
+
+        $companyId = $request->user()->company_id;
+        [$dateFrom, $dateTo] = $this->resolveDateRange($request);
+
+        // Fetch all bank account ledgers
+        $banks = Ledger::whereHas('group', function ($q) use ($companyId) {
+            $q->where('company_id', $companyId)->where('system_key', 'bank_account');
+        })
+            ->where('company_id', $companyId)
+            ->whereNull('deleted_at')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $selectedLedger = null;
+        $data = [];
+        $closingBalance = 0;
+
+        if ($banks->isNotEmpty()) {
+            $ledgerId = $request->ledger_id ?? $banks->first()->id;
+            $selectedLedger = Ledger::with('group')
+                ->where('company_id', $companyId)
+                ->findOrFail($ledgerId);
+
+            $book = $this->buildLedgerBook($companyId, $selectedLedger, $dateFrom, $dateTo);
+            $data = $book['data'];
+            $closingBalance = $book['closing_balance'];
+            $selectedLedger = $book['ledger'];
+        }
+
+        return response()->json([
+            'banks'            => $banks,
+            'selected_ledger'  => $selectedLedger,
+            'data'             => $data,
+            'closing_balance'  => $closingBalance,
+        ]);
+    }
+
+    /**
+     * Day Book — all posted vouchers for a date range, with their lines.
+     */
+    public function dayBook(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Voucher::class);
+
+        $companyId = $request->user()->company_id;
+        [$dateFrom, $dateTo] = $this->resolveDateRange($request);
+
+        $query = Voucher::with(['lines.ledger'])
+            ->where('company_id', $companyId)
+            ->where('is_posted', true)
+            ->orderBy('voucher_date')
+            ->orderBy('created_at');
+
+        if ($dateFrom && $dateTo) {
+            $query->whereDate('voucher_date', '>=', $dateFrom)
+                  ->whereDate('voucher_date', '<=', $dateTo);
+        }
+
+        $vouchers = $query->get();
+
+        $totalDebit  = 0;
+        $totalCredit = 0;
+        $rows = [];
+
+        foreach ($vouchers as $voucher) {
+            $voucherDebit  = 0;
+            $voucherCredit = 0;
+            $lines = [];
+
+            foreach ($voucher->lines as $line) {
+                $dr = (float) $line->debit;
+                $cr = (float) $line->credit;
+                $voucherDebit  += $dr;
+                $voucherCredit += $cr;
+
+                $lines[] = [
+                    'ledger_name' => $line->ledger?->name ?? '—',
+                    'narration'   => $line->narration,
+                    'debit'       => round($dr, 2),
+                    'credit'      => round($cr, 2),
+                ];
+            }
+
+            $totalDebit  += $voucherDebit;
+            $totalCredit += $voucherCredit;
+
+            $rows[] = [
+                'voucher_id'     => $voucher->id,
+                'voucher_number' => $voucher->voucher_number,
+                'voucher_date'   => $voucher->voucher_date,
+                'voucher_type'   => $voucher->voucher_type,
+                'narration'      => $voucher->narration,
+                'lines'          => $lines,
+                'total_debit'    => round($voucherDebit, 2),
+                'total_credit'   => round($voucherCredit, 2),
+            ];
+        }
+
+        return response()->json([
+            'data'    => $rows,
+            'summary' => [
+                'total_debit'  => round($totalDebit, 2),
+                'total_credit' => round($totalCredit, 2),
+            ],
+        ]);
+    }
+
+    /**
+     * Shared helper — build ledger book (opening + transactions + closing).
+     */
+    private function buildLedgerBook(string $companyId, Ledger $ledger, ?string $dateFrom, ?string $dateTo): array
+    {
+        $query = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true)
+            ->where('voucher_lines.ledger_id', $ledger->id);
+
+        if ($dateFrom && $dateTo) {
+            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
+                  ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+        }
+
+        $entries = $query->select(
+            'vouchers.id as voucher_id',
+            'vouchers.voucher_number',
+            'vouchers.voucher_date',
+            'vouchers.voucher_type',
+            'vouchers.narration as entry_narration',
+            'voucher_lines.debit',
+            'voucher_lines.credit',
+            'voucher_lines.narration as line_narration'
+        )
+            ->orderBy('vouchers.voucher_date')
+            ->orderBy('vouchers.created_at')
+            ->get();
+
+        $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+        $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+        $runningBalance = $openingDebit - $openingCredit;
+
+        $rows = [];
+        foreach ($entries as $entry) {
+            $debit  = (float) $entry->debit;
+            $credit = (float) $entry->credit;
+            $runningBalance += ($debit - $credit);
+
+            $rows[] = [
+                'voucher_id'     => $entry->voucher_id,
+                'voucher_number' => $entry->voucher_number,
+                'voucher_date'   => $entry->voucher_date,
+                'voucher_type'   => $entry->voucher_type,
+                'narration'      => $entry->line_narration ?? $entry->entry_narration,
+                'debit'          => round($debit, 2),
+                'credit'         => round($credit, 2),
+                'balance'        => round($runningBalance, 2),
+            ];
+        }
+
+        return [
+            'ledger' => [
+                'id'             => $ledger->id,
+                'name'           => $ledger->name,
+                'group_name'     => $ledger->group?->name,
+                'opening_debit'  => round($openingDebit, 2),
+                'opening_credit' => round($openingCredit, 2),
+            ],
+            'data'            => $rows,
+            'closing_balance' => round($runningBalance, 2),
+        ];
+    }
+
+    /**
      * Party Ledger — all transactions for a specific party.
      */
     public function partyLedger(Request $request): JsonResponse

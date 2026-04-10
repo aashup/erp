@@ -10,6 +10,9 @@ import type {
   ProfitAndLossResponse,
   PartyLedgerResponse,
   LedgerTransactionsResponse,
+  CashBookResponse,
+  BankBookResponse,
+  DayBookResponse,
 } from '@/types';
 
 export const accountingGroupsApi = {
@@ -70,6 +73,15 @@ export const reportsApi = {
 
   ledgerTransactions: (params: Record<string, string>) =>
     api.get<LedgerTransactionsResponse>('/reports/ledger-transactions', { params }),
+
+  cashBook: (params?: Record<string, string>) =>
+    api.get<CashBookResponse>('/reports/cash-book', { params }),
+
+  bankBook: (params?: Record<string, string>) =>
+    api.get<BankBookResponse>('/reports/bank-book', { params }),
+
+  dayBook: (params?: Record<string, string>) =>
+    api.get<DayBookResponse>('/reports/day-book', { params }),
 };
 
 export const paymentReceiptsApi = {

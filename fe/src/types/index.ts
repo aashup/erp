@@ -541,6 +541,59 @@ export interface LedgerTransactionsResponse {
   closing_balance: number;
 }
 
+// Cash Book / Bank Book response (same shape as LedgerTransactionsResponse)
+export interface BookLedgerInfo {
+  id: string;
+  name: string;
+  group_name: string | null;
+  opening_debit: number;
+  opening_credit: number;
+}
+
+export interface CashBookResponse {
+  ledger: BookLedgerInfo | null;
+  data: LedgerTransactionRow[];
+  closing_balance: number;
+}
+
+export interface BankOption {
+  id: string;
+  name: string;
+}
+
+export interface BankBookResponse {
+  banks: BankOption[];
+  selected_ledger: BookLedgerInfo | null;
+  data: LedgerTransactionRow[];
+  closing_balance: number;
+}
+
+export interface DayBookLine {
+  ledger_name: string;
+  narration: string | null;
+  debit: number;
+  credit: number;
+}
+
+export interface DayBookEntry {
+  voucher_id: string;
+  voucher_number: string;
+  voucher_date: string;
+  voucher_type: string;
+  narration: string | null;
+  lines: DayBookLine[];
+  total_debit: number;
+  total_credit: number;
+}
+
+export interface DayBookResponse {
+  data: DayBookEntry[];
+  summary: {
+    total_debit: number;
+    total_credit: number;
+  };
+}
+
 // API response types
 export interface PaginatedResponse<T> {
   data: T[];

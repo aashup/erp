@@ -22,6 +22,9 @@ import {
   TrendingUp,
   Palette,
   FileText,
+  Landmark,
+  CalendarDays,
+  BookMarked,
 } from 'lucide-react';
 
 const navigation = [
@@ -60,6 +63,15 @@ const navigation = [
       { name: 'Vouchers Entry', href: '/accounting/vouchers', icon: BookOpen },
       { name: 'Trial Balance', href: '/accounting/trial-balance', icon: Scale },
       { name: 'Profit & Loss', href: '/accounting/profit-and-loss', icon: TrendingUp },
+    ],
+  },
+  {
+    name: 'Reports',
+    children: [
+      { name: 'Cash Book', href: '/reports/account-books/cash-book', icon: BookOpen },
+      { name: 'Bank Book', href: '/reports/account-books/bank-book', icon: Landmark },
+      { name: 'Ledger', href: '/reports/account-books/ledger', icon: BookMarked },
+      { name: 'Day Book', href: '/reports/account-books/day-book', icon: CalendarDays },
     ],
   },
   { name: 'Branches', href: '/branches', icon: Building2 },
