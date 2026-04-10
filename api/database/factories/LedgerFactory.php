@@ -16,7 +16,7 @@ class LedgerFactory extends Factory
             'name' => fake()->words(3, true),
             'alias' => fake()->optional(0.3)->word(),
             'group_id' => AccountingGroup::factory(),
-            'opening_balance' => fake()->randomFloat(2, 0, 100000),
+            'opening_balance' => 0.00,
             'opening_type' => fake()->randomElement(['dr', 'cr']),
             'opening_date' => fake()->optional(0.5)->date(),
             'is_bill_wise' => fake()->boolean(20),

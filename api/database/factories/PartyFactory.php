@@ -36,7 +36,7 @@ class PartyFactory extends Factory
             'email' => fake()->safeEmail(),
             'contact_person' => fake()->name(),
             'credit_limit' => fake()->randomFloat(2, 0, 100000),
-            'opening_balance' => fake()->randomFloat(2, 0, 50000),
+            'opening_balance' => 0.00,
             'balance_type' => $balanceType,
             'is_active' => fake()->boolean(90),
             'sync_status' => 'synced',

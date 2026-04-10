@@ -53,7 +53,7 @@ class StockLedgerSeeder extends Seeder
                 'type' => 'opening',
                 'reference_type' => 'OpeningStock',
                 'reference_id' => null,
-                'quantity' => fake()->numberBetween(50, 500),
+                'quantity' => 0,
                 'rate' => $item->purchase_price,
                 'value' => fn (array $attributes) => $attributes['quantity'] * $attributes['rate'],
                 'narration' => 'Opening stock',

@@ -27,16 +27,14 @@ class DatabaseSeeder extends Seeder
             // Parties (observer auto-creates ledgers)
             PartySeeder::class,
 
-            // Purchase
-            PurchaseOrderSeeder::class,
-
         ]);
 
         // Local-only seeders — dummy invoice data for development
         if (app()->environment('local')) {
             $this->call([
                 LedgerSeeder::class,
-
+                // Purchase
+                PurchaseOrderSeeder::class,
                 PurchaseInvoiceSeeder::class,
                 // Sales
                 SalesOrderSeeder::class,

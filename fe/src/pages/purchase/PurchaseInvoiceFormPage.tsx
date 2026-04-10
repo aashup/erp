@@ -411,11 +411,14 @@ export default function PurchaseInvoiceFormPage() {
                     <div className="col-span-1"></div>
                   </div>
 
-                  {fields.map((field, index) => (
+                  {fields.map((field, index) => {
+                    const selectedItemIds = new Set((watchedLines ?? []).filter((_, i) => i !== index).map((l) => l.item_id).filter(Boolean));
+                    const filteredItemOptions = itemOptions.filter((o) => !selectedItemIds.has(o.value));
+                    return (
                     <div key={field.id} className="space-y-2">
                       <div className="grid grid-cols-12 items-start gap-2">
                         <div className="col-span-3">
-                          <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={itemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemSelect(index, val)} />
+                          <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={filteredItemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemSelect(index, val)} />
                         </div>
                         <div className="col-span-2">
                           <SlideSelect name={`lines.${index}.godown_id`} placeholder="Select godown" panelTitle="Select Godown" options={godownOptions} value={watch(`lines.${index}.godown_id`)} onChange={(val) => setValue(`lines.${index}.godown_id`, val, { shouldValidate: true })} />
@@ -467,7 +470,8 @@ export default function PurchaseInvoiceFormPage() {
                         </div>
                       )}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
                 {/* GST Totals */}
