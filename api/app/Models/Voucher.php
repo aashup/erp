@@ -60,4 +60,24 @@ class Voucher extends Model
     {
         return $this->morphTo();
     }
+
+    /**
+     * Get the prefix for a voucher type.
+     * Used to construct the formatted voucher_number (e.g., "PUR-00001").
+     *
+     * @param string $voucherType (contra, payment, receipt, journal, purchase, sales)
+     * @return string (e.g., 'PUR', 'SAL', 'PAY', 'REC', 'JOU', 'CON')
+     */
+    public static function getTypePrefix(string $voucherType): string
+    {
+        return match($voucherType) {
+            'purchase' => 'PUR',
+            'sales' => 'SAL',
+            'payment' => 'PAY',
+            'receipt' => 'REC',
+            'journal' => 'JOU',
+            'contra' => 'CON',
+            default => 'VOC',
+        };
+    }
 }

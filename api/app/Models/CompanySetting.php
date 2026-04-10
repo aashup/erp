@@ -11,12 +11,22 @@ class CompanySetting extends Model
     use HasUuids;
 
     public const ITEM_UNITS_KEY = 'item_units';
+    public const VOUCHERS_INDEX_KEY = 'vouchers_index';
 
     public const DEFAULT_ITEM_UNITS = [
         ['value' => 'PCS', 'label' => 'Pieces'],
         ['value' => 'KG', 'label' => 'Kilograms'],
         ['value' => 'BOX', 'label' => 'Box'],
         ['value' => 'STRIP', 'label' => 'Strip'],
+    ];
+
+    public const DEFAULT_VOUCHERS_INDEX = [
+        'contra' => 1,
+        'payment' => 1,
+        'receipt' => 1,
+        'journal' => 1,
+        'purchase' => 1,
+        'sales' => 1,
     ];
 
     protected $fillable = ['company_id', 'key', 'value'];
@@ -91,6 +101,69 @@ class CompanySetting extends Model
     public static function getItemUnitValues(string $companyId): array
     {
         return array_column(static::getItemUnits($companyId), 'value');
+    }
+
+    /**
+     * Get the current voucher index for a company and voucher type.
+     * Returns the next sequential number to be assigned.
+     *
+     * @param string $companyId
+     * @param string $voucherType (contra, payment, receipt, journal, purchase, sales)
+     * @return int
+     */
+    public static function getVoucherIndex(string $companyId, string $voucherType): int
+    {
+        $rawValue = static::getValue($companyId, static::VOUCHERS_INDEX_KEY);
+        $indices = static::normalizeVouchersIndex($rawValue);
+
+        return $indices[$voucherType] ?? 1;
+    }
+
+    /**
+     * Increment and return the next voucher number for a type.
+     * Increments the counter in company settings and returns the new value.
+     *
+     * @param string $companyId
+     * @param string $voucherType (contra, payment, receipt, journal, purchase, sales)
+     * @return int
+     */
+    public static function getAndIncrementVoucherIndex(string $companyId, string $voucherType): int
+    {
+        // Get current indices
+        $rawValue = static::getValue($companyId, static::VOUCHERS_INDEX_KEY);
+        $indices = static::normalizeVouchersIndex($rawValue);
+
+        // Get current value for this type
+        $currentValue = $indices[$voucherType] ?? 1;
+
+        // Increment for next time
+        $indices[$voucherType] = $currentValue + 1;
+
+        // Store updated indices
+        static::setValue($companyId, static::VOUCHERS_INDEX_KEY, json_encode($indices, JSON_UNESCAPED_UNICODE));
+
+        // Return the current (now-used) value
+        return $currentValue;
+    }
+
+    /**
+     * Normalize raw voucher index data.
+     *
+     * @return array<string, int>
+     */
+    public static function normalizeVouchersIndex(mixed $value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+        }
+
+        if (!is_array($value)) {
+            return static::DEFAULT_VOUCHERS_INDEX;
+        }
+
+        // Merge with defaults to ensure all keys exist
+        return array_merge(static::DEFAULT_VOUCHERS_INDEX, array_filter($value, fn($v) => is_int($v)));
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\CompanySetting;
 use App\Models\Voucher;
 use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
@@ -71,11 +72,12 @@ class VoucherController extends Controller
 
         // Auto-generate voucher number if not provided
         if (empty($validated['voucher_number'])) {
-            $prefix = strtoupper(substr($validated['voucher_type'], 0, 3));
-            $count = Voucher::where('company_id', $request->user()->company_id)
-                ->where('voucher_type', $validated['voucher_type'])
-                ->count() + 1;
-            $validated['voucher_number'] = $prefix.'-'.str_pad($count, 5, '0', STR_PAD_LEFT);
+            $nextNumber = CompanySetting::getAndIncrementVoucherIndex(
+                $request->user()->company_id,
+                $validated['voucher_type']
+            );
+            $prefix = Voucher::getTypePrefix($validated['voucher_type']);
+            $validated['voucher_number'] = $prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
         }
 
         $entry = DB::transaction(function () use ($validated, $request) {

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AccountingGroup;
+use App\Models\CompanySetting;
 use App\Models\FinancialYear;
 use App\Models\Ledger;
 use App\Models\Party;
@@ -40,7 +41,7 @@ class AccountingService
         }
 
         return DB::transaction(function () use ($invoice, $party, $salesLedger, $companyId, $userId, $fy) {
-            $voucherNumber = $this->generateVoucherNumber('sales');
+            $voucherNumber = $this->generateVoucherNumber($companyId, 'sales');
 
             $entry = Voucher::create([
                 'company_id' => $companyId,
@@ -106,7 +107,7 @@ class AccountingService
         }
 
         return DB::transaction(function () use ($invoice, $party, $purchaseLedger, $companyId, $userId, $fy) {
-            $voucherNumber = $this->generateVoucherNumber('purchase');
+            $voucherNumber = $this->generateVoucherNumber($companyId, 'purchase');
 
             $entry = Voucher::create([
                 'company_id' => $companyId,
@@ -168,7 +169,7 @@ class AccountingService
         }
 
         return DB::transaction(function () use ($companyId, $party, $amount, $cashOrBank, $receiptDate, $narration, $userId, $fy, $referenceType, $referenceId) {
-            $voucherNumber = $this->generateVoucherNumber('payment');
+            $voucherNumber = $this->generateVoucherNumber($companyId, 'payment');
 
             $entry = Voucher::create([
                 'company_id' => $companyId,
@@ -227,7 +228,7 @@ class AccountingService
         }
 
         return DB::transaction(function () use ($companyId, $party, $amount, $cashOrBank, $receiptDate, $narration, $userId, $fy, $referenceType, $referenceId) {
-            $voucherNumber = $this->generateVoucherNumber('receipt');
+            $voucherNumber = $this->generateVoucherNumber($companyId, 'receipt');
 
             $entry = Voucher::create([
                 'company_id' => $companyId,
@@ -386,20 +387,17 @@ class AccountingService
     }
 
     /**
-     * Generate a unique voucher number.
+     * Generate a unique voucher number using company-specific sequential counter.
+     *
+     * @param string $companyId
+     * @param string $type (sales, purchase, payment, receipt, journal, contra)
+     * @return string Formatted voucher number (e.g., "PUR-00001")
      */
-    private function generateVoucherNumber(string $type): string
+    private function generateVoucherNumber(string $companyId, string $type): string
     {
-        $prefix = match ($type) {
-            'sales' => 'SV',
-            'purchase' => 'PV',
-            'payment' => 'PMT',
-            'receipt' => 'RCT',
-            default => 'JV',
-        };
+        $nextNumber = CompanySetting::getAndIncrementVoucherIndex($companyId, $type);
+        $prefix = Voucher::getTypePrefix($type);
 
-        $count = Voucher::withoutGlobalScopes()->count() + 1;
-
-        return $prefix.'-'.str_pad($count, 6, '0', STR_PAD_LEFT);
+        return $prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
     }
 }

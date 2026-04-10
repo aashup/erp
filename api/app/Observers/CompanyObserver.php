@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Company;
+use App\Models\CompanySetting;
 use App\Models\FinancialYear;
 use App\Models\ItemGroup;
 use Carbon\Carbon;
@@ -31,6 +32,13 @@ class CompanyObserver
             'company_id' => $company->id,
             'name' => 'Primary',
             'is_active' => true,
+        ]);
+
+        // Initialize voucher indices for sequential numbering
+        CompanySetting::create([
+            'company_id' => $company->id,
+            'key' => CompanySetting::VOUCHERS_INDEX_KEY,
+            'value' => json_encode(CompanySetting::DEFAULT_VOUCHERS_INDEX, JSON_UNESCAPED_UNICODE),
         ]);
     }
 }

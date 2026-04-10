@@ -59,9 +59,10 @@ export function ContraVoucherForm() {
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => vouchersApi.create(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
-      toast.success('Voucher created');
+      const voucherNumber = response.data.voucher_number;
+      toast.success(`Contra Voucher ${voucherNumber} created successfully`);
       navigate('/accounting/vouchers/contra');
     },
   });
