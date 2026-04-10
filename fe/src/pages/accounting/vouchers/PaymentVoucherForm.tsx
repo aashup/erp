@@ -1,0 +1,275 @@
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Plus, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+import { vouchersApi, ledgersApi } from '@/api/accounting';
+import { formatCurrency } from '@/lib/utils';
+import { useSelectedFYId } from '@/hooks/useFinancialYear';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { SlideSelect } from '@/components/ui/SlideSelect';
+import { Badge } from '@/components/ui/Badge';
+import { LedgerBalanceBadge } from '@/components/accounting/LedgerBalanceBadge';
+
+import { paymentVoucherSchema, type PaymentVoucherForm as PaymentVoucherFormType } from './schemas';
+import { VoucherFormHeader } from './VoucherFormHeader';
+
+export function PaymentVoucherForm() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const fyId = useSelectedFYId();
+
+  usePageTitle('New Payment Voucher');
+
+  const { data: ledgersData } = useQuery({
+    queryKey: ['ledgers-all'],
+    queryFn: () => ledgersApi.list({ per_page: '500' }),
+    select: (res) => res.data,
+  });
+
+  const allLedgers = ledgersData?.data ?? [];
+
+  // Payment From: only bank (1210) and cash (1220) accounts
+  const fromLedgerOptions = allLedgers
+    .filter((l) => l.group?.code === '1210' || l.group?.code === '1220')
+    .map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name }));
+
+  // Payment lines: exclude bank (1210) and cash (1220) — those are "Payment From" only
+  const payToLedgerOptions = allLedgers
+    .filter((l) => l.group?.code !== '1210' && l.group?.code !== '1220')
+    .map((l) => ({ value: l.id, label: l.name, subtitle: l.group?.name }));
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const form = useForm<PaymentVoucherFormType>({
+    resolver: zodResolver(paymentVoucherSchema) as any,
+    defaultValues: {
+      voucher_date:   new Date().toISOString().split('T')[0],
+      narration:      '',
+      from_ledger_id: '',
+      lines: [
+        { ledger_id: '', amount: '' as unknown as number, narration: '' },
+      ],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({ control: form.control, name: 'lines' });
+  const watchedLines = form.watch('lines');
+  const totalAmount = watchedLines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+  const isValid = totalAmount > 0;
+
+  const mutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => vouchersApi.create(data),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['vouchers'] });
+      const voucherNumber = response.data.voucher_number;
+      toast.success(`Payment Voucher ${voucherNumber} created successfully`);
+      navigate('/accounting/vouchers/payment');
+    },
+  });
+
+  const onSubmit = (formData: PaymentVoucherFormType) => {
+    const total = formData.lines.reduce((s, l) => s + Number(l.amount || 0), 0);
+    mutation.mutate({
+      voucher_type:      'payment',
+      voucher_date:      formData.voucher_date,
+      financial_year_id: fyId,
+      narration:         formData.narration,
+      lines: [
+        { ledger_id: formData.from_ledger_id, debit: 0, credit: total },
+        ...formData.lines.map((l) => ({
+          ledger_id: l.ledger_id,
+          debit:     Number(l.amount || 0),
+          credit:    0,
+          narration: l.narration,
+        })),
+      ],
+    } as unknown as Record<string, unknown>);
+  };
+
+  return (
+    <div className="space-y-6">
+      <VoucherFormHeader
+        voucherType="payment"
+        onBack={() => navigate('/accounting/vouchers/payment')}
+      />
+
+      <Card>
+        <CardHeader>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Entry Details</h2>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            {/* Payment From + Date row */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Payment From
+                </label>
+                <SlideSelect
+                  name="from_ledger_id"
+                  placeholder="Select bank or cash account"
+                  panelTitle="Select Payment From"
+                  options={fromLedgerOptions}
+                  value={form.watch('from_ledger_id')}
+                  onChange={(val) =>
+                    form.setValue('from_ledger_id', val, { shouldValidate: true })
+                  }
+                  error={form.formState.errors.from_ledger_id?.message}
+                />
+                <LedgerBalanceBadge ledgerId={form.watch('from_ledger_id')} />
+              </div>
+              <Input
+                id="voucher_date"
+                label="Voucher Date"
+                type="date"
+                error={form.formState.errors.voucher_date?.message}
+                {...form.register('voucher_date')}
+              />
+            </div>
+
+            {/* Payment Lines */}
+            <div className="border-t dark:border-gray-700 pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Pay To
+                </h3>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    append({ ledger_id: '', amount: '' as unknown as number, narration: '' })
+                  }
+                >
+                  <Plus className="mr-1 h-3 w-3" /> Add Line
+                </Button>
+              </div>
+
+              {typeof form.formState.errors.lines?.message === 'string' && (
+                <p className="text-sm text-red-500 mb-3">{form.formState.errors.lines.message}</p>
+              )}
+
+              {/* Column headers */}
+              <div className="hidden sm:grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">
+                <div className="col-span-6">Party / Ledger</div>
+                <div className="col-span-3">Amount (₹)</div>
+                <div className="col-span-2">Note</div>
+                <div className="col-span-1"></div>
+              </div>
+
+              <div className="space-y-3">
+                {fields.map((field, index) => {
+                  const fromId = form.watch('from_ledger_id');
+                  const selectedElsewhere = new Set(
+                    watchedLines
+                      .filter((_, i) => i !== index)
+                      .map((l) => l.ledger_id)
+                      .filter(Boolean)
+                  );
+                  // Exclude already-selected ledgers in other rows
+                  const lineOptions = payToLedgerOptions.filter(
+                    (o) => !selectedElsewhere.has(o.value)
+                  );
+
+                  return (
+                    <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
+                      {/* Ledger */}
+                      <div className="col-span-12 sm:col-span-6">
+                        <SlideSelect
+                          name={`lines.${index}.ledger_id`}
+                          placeholder="Select party or ledger"
+                          panelTitle="Select Ledger"
+                          options={lineOptions}
+                          value={form.watch(`lines.${index}.ledger_id`)}
+                          onChange={(val) =>
+                            form.setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })
+                          }
+                          error={form.formState.errors.lines?.[index]?.ledger_id?.message}
+                        />
+                        <LedgerBalanceBadge ledgerId={form.watch(`lines.${index}.ledger_id`)} />
+                      </div>
+                      {/* Amount */}
+                      <div className="col-span-5 sm:col-span-3">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Amount"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                          {...form.register(`lines.${index}.amount`)}
+                        />
+                        {form.formState.errors.lines?.[index]?.amount && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {form.formState.errors.lines[index].amount?.message}
+                          </p>
+                        )}
+                      </div>
+                      {/* Note */}
+                      <div className="col-span-6 sm:col-span-2">
+                        <input
+                          placeholder="Note"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none"
+                          {...form.register(`lines.${index}.narration`)}
+                        />
+                      </div>
+                      {/* Remove */}
+                      <div className="col-span-1 flex items-center justify-center">
+                        {fields.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => remove(index)}
+                            className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30"
+                          >
+                            <X className="h-4 w-4 text-red-500" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Narration */}
+              <div className="mt-4">
+                <Input id="narration" label="Narration" {...form.register('narration')} />
+              </div>
+
+              {/* Totals row */}
+              <div className="mt-5 border-t dark:border-gray-700 pt-4 flex items-center justify-between text-sm font-semibold">
+                <span className="text-gray-500 dark:text-gray-400">Total Payment:</span>
+                <div className="flex items-center gap-3">
+                  <span className={isValid ? 'text-green-600' : 'text-gray-400'}>
+                    {formatCurrency(totalAmount)}
+                  </span>
+                  {isValid ? (
+                    <Badge variant="success">Balanced</Badge>
+                  ) : (
+                    <Badge variant="danger">Enter amounts</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => navigate('/accounting/vouchers/payment')}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={mutation.isPending} disabled={!isValid}>
+                Create Payment
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

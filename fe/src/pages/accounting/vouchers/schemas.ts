@@ -38,3 +38,23 @@ export const paymentSchema = z.object({
 });
 
 export type PaymentForm = z.infer<typeof paymentSchema>;
+
+export const paymentVoucherLineSchema = z.object({
+  ledger_id: z.string().min(1, 'Ledger required'),
+  amount:    z.preprocess((v) => (v === '' || v === undefined ? 0 : Number(v)), z.number().min(0.01, 'Amount required')),
+  narration: z.string().optional(),
+});
+
+export const paymentVoucherSchema = z
+  .object({
+    voucher_date:   z.string().min(1, 'Date required'),
+    narration:      z.string().optional(),
+    from_ledger_id: z.string().min(1, 'Payment From is required'),
+    lines:          z.array(paymentVoucherLineSchema).min(1, 'At least 1 line required'),
+  })
+  .refine(
+    (data) => data.lines.reduce((s, l) => s + Number(l.amount || 0), 0) > 0,
+    { message: 'Total payment amount must be greater than 0', path: ['lines'] }
+  );
+
+export type PaymentVoucherForm = z.infer<typeof paymentVoucherSchema>;
