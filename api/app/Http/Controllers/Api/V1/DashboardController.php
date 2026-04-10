@@ -46,24 +46,60 @@ class DashboardController extends Controller
         $salesSgst     = (float) $salesQuery->sum('sgst_total');
         $salesIgst     = (float) $salesQuery->sum('igst_total');
 
-        $purchaseTotal = (float) PurchaseInvoice::where('company_id', $companyId)
+        $purchaseQuery = PurchaseInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [$range['from'], $range['to']])
-            ->sum('grand_total');
-
-        $confirmedSales = SalesInvoice::query()
-            ->where('company_id', $companyId)
-            ->where('status', 'confirmed')
             ->whereBetween('invoice_date', [$range['from'], $range['to']]);
 
-        $confirmedPurchases = PurchaseInvoice::query()
-            ->where('company_id', $companyId)
-            ->where('status', 'confirmed')
-            ->whereBetween('invoice_date', [$range['from'], $range['to']]);
+        $purchaseTotal    = (float) $purchaseQuery->sum('grand_total');
+        $purchaseTaxable  = (float) $purchaseQuery->sum('taxable_amount');
+        $purchaseCgst     = (float) $purchaseQuery->sum('cgst_total');
+        $purchaseSgst     = (float) $purchaseQuery->sum('sgst_total');
+        $purchaseIgst     = (float) $purchaseQuery->sum('igst_total');
 
-        $netRevenue = (float) $confirmedSales->sum('taxable_amount');
-        $gstOutput = (float) $confirmedSales->sum(DB::raw('cgst_total + sgst_total + igst_total'));
-        $gstInputCredit = (float) $confirmedPurchases->sum(DB::raw('cgst_total + sgst_total + igst_total'));
+        // ── Net Revenue: taxable sales (same filter as total_sales) ──────────
+        // net_revenue = total_sales − total_gst = sales_taxable
+        // Both use status != 'cancelled', so the math is always consistent.
+        $netRevenue = $salesTaxable;
+
+        // ── GST Payable from accounting ledgers (posted vouchers) ─────────────
+        // Output GST ledgers (liability): net credit = GST collected from customers
+        // Input GST ledgers (ITC asset):  net debit  = GST paid to vendors
+        // Reading from ledgers guarantees this matches the books (Trial Balance / GST report).
+        $gstLedgerRows = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->join('ledgers', 'voucher_lines.ledger_id', '=', 'ledgers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true)
+            ->whereIn('ledgers.system_key', [
+                'output_cgst', 'output_sgst', 'output_igst',
+                'input_cgst',  'input_sgst',  'input_igst',
+            ])
+            ->whereDate('vouchers.voucher_date', '>=', $range['from']->toDateString())
+            ->whereDate('vouchers.voucher_date', '<=', $range['to']->toDateString())
+            ->select(
+                'ledgers.system_key',
+                DB::raw('SUM(voucher_lines.debit)  as total_debit'),
+                DB::raw('SUM(voucher_lines.credit) as total_credit')
+            )
+            ->groupBy('ledgers.system_key')
+            ->get()
+            ->keyBy('system_key');
+
+        $netBalance = fn (string $key): float => (float) ($gstLedgerRows[$key]->total_credit ?? 0)
+                                               - (float) ($gstLedgerRows[$key]->total_debit  ?? 0);
+
+        // Output GST = net credit on output ledgers (positive = liability)
+        $gstOutputCgst = $netBalance('output_cgst');
+        $gstOutputSgst = $netBalance('output_sgst');
+        $gstOutputIgst = $netBalance('output_igst');
+        $gstOutput     = $gstOutputCgst + $gstOutputSgst + $gstOutputIgst;
+
+        // ITC = net debit on input ledgers (positive = credit available)
+        $gstInputCgst  = -$netBalance('input_cgst');  // net_debit = -(net_credit)
+        $gstInputSgst  = -$netBalance('input_sgst');
+        $gstInputIgst  = -$netBalance('input_igst');
+        $gstInputCredit = $gstInputCgst + $gstInputSgst + $gstInputIgst;
+
         $payableTax = $gstOutput - $gstInputCredit;
 
         // ── P&L from journal lines (matches P&L report exactly) ────────────────
@@ -151,16 +187,26 @@ class DashboardController extends Controller
                 'sales_cgst'      => round($salesCgst, 2),
                 'sales_sgst'      => round($salesSgst, 2),
                 'sales_igst'      => round($salesIgst, 2),
-                'total_purchase'  => round((float) $purchaseTotal, 2),
+                'total_purchase'    => round($purchaseTotal, 2),
+                'purchase_taxable' => round($purchaseTaxable, 2),
+                'purchase_cgst'    => round($purchaseCgst, 2),
+                'purchase_sgst'    => round($purchaseSgst, 2),
+                'purchase_igst'    => round($purchaseIgst, 2),
                 'pnl_income'      => round($pnlIncome, 2),
                 'pnl_expense'     => round($pnlExpense, 2),
                 'opening_stock'   => round($openingStock, 2),
                 'closing_stock'   => round($closingStock, 2),
                 'pnl'             => round($pnl, 2),
-                'net_revenue'     => round($netRevenue, 2),
-                'gst_output'      => round($gstOutput, 2),
+                'net_revenue'      => round($netRevenue, 2),
+                'gst_output'       => round($gstOutput, 2),
+                'gst_output_cgst'  => round($gstOutputCgst, 2),
+                'gst_output_sgst'  => round($gstOutputSgst, 2),
+                'gst_output_igst'  => round($gstOutputIgst, 2),
                 'gst_input_credit' => round($gstInputCredit, 2),
-                'payable_tax'     => round($payableTax, 2),
+                'gst_input_cgst'   => round($gstInputCgst, 2),
+                'gst_input_sgst'   => round($gstInputSgst, 2),
+                'gst_input_igst'   => round($gstInputIgst, 2),
+                'payable_tax'      => round($payableTax, 2),
             ],
         ]);
     }

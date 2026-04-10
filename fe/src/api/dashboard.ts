@@ -10,6 +10,10 @@ export interface DashboardStats {
   sales_sgst: number;
   sales_igst: number;
   total_purchase: number;
+  purchase_taxable: number;
+  purchase_cgst: number;
+  purchase_sgst: number;
+  purchase_igst: number;
   pnl_income: number;
   pnl_expense: number;
   pnl: number;
@@ -17,7 +21,13 @@ export interface DashboardStats {
   closing_stock: number;
   net_revenue: number;
   gst_output: number;
+  gst_output_cgst: number;
+  gst_output_sgst: number;
+  gst_output_igst: number;
   gst_input_credit: number;
+  gst_input_cgst: number;
+  gst_input_sgst: number;
+  gst_input_igst: number;
   payable_tax: number;
 }
 
