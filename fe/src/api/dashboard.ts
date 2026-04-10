@@ -6,7 +6,11 @@ export interface DashboardStats {
   to: string;
   total_sales: number;
   total_purchase: number;
+  pnl_income: number;
+  pnl_expense: number;
   pnl: number;
+  opening_stock: number;
+  closing_stock: number;
   net_revenue: number;
   gst_output: number;
   gst_input_credit: number;

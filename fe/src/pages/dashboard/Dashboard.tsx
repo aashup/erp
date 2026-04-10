@@ -1,93 +1,54 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Card, CardContent } from "@/components/ui/Card";
 import { useAuthStore } from "@/store/authStore";
+import { useSync } from "@/hooks/useSync";
 import { itemsApi } from "@/api/inventory";
 import { partiesApi } from "@/api/parties";
 import { purchaseOrdersApi } from "@/api/purchase";
 import { salesInvoicesApi } from "@/api/sales";
-import { Package, ShoppingCart, IndianRupee, Users } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+
+import { CountStatsRow } from "./widgets/CountStatsRow";
 import { TotalSalesWidget } from "./widgets/TotalSalesWidget";
 import { NetRevenueWidget } from "./widgets/NetRevenueWidget";
 import { TotalPurchaseWidget } from "./widgets/TotalPurchaseWidget";
 import { ProfitLossWidget } from "./widgets/ProfitLossWidget";
 import { PayableTaxWidget } from "./widgets/PayableTaxWidget";
 import { SalesPurchaseChart } from "./widgets/SalesPurchaseChart";
+import { QuickActions } from "./widgets/QuickActions";
+import { AlertsSync } from "./widgets/AlertsSync";
 import { LowStockAlerts } from "./widgets/LowStockAlerts";
-import { QuickActionsWidget } from "./widgets/QuickActionsWidget";
-import { AlertsSyncWidget } from "./widgets/AlertsSyncWidget";
-import { RecentInvoicesWidget } from "./widgets/RecentInvoicesWidget";
-
-const COUNT_STATS: {
-  name: string;
-  color: string;
-  Icon: LucideIcon;
-  queryKey: string;
-}[] = [
-  { name: "Total Items", color: "bg-blue-500", Icon: Package, queryKey: "items" },
-  { name: "Parties", color: "bg-green-500", Icon: Users, queryKey: "parties" },
-  { name: "Purchase Orders", color: "bg-orange-500", Icon: ShoppingCart, queryKey: "purchase-orders" },
-  { name: "Sales Invoices", color: "bg-purple-500", Icon: IndianRupee, queryKey: "sales-invoices" },
-];
-
-function CountStatCard({
-  name,
-  color,
-  Icon,
-  value,
-}: {
-  name: string;
-  color: string;
-  Icon: LucideIcon;
-  value: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 py-5">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-lg ${color} text-white`}
-        >
-          <Icon className="h-6 w-6" />
-        </div>
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{name}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+import { RecentInvoices } from "./widgets/RecentInvoices";
 
 export default function Dashboard() {
   usePageTitle("Dashboard");
   const { user } = useAuthStore();
+  const { pendingCount, lastSync, isSyncing } = useSync();
 
-  const { data: itemsTotal } = useQuery({
+  const { data: itemsData } = useQuery({
     queryKey: ["items", 1],
     queryFn: () => itemsApi.list({ per_page: "1" }),
-    select: (res) => res.data.total,
+    select: (res) => res.data,
   });
 
-  const { data: partiesTotal } = useQuery({
+  const { data: partiesData } = useQuery({
     queryKey: ["parties", 1],
     queryFn: () => partiesApi.list({ per_page: "1" }),
-    select: (res) => res.data.total,
+    select: (res) => res.data,
   });
 
-  const { data: posTotal } = useQuery({
+  const { data: posData } = useQuery({
     queryKey: ["purchase-orders", 1],
     queryFn: () => purchaseOrdersApi.list({ per_page: "1" }),
-    select: (res) => res.data.total,
+    select: (res) => res.data,
   });
 
-  const { data: invoicesTotal } = useQuery({
+  const { data: invoicesData } = useQuery({
     queryKey: ["sales-invoices", 1],
-    queryFn: () => salesInvoicesApi.list({ per_page: "1" }),
-    select: (res) => res.data.total,
+    queryFn: () => salesInvoicesApi.list({ per_page: "5" }),
+    select: (res) => res.data,
   });
 
-  const countValues = [itemsTotal, partiesTotal, posTotal, invoicesTotal];
+  const recentInvoices = invoicesData?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -101,17 +62,12 @@ export default function Dashboard() {
       </div>
 
       {/* Count Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {COUNT_STATS.map(({ name, color, Icon }, i) => (
-          <CountStatCard
-            key={name}
-            name={name}
-            color={color}
-            Icon={Icon}
-            value={countValues[i]?.toString() ?? "—"}
-          />
-        ))}
-      </div>
+      <CountStatsRow
+        itemsTotal={itemsData?.total}
+        partiesTotal={partiesData?.total}
+        posTotal={posData?.total}
+        invoicesTotal={invoicesData?.total}
+      />
 
       {/* Financial Widgets */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
@@ -125,17 +81,20 @@ export default function Dashboard() {
       {/* Sales / Purchase / Revenue Chart */}
       <SalesPurchaseChart />
 
-      {/* Quick Actions + Alerts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <QuickActionsWidget />
-        <AlertsSyncWidget />
+        <QuickActions />
+        <AlertsSync
+          pendingCount={pendingCount}
+          isSyncing={isSyncing}
+          lastSync={lastSync}
+        />
       </div>
 
       {/* Low Stock Alerts */}
       <LowStockAlerts />
 
       {/* Recent Sales Invoices */}
-      <RecentInvoicesWidget />
+      <RecentInvoices invoices={recentInvoices} />
     </div>
   );
 }

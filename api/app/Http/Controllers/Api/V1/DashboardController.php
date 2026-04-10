@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialYear;
+use App\Models\Ledger;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
-use App\Models\StockLedger;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,34 +61,97 @@ class DashboardController extends Controller
         $gstInputCredit = (float) $confirmedPurchases->sum(DB::raw('cgst_total + sgst_total + igst_total'));
         $payableTax = $gstOutput - $gstInputCredit;
 
-        // Calculate Opening Stock (inventory value at start of period)
-        $openingStock = (float) StockLedger::where('company_id', $companyId)
-            ->where('created_at', '<', $range['from'])
-            ->sum('value');
+        // ── P&L from journal lines (matches P&L report exactly) ────────────────
+        // Income ledgers: amount = net credit (credit − debit)
+        // Expense ledgers: amount = net debit (debit − credit)
+        $pnlLedgers = Ledger::with('group')
+            ->where('company_id', $companyId)
+            ->whereHas('group', fn ($q) => $q->whereIn('type', ['income', 'expense']))
+            ->whereNull('deleted_at')
+            ->get();
 
-        // Calculate Closing Stock (inventory value at end of period)
-        $closingStock = (float) StockLedger::where('company_id', $companyId)
-            ->where('created_at', '<=', $range['to'])
-            ->sum('value');
+        $pnlIncome  = 0.0;
+        $pnlExpense = 0.0;
 
-        // P&L = Sales - (Opening Stock + Purchases - Closing Stock)
-        // Simplified: P&L = Sales - Opening Stock - Purchases + Closing Stock
-        $pnl = $salesTotal - $openingStock - $purchaseTotal + $closingStock;
+        if ($pnlLedgers->isNotEmpty()) {
+            $journalTotals = DB::table('voucher_lines')
+                ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+                ->where('vouchers.company_id', $companyId)
+                ->where('vouchers.is_posted', true)
+                ->whereIn('voucher_lines.ledger_id', $pnlLedgers->pluck('id'))
+                ->whereDate('vouchers.voucher_date', '>=', $range['from']->toDateString())
+                ->whereDate('vouchers.voucher_date', '<=', $range['to']->toDateString())
+                ->select(
+                    'voucher_lines.ledger_id',
+                    DB::raw('SUM(voucher_lines.debit) as total_debit'),
+                    DB::raw('SUM(voucher_lines.credit) as total_credit')
+                )
+                ->groupBy('voucher_lines.ledger_id')
+                ->get()
+                ->keyBy('ledger_id');
+
+            foreach ($pnlLedgers as $ledger) {
+                $txn    = $journalTotals[$ledger->id] ?? null;
+                $debit  = (float) ($txn->total_debit ?? 0);
+                $credit = (float) ($txn->total_credit ?? 0);
+
+                if ($ledger->group?->type === 'income') {
+                    $pnlIncome  += $credit - $debit;
+                } else {
+                    $pnlExpense += $debit - $credit;
+                }
+            }
+        }
+
+        // ── Stock valuation: SUM(qty) × purchase_price (matches P&L report) ──
+        // We use quantity × cost price, NOT the value column, because sales entries
+        // store selling price in value — using value would overstate closing stock.
+        $stockValue = function (?string $beforeDate, ?string $upToDate) use ($companyId): float {
+            $q = DB::table('stock_ledger')->where('company_id', $companyId);
+            if ($beforeDate) {
+                $q->whereDate('created_at', '<', $beforeDate);
+            } elseif ($upToDate) {
+                $q->whereDate('created_at', '<=', $upToDate);
+            }
+            $rows = $q->select('item_id', DB::raw('SUM(quantity) as total_qty'))
+                ->groupBy('item_id')
+                ->havingRaw('SUM(quantity) > 0')
+                ->get();
+            if ($rows->isEmpty()) {
+                return 0.0;
+            }
+            $prices = DB::table('items')
+                ->whereIn('id', $rows->pluck('item_id'))
+                ->pluck('purchase_price', 'id');
+            $val = 0.0;
+            foreach ($rows as $row) {
+                $val += (float) $row->total_qty * (float) ($prices[$row->item_id] ?? 0);
+            }
+            return $val;
+        };
+
+        $openingStock = $stockValue($range['from']->toDateString(), null);
+        $closingStock = $stockValue(null, $range['to']->toDateString());
+
+        // Net P&L = Income − Expense + Closing Stock − Opening Stock
+        $pnl = $pnlIncome - $pnlExpense + $closingStock - $openingStock;
 
         return response()->json([
             'data' => [
-                'period' => $period,
-                'from' => $range['from']->toDateString(),
-                'to' => $range['to']->toDateString(),
-                'total_sales' => round((float) $salesTotal, 2),
-                'total_purchase' => round((float) $purchaseTotal, 2),
-                'opening_stock' => round($openingStock, 2),
-                'closing_stock' => round($closingStock, 2),
-                'pnl' => round((float) $pnl, 2),
-                'net_revenue' => round($netRevenue, 2),
-                'gst_output' => round($gstOutput, 2),
+                'period'          => $period,
+                'from'            => $range['from']->toDateString(),
+                'to'              => $range['to']->toDateString(),
+                'total_sales'     => round((float) $salesTotal, 2),
+                'total_purchase'  => round((float) $purchaseTotal, 2),
+                'pnl_income'      => round($pnlIncome, 2),
+                'pnl_expense'     => round($pnlExpense, 2),
+                'opening_stock'   => round($openingStock, 2),
+                'closing_stock'   => round($closingStock, 2),
+                'pnl'             => round($pnl, 2),
+                'net_revenue'     => round($netRevenue, 2),
+                'gst_output'      => round($gstOutput, 2),
                 'gst_input_credit' => round($gstInputCredit, 2),
-                'payable_tax' => round($payableTax, 2),
+                'payable_tax'     => round($payableTax, 2),
             ],
         ]);
     }
