@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAuthStore } from '@/store/authStore';
+import { useFYStore } from '@/store/fyStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
 import { purchaseInvoicesApi } from '@/api/purchase';
@@ -27,6 +28,7 @@ const lineSchema = z.object({
 });
 
 const invoiceSchema = z.object({
+  financial_year_id: z.string().min(1, 'Financial year is required'),
   invoice_number: z.string().optional(),
   party_id: z.string().min(1, 'Vendor is required'),
   invoice_date: z.string().min(1, 'Date is required'),
@@ -54,6 +56,8 @@ export default function PurchaseInvoiceFormPage() {
   const { invoiceId } = useParams<{ invoiceId: string }>();
   const isEditMode = Boolean(invoiceId);
   const queryClient = useQueryClient();
+
+  const selectedFYId = useFYStore((state) => state.selectedFY?.id ?? '');
 
   const { data: vendorsData } = useQuery({
     queryKey: ['parties-vendors'],
@@ -89,6 +93,7 @@ export default function PurchaseInvoiceFormPage() {
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<InvoiceForm>({
     resolver: zodResolver(invoiceSchema) as any,
     defaultValues: {
+      financial_year_id: selectedFYId,
       invoice_number: '',
       party_id: '',
       invoice_date: new Date().toISOString().split('T')[0],

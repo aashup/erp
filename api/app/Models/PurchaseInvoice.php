@@ -17,6 +17,7 @@ class PurchaseInvoice extends Model
 
     protected $fillable = [
         'company_id',
+        'financial_year_id',
         'party_id',
         'branch_id',
         'purchase_order_id',
@@ -62,6 +63,11 @@ class PurchaseInvoice extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logFillable();
+    }
+
+    public function financialYear()
+    {
+        return $this->belongsTo(FinancialYear::class);
     }
 
     public function party()
