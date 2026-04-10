@@ -5,6 +5,10 @@ export interface DashboardStats {
   from: string;
   to: string;
   total_sales: number;
+  sales_taxable: number;
+  sales_cgst: number;
+  sales_sgst: number;
+  sales_igst: number;
   total_purchase: number;
   pnl_income: number;
   pnl_expense: number;

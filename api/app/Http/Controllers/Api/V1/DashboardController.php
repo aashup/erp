@@ -36,12 +36,17 @@ class DashboardController extends Controller
             }
         }
 
-        $salesTotal = SalesInvoice::where('company_id', $companyId)
+        $salesQuery = SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [$range['from'], $range['to']])
-            ->sum('grand_total');
+            ->whereBetween('invoice_date', [$range['from'], $range['to']]);
 
-        $purchaseTotal = PurchaseInvoice::where('company_id', $companyId)
+        $salesTotal    = (float) $salesQuery->sum('grand_total');
+        $salesTaxable  = (float) $salesQuery->sum('taxable_amount');
+        $salesCgst     = (float) $salesQuery->sum('cgst_total');
+        $salesSgst     = (float) $salesQuery->sum('sgst_total');
+        $salesIgst     = (float) $salesQuery->sum('igst_total');
+
+        $purchaseTotal = (float) PurchaseInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
             ->whereBetween('invoice_date', [$range['from'], $range['to']])
             ->sum('grand_total');
@@ -141,7 +146,11 @@ class DashboardController extends Controller
                 'period'          => $period,
                 'from'            => $range['from']->toDateString(),
                 'to'              => $range['to']->toDateString(),
-                'total_sales'     => round((float) $salesTotal, 2),
+                'total_sales'     => round($salesTotal, 2),
+                'sales_taxable'   => round($salesTaxable, 2),
+                'sales_cgst'      => round($salesCgst, 2),
+                'sales_sgst'      => round($salesSgst, 2),
+                'sales_igst'      => round($salesIgst, 2),
                 'total_purchase'  => round((float) $purchaseTotal, 2),
                 'pnl_income'      => round($pnlIncome, 2),
                 'pnl_expense'     => round($pnlExpense, 2),
