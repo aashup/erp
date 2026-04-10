@@ -128,6 +128,21 @@ class PaymentReceiptController extends Controller
         return response()->json(['data' => $paymentReceipt->load('party')]);
     }
 
+    /**
+     * Return the auto-posted journal voucher (with Dr/Cr lines) for a payment/receipt.
+     */
+    public function journal(PaymentReceipt $paymentReceipt): JsonResponse
+    {
+        $this->authorize('view', $paymentReceipt);
+
+        $voucher = \App\Models\Voucher::with('lines.ledger')
+            ->where('reference_type', PaymentReceipt::class)
+            ->where('reference_id', $paymentReceipt->id)
+            ->first();
+
+        return response()->json(['data' => $voucher]);
+    }
+
     public function destroy(PaymentReceipt $paymentReceipt): JsonResponse
     {
         $this->authorize('delete', $paymentReceipt);

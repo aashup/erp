@@ -117,6 +117,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ledgers/{ledger}/balance', [LedgerController::class, 'balance']);
     Route::apiResource('ledgers', LedgerController::class);
     Route::apiResource('vouchers', VoucherController::class)->except(['update']);
+    Route::get('payment-receipts/{payment_receipt}/journal', [PaymentReceiptController::class, 'journal']);
     Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);
 
     // Reports

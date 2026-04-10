@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { PaymentVoucherDetailModal } from '@/components/accounting/PaymentVoucherDetailModal';
 import toast from 'react-hot-toast';
 import {
   Plus,
@@ -272,6 +273,7 @@ export default function VouchersEntry() {
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [editPayment, setEditPayment] = useState<PaymentReceipt | null>(null);
+  const [showPaymentDetail, setShowPaymentDetail] = useState<PaymentReceipt | null>(null);
 
   const { data: paymentData, isLoading: paymentLoading } = useQuery({
     queryKey: ['payment-receipts', page, search, activeTab],
@@ -383,6 +385,13 @@ export default function VouchersEntry() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowPaymentDetail(row.original)}
+            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            title="View journal entry"
+          >
+            <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          </button>
           <button onClick={() => openPaymentEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
             <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </button>
@@ -609,6 +618,12 @@ export default function VouchersEntry() {
           </div>
         )}
       </Modal>
+
+      {/* ─── Payment/Receipt Detail Modal ────────────────────────────────── */}
+      <PaymentVoucherDetailModal
+        record={showPaymentDetail}
+        onClose={() => setShowPaymentDetail(null)}
+      />
 
       {/* ─── Payment/Receipt Create/Edit Modal ───────────────────────────── */}
       <Modal open={showPaymentModal} onClose={closePaymentModal} title={editPayment ? `Edit ${activeConfig.label}` : `New ${activeConfig.label}`} size="lg">

@@ -79,6 +79,9 @@ export const paymentReceiptsApi = {
   get: (id: string) =>
     api.get<ApiResponse<PaymentReceipt>>(`/payment-receipts/${id}`),
 
+  journal: (id: string) =>
+    api.get<ApiResponse<Voucher | null>>(`/payment-receipts/${id}/journal`),
+
   create: (data: Partial<PaymentReceipt>) =>
     api.post<ApiResponse<PaymentReceipt>>('/payment-receipts', data),
 

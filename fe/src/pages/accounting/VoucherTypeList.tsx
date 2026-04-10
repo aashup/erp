@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
+import { PaymentVoucherDetailModal } from "@/components/accounting/PaymentVoucherDetailModal";
 import toast from "react-hot-toast";
 import {
   ArrowLeft,
@@ -113,6 +114,7 @@ export default function VoucherTypeList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showDetail, setShowDetail] = useState<Voucher | null>(null);
+  const [showPaymentDetail, setShowPaymentDetail] = useState<PaymentReceipt | null>(null);
 
   // ─── Journal/Contra/Sales/Purchase list ──────────────────────────────────
 
@@ -221,6 +223,13 @@ export default function VoucherTypeList() {
       header: "",
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowPaymentDetail(row.original)}
+            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            title="View journal entry"
+          >
+            <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          </button>
           <button
             onClick={() =>
               navigate(`/accounting/vouchers/${voucherType}/new`, {
@@ -338,6 +347,12 @@ export default function VoucherTypeList() {
           </>
         )}
       </Card>
+
+      {/* Payment/Receipt Detail Modal */}
+      <PaymentVoucherDetailModal
+        record={showPaymentDetail}
+        onClose={() => setShowPaymentDetail(null)}
+      />
 
       {/* Journal Detail Modal */}
       <Modal
