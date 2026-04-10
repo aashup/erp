@@ -368,6 +368,7 @@ export interface PaymentReceipt extends SyncColumns {
   company_id: string;
   party_id: string;
   purchase_invoice_id: string | null;
+  sales_invoice_id: string | null;
   type: 'payment' | 'receipt';
   receipt_number: string;
   receipt_date: string;

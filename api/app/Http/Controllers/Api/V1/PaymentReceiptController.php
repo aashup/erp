@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Party;
 use App\Models\PaymentReceipt;
 use App\Models\PurchaseInvoice;
+use App\Models\SalesInvoice;
 use App\Services\AccountingService;
 use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
@@ -46,6 +47,7 @@ class PaymentReceiptController extends Controller
             'bank_name' => 'nullable|string',
             'notes' => 'nullable|string',
             'purchase_invoice_id' => 'nullable|uuid|exists:purchase_invoices,id',
+            'sales_invoice_id' => 'nullable|uuid|exists:sales_invoices,id',
         ]);
 
         $receipt = PaymentReceipt::create([
@@ -90,6 +92,21 @@ class PaymentReceiptController extends Controller
         if (! empty($validated['purchase_invoice_id'])) {
             $invoice = PurchaseInvoice::find($validated['purchase_invoice_id']);
             if ($invoice && $validated['type'] === 'payment') {
+                $newAmountPaid = min(
+                    (float) $invoice->amount_paid + (float) $validated['amount'],
+                    (float) $invoice->grand_total
+                );
+                $invoice->update([
+                    'amount_paid' => $newAmountPaid,
+                    'balance_due' => max(0, (float) $invoice->grand_total - $newAmountPaid),
+                ]);
+            }
+        }
+
+        // Update sales invoice balance if linked
+        if (! empty($validated['sales_invoice_id'])) {
+            $invoice = SalesInvoice::find($validated['sales_invoice_id']);
+            if ($invoice && $validated['type'] === 'receipt') {
                 $newAmountPaid = min(
                     (float) $invoice->amount_paid + (float) $validated['amount'],
                     (float) $invoice->grand_total

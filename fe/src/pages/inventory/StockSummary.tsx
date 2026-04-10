@@ -118,8 +118,8 @@ export default function StockSummary() {
           {renderSortIcon('current_stock')}
         </button>
       ),
-      cell: ({ getValue }) => {
-        const v = getValue() as number;
+      cell: ({ row }) => {
+        const v = row.original.current_stock;
         return <span className="font-semibold">{Number(v).toFixed(2)}</span>;
       },
     },

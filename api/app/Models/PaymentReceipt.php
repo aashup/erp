@@ -27,6 +27,7 @@ class PaymentReceipt extends Model
         'bank_name',
         'notes',
         'purchase_invoice_id',
+        'sales_invoice_id',
         'created_by',
     ];
 
