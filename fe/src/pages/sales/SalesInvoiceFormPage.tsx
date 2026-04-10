@@ -27,7 +27,7 @@ const lineSchema = z.object({
 });
 
 const invoiceSchema = z.object({
-  invoice_number: z.string().min(1, 'Invoice number is required'),
+  invoice_number: z.string().optional(),
   party_id: z.string().min(1, 'Customer is required'),
   invoice_date: z.string().min(1, 'Date is required'),
   due_date: z.string().optional(),

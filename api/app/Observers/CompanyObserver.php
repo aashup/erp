@@ -3,7 +3,6 @@
 namespace App\Observers;
 
 use App\Models\Company;
-use App\Models\CompanySetting;
 use App\Models\FinancialYear;
 use App\Models\ItemGroup;
 use Carbon\Carbon;
@@ -11,7 +10,8 @@ use Carbon\Carbon;
 class CompanyObserver
 {
     /**
-     * When a company is created, auto-create the current financial year (Apr-Mar).
+     * When a company is created, auto-create the current financial year (Apr-Mar) and primary item group.
+     * The FinancialYearObserver will handle initializing document counters.
      */
     public function created(Company $company): void
     {
@@ -19,26 +19,21 @@ class CompanyObserver
         // Indian FY: Apr 1 – Mar 31. If current month >= April, FY starts this year; else last year.
         $fyStartYear = $now->month >= 4 ? $now->year : $now->year - 1;
 
-        FinancialYear::create([
-            'company_id' => $company->id,
-            'label' => $fyStartYear.'-'.substr($fyStartYear + 1, -2),
-            'start_date' => Carbon::create($fyStartYear, 4, 1),
-            'end_date' => Carbon::create($fyStartYear + 1, 3, 31),
-            'is_current' => true,
-            'is_locked' => false,
-        ]);
+        FinancialYear::firstOrCreate(
+            [
+                'company_id' => $company->id,
+                'label' => $fyStartYear.'-'.substr($fyStartYear + 1, -2),
+            ], [
+                'start_date' => Carbon::create($fyStartYear, 4, 1),
+                'end_date' => Carbon::create($fyStartYear + 1, 3, 31),
+                'is_current' => true,
+                'is_locked' => false,
+            ]);
 
         ItemGroup::create([
             'company_id' => $company->id,
             'name' => 'Primary',
             'is_active' => true,
-        ]);
-
-        // Initialize voucher indices for sequential numbering
-        CompanySetting::create([
-            'company_id' => $company->id,
-            'key' => CompanySetting::VOUCHERS_INDEX_KEY,
-            'value' => json_encode(CompanySetting::DEFAULT_VOUCHERS_INDEX, JSON_UNESCAPED_UNICODE),
         ]);
     }
 }

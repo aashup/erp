@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\DocumentCounter;
+use App\Models\FinancialYear;
 use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
@@ -71,12 +73,32 @@ class SalesOrderController extends Controller
         $so = DB::transaction(function () use ($validated, $request) {
             // Auto-generate SO number if not provided
             if (empty($validated['so_number'])) {
-                $validated['so_number'] = 'SO-'.str_pad(
-                    SalesOrder::withoutGlobalScopes()->count() + 1,
-                    6,
-                    '0',
-                    STR_PAD_LEFT
+                // Find the financial year that contains the SO date
+                $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                    ->whereDate('start_date', '<=', $validated['so_date'])
+                    ->whereDate('end_date', '>=', $validated['so_date'])
+                    ->first();
+
+                if (!$fy) {
+                    throw ValidationException::withMessages(['so_date' => 'No financial year found for the selected date']);
+                }
+
+                $counter = DocumentCounter::where('company_id', $request->user()->company_id)
+                    ->where('financial_year_id', $fy->id)
+                    ->where('document_type', 'sales_order')
+                    ->first();
+
+                if (!$counter) {
+                    throw ValidationException::withMessages(['so_date' => 'Document counter not initialized for this financial year']);
+                }
+
+                $nextNumber = $counter->getAndIncrementCounter(
+                    $request->user()->company_id,
+                    $fy->id,
+                    'sales_order'
                 );
+                $validated['so_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['financial_year_id'] = $fy->id;
             }
 
             $so = SalesOrder::create([
@@ -214,16 +236,31 @@ class SalesOrderController extends Controller
             ->where('is_default', true)
             ->first();
 
-        // Generate invoice number
-        $invoiceNumber = 'SI-'.str_pad(
-            SalesInvoice::withoutGlobalScopes()->count() + 1,
-            6,
-            '0',
-            STR_PAD_LEFT
-        );
+        // Generate invoice number using DocumentCounter
+        $fyId = $so->financial_year_id ?? FinancialYear::where('company_id', $so->company_id)
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->first()?->id;
+
+        if (!$fyId) {
+            throw ValidationException::withMessages(['invoice_date' => 'No financial year found for invoice date']);
+        }
+
+        $counter = DocumentCounter::where('company_id', $so->company_id)
+            ->where('financial_year_id', $fyId)
+            ->where('document_type', 'sales_invoice')
+            ->first();
+
+        if (!$counter) {
+            throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized']);
+        }
+
+        $nextNumber = $counter->getAndIncrementCounter($so->company_id, $fyId, 'sales_invoice');
+        $invoiceNumber = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
         $invoice = SalesInvoice::create([
             'company_id' => $so->company_id,
+            'financial_year_id' => $fyId,
             'party_id' => $so->party_id,
             'branch_id' => $so->branch_id,
             'sales_order_id' => $so->id,

@@ -13,6 +13,7 @@ class CompanySeeder extends Seeder
     public function run(): void
     {
         // Create one primary company for testing
+        // Note: FinancialYearObserver will auto-initialize document counters
         Company::factory()->create([
             'name' => 'Demo Company Pvt. Ltd.',
             'gstin' => '27ABCDE1234F1Z5',

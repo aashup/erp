@@ -93,7 +93,7 @@ export default function PurchaseInvoiceFormPage() {
       party_id: '',
       invoice_date: new Date().toISOString().split('T')[0],
       vendor_invoice_number: '',
-      due_date: '',
+      due_date: new Date().toISOString().split('T')[0],
       is_inter_state: false,
       notes: '',
       lines: [makeEmptyLine()],

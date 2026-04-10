@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\DocumentCounter;
+use App\Models\FinancialYear;
 use App\Models\PurchaseInvoice;
 use App\Models\StockLedger;
 use App\Services\AccountingService;
@@ -10,6 +12,7 @@ use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PurchaseInvoiceController extends Controller
 {
@@ -56,7 +59,7 @@ class PurchaseInvoiceController extends Controller
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
             'purchase_order_id' => 'nullable|uuid|exists:purchase_orders,id',
-            'invoice_number' => 'required|string|unique:purchase_invoices',
+            'invoice_number' => 'nullable|string|unique:purchase_invoices',
             'vendor_invoice_number' => 'nullable|string',
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date',
@@ -75,6 +78,36 @@ class PurchaseInvoiceController extends Controller
 
         $invoice = DB::transaction(function () use ($validated, $request) {
             $isInterState = $validated['is_inter_state'] ?? false;
+
+            // Auto-generate invoice number if not provided
+            if (empty($validated['invoice_number'])) {
+                // Find the financial year that contains the invoice date
+                $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                    ->whereDate('start_date', '<=', $validated['invoice_date'])
+                    ->whereDate('end_date', '>=', $validated['invoice_date'])
+                    ->first();
+
+                if (!$fy) {
+                    throw ValidationException::withMessages(['invoice_date' => 'No financial year found for the selected date']);
+                }
+
+                $counter = DocumentCounter::where('company_id', $request->user()->company_id)
+                    ->where('financial_year_id', $fy->id)
+                    ->where('document_type', 'purchase_invoice')
+                    ->first();
+
+                if (!$counter) {
+                    throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized for this financial year']);
+                }
+
+                $nextNumber = $counter->getAndIncrementCounter(
+                    $request->user()->company_id,
+                    $fy->id,
+                    'purchase_invoice'
+                );
+                $validated['invoice_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['financial_year_id'] = $fy->id;
+            }
 
             $invoice = PurchaseInvoice::create([
                 ...$validated,

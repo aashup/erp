@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\DocumentCounter;
+use App\Models\FinancialYear;
 use App\Models\Godown;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseOrder;
@@ -71,12 +73,32 @@ class PurchaseOrderController extends Controller
         $po = DB::transaction(function () use ($validated, $request) {
             // Auto-generate PO number if not provided
             if (empty($validated['po_number'])) {
-                $validated['po_number'] = 'PO-'.str_pad(
-                    PurchaseOrder::withoutGlobalScopes()->count() + 1,
-                    6,
-                    '0',
-                    STR_PAD_LEFT
+                // Find the financial year that contains the PO date
+                $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                    ->whereDate('start_date', '<=', $validated['po_date'])
+                    ->whereDate('end_date', '>=', $validated['po_date'])
+                    ->first();
+
+                if (!$fy) {
+                    throw ValidationException::withMessages(['po_date' => 'No financial year found for the selected date']);
+                }
+
+                $counter = DocumentCounter::where('company_id', $request->user()->company_id)
+                    ->where('financial_year_id', $fy->id)
+                    ->where('document_type', 'purchase_order')
+                    ->first();
+
+                if (!$counter) {
+                    throw ValidationException::withMessages(['po_date' => 'Document counter not initialized for this financial year']);
+                }
+
+                $nextNumber = $counter->getAndIncrementCounter(
+                    $request->user()->company_id,
+                    $fy->id,
+                    'purchase_order'
                 );
+                $validated['po_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['financial_year_id'] = $fy->id;
             }
 
             $po = PurchaseOrder::create([
@@ -215,16 +237,31 @@ class PurchaseOrderController extends Controller
             ->where('is_default', true)
             ->first();
 
-        // Generate invoice number
-        $invoiceNumber = 'PI-'.str_pad(
-            PurchaseInvoice::withoutGlobalScopes()->count() + 1,
-            6,
-            '0',
-            STR_PAD_LEFT
-        );
+        // Generate invoice number using DocumentCounter
+        $fyId = $po->financial_year_id ?? FinancialYear::where('company_id', $po->company_id)
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->first()?->id;
+
+        if (!$fyId) {
+            throw ValidationException::withMessages(['invoice_date' => 'No financial year found for invoice date']);
+        }
+
+        $counter = DocumentCounter::where('company_id', $po->company_id)
+            ->where('financial_year_id', $fyId)
+            ->where('document_type', 'purchase_invoice')
+            ->first();
+
+        if (!$counter) {
+            throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized']);
+        }
+
+        $nextNumber = $counter->getAndIncrementCounter($po->company_id, $fyId, 'purchase_invoice');
+        $invoiceNumber = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
         $invoice = PurchaseInvoice::create([
             'company_id' => $po->company_id,
+            'financial_year_id' => $fyId,
             'party_id' => $po->party_id,
             'branch_id' => $po->branch_id,
             'purchase_order_id' => $po->id,

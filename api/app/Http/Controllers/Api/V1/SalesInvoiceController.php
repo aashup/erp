@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\DocumentCounter;
+use App\Models\FinancialYear;
 use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\StockLedger;
@@ -62,7 +64,7 @@ class SalesInvoiceController extends Controller
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
             'sales_order_id' => 'nullable|uuid|exists:sales_orders,id',
-            'invoice_number' => 'required|string|unique:sales_invoices',
+            'invoice_number' => 'nullable|string|unique:sales_invoices',
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date',
             'is_inter_state' => 'boolean',
@@ -79,6 +81,36 @@ class SalesInvoiceController extends Controller
 
         $invoice = DB::transaction(function () use ($validated, $request) {
             $isInterState = $validated['is_inter_state'] ?? false;
+
+            // Auto-generate invoice number if not provided
+            if (empty($validated['invoice_number'])) {
+                // Find the financial year that contains the invoice date
+                $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                    ->whereDate('start_date', '<=', $validated['invoice_date'])
+                    ->whereDate('end_date', '>=', $validated['invoice_date'])
+                    ->first();
+
+                if (!$fy) {
+                    throw ValidationException::withMessages(['invoice_date' => 'No financial year found for the selected date']);
+                }
+
+                $counter = DocumentCounter::where('company_id', $request->user()->company_id)
+                    ->where('financial_year_id', $fy->id)
+                    ->where('document_type', 'sales_invoice')
+                    ->first();
+
+                if (!$counter) {
+                    throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized for this financial year']);
+                }
+
+                $nextNumber = $counter->getAndIncrementCounter(
+                    $request->user()->company_id,
+                    $fy->id,
+                    'sales_invoice'
+                );
+                $validated['invoice_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['financial_year_id'] = $fy->id;
+            }
 
             $invoice = SalesInvoice::create([
                 ...$validated,
@@ -158,7 +190,7 @@ class SalesInvoiceController extends Controller
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
             'sales_order_id' => 'nullable|uuid|exists:sales_orders,id',
-            'invoice_number' => ['required', 'string', Rule::unique('sales_invoices', 'invoice_number')->ignore($salesInvoice->id)],
+            'invoice_number' => ['nullable', 'string', Rule::unique('sales_invoices', 'invoice_number')->ignore($salesInvoice->id)],
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date',
             'is_inter_state' => 'boolean',
