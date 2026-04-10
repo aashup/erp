@@ -46,6 +46,9 @@ export const ledgersApi = {
   get: (id: string) =>
     api.get<ApiResponse<Ledger>>(`/ledgers/${id}`),
 
+  balance: (id: string) =>
+    api.get<{ data: { balance: number; balance_type: 'dr' | 'cr' } }>(`/ledgers/${id}/balance`),
+
   create: (data: Partial<Ledger>) =>
     api.post<ApiResponse<Ledger>>('/ledgers', data),
 

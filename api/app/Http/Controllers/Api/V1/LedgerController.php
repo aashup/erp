@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ledger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LedgerController extends Controller
 {
@@ -95,6 +96,39 @@ class LedgerController extends Controller
         ]);
 
         return response()->json(['data' => $ledger->load('group')]);
+    }
+
+    public function balance(Ledger $ledger): JsonResponse
+    {
+        $this->authorize('view', $ledger);
+
+        $companyId = request()->user()->company_id;
+
+        $txn = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true)
+            ->where('voucher_lines.ledger_id', $ledger->id)
+            ->select(
+                DB::raw('SUM(voucher_lines.debit) as total_debit'),
+                DB::raw('SUM(voucher_lines.credit) as total_credit')
+            )
+            ->first();
+
+        $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+        $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+
+        $totalDebit  = $openingDebit + (float) ($txn->total_debit ?? 0);
+        $totalCredit = $openingCredit + (float) ($txn->total_credit ?? 0);
+
+        $net = $totalDebit - $totalCredit;
+
+        return response()->json([
+            'data' => [
+                'balance'      => round(abs($net), 2),
+                'balance_type' => $net >= 0 ? 'dr' : 'cr',
+            ],
+        ]);
     }
 
     public function destroy(Ledger $ledger): JsonResponse

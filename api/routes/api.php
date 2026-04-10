@@ -114,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Accounting
     Route::post('accounting-groups/load-defaults', [AccountingGroupController::class, 'loadDefaults']);
     Route::apiResource('accounting-groups', AccountingGroupController::class);
+    Route::get('ledgers/{ledger}/balance', [LedgerController::class, 'balance']);
     Route::apiResource('ledgers', LedgerController::class);
     Route::apiResource('vouchers', VoucherController::class)->except(['update']);
     Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);

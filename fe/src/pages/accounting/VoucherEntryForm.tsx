@@ -27,6 +27,27 @@ import {
   Receipt,
 } from 'lucide-react';
 
+// ─── Ledger Balance Badge ──────────────────────────────────────────────────────
+
+function LedgerBalanceBadge({ ledgerId }: { ledgerId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['ledger-balance', ledgerId],
+    queryFn: () => ledgersApi.balance(ledgerId),
+    select: (res) => res.data.data,
+    enabled: !!ledgerId,
+    staleTime: 30_000,
+  });
+
+  if (!ledgerId || isLoading) return null;
+  if (!data) return null;
+
+  return (
+    <span className={`text-[11px] font-medium ${data.balance_type === 'dr' ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+      Bal: {formatCurrency(data.balance)} {data.balance_type.toUpperCase()}
+    </span>
+  );
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type VoucherTab = 'contra' | 'payment' | 'receipt' | 'journal' | 'sales' | 'purchase';
@@ -428,6 +449,7 @@ export default function VoucherEntryForm() {
                               onChange={(val) => journalForm.setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })}
                               error={journalForm.formState.errors.lines?.[index]?.ledger_id?.message}
                             />
+                            <LedgerBalanceBadge ledgerId={journalForm.watch(`lines.${index}.ledger_id`)} />
                           </div>
                           {/* Amount */}
                           <div className="col-span-6 sm:col-span-3">
@@ -470,6 +492,7 @@ export default function VoucherEntryForm() {
                               onChange={(val) => journalForm.setValue(`lines.${index}.ledger_id`, val, { shouldValidate: true })}
                               error={journalForm.formState.errors.lines?.[index]?.ledger_id?.message}
                             />
+                            <LedgerBalanceBadge ledgerId={journalForm.watch(`lines.${index}.ledger_id`)} />
                           </div>
                           <div className="col-span-5 sm:col-span-2">
                             <input
