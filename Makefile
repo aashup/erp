@@ -7,7 +7,7 @@ COMPOSE := PATH=/usr/local/bin:$$PATH /usr/local/bin/docker compose
 # Live-edits in ./api and ./fe take effect immediately (bind mounts)
 # ─────────────────────────────────────────────
 start:
-	$(COMPOSE) up -d --build
+	$(COMPOSE) up -d  
 
 # ─────────────────────────────────────────────
 # Database

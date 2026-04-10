@@ -122,4 +122,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/trial-balance', [ReportController::class, 'trialBalance']);
     Route::get('reports/profit-and-loss', [ReportController::class, 'profitAndLoss']);
     Route::get('reports/party-ledger', [ReportController::class, 'partyLedger']);
+    Route::get('reports/ledger-transactions', [ReportController::class, 'ledgerTransactions']);
 });

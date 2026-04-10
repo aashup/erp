@@ -474,25 +474,24 @@ export interface TrialBalanceResponse {
   };
 }
 
-export interface PnlItem {
+export interface PnlRow {
   account_id: string;
-  code: string;
   name: string;
+  code: string;
+  type: 'income' | 'expense';
   parent_id: string | null;
-  amount: number;
+  is_group: boolean;
+  amount: number; // for groups: 0 (aggregated in frontend); for ledgers: net income/expense
 }
 
 export interface ProfitAndLossResponse {
-  data: {
-    income: {
-      items: PnlItem[];
-      total: number;
-    };
-    expense: {
-      items: PnlItem[];
-      total: number;
-    };
-    net_profit_loss: number;
+  data: PnlRow[];
+  summary: {
+    total_income: number;
+    total_expense: number;
+    opening_stock: number;   // stock value at period start (from stock_ledger)
+    closing_stock: number;   // stock value at period end (from stock_ledger)
+    net_profit_loss: number; // (income + closing_stock) - (expense + opening_stock)
     is_profit: boolean;
   };
 }
@@ -515,6 +514,29 @@ export interface PartyLedgerResponse {
     type: string;
   };
   opening_balance: number;
+  closing_balance: number;
+}
+
+export interface LedgerTransactionRow {
+  voucher_id: string;
+  voucher_number: string;
+  voucher_date: string;
+  voucher_type: string;
+  narration: string | null;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface LedgerTransactionsResponse {
+  ledger: {
+    id: string;
+    name: string;
+    group_name: string | null;
+    opening_debit: number;
+    opening_credit: number;
+  };
+  data: LedgerTransactionRow[];
   closing_balance: number;
 }
 

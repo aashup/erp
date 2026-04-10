@@ -9,6 +9,7 @@ import type {
   TrialBalanceResponse,
   ProfitAndLossResponse,
   PartyLedgerResponse,
+  LedgerTransactionsResponse,
 } from '@/types';
 
 export const accountingGroupsApi = {
@@ -63,6 +64,9 @@ export const reportsApi = {
 
   partyLedger: (params: Record<string, string>) =>
     api.get<PartyLedgerResponse>('/reports/party-ledger', { params }),
+
+  ledgerTransactions: (params: Record<string, string>) =>
+    api.get<LedgerTransactionsResponse>('/reports/ledger-transactions', { params }),
 };
 
 export const paymentReceiptsApi = {
