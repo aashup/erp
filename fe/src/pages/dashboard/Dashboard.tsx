@@ -599,13 +599,23 @@ export default function Dashboard() {
                     {pnlIsPositive ? "+" : ""}
                     {formatCurrency(pnlValue)}
                   </p>
-                  <div className="mt-2 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
-                    <span>
-                      Sales: {formatCurrency(pnlStats?.total_sales ?? 0)}
-                    </span>
-                    <span>
-                      Purchase: {formatCurrency(pnlStats?.total_purchase ?? 0)}
-                    </span>
+                  <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Sales:</span>
+                      <span>{formatCurrency(pnlStats?.total_sales ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Opening Stock:</span>
+                      <span>-{formatCurrency(pnlStats?.opening_stock ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Purchase:</span>
+                      <span>-{formatCurrency(pnlStats?.total_purchase ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Closing Stock:</span>
+                      <span>+{formatCurrency(pnlStats?.closing_stock ?? 0)}</span>
+                    </div>
                   </div>
                 </>
               )}

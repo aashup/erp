@@ -597,8 +597,8 @@ export default function VouchersEntry() {
                 <tfoot>
                   <tr className="font-semibold">
                     <td className="py-2">Total</td>
-                    <td className="py-2 text-right">{formatCurrency(showJournalDetail.lines.reduce((s, l) => s + l.debit, 0))}</td>
-                    <td className="py-2 text-right">{formatCurrency(showJournalDetail.lines.reduce((s, l) => s + l.credit, 0))}</td>
+                    <td className="py-2 text-right">{formatCurrency(showJournalDetail.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0))}</td>
+                    <td className="py-2 text-right">{formatCurrency(showJournalDetail.lines.reduce((s, l) => s + (Number(l.credit) || 0), 0))}</td>
                   </tr>
                 </tfoot>
               </table>

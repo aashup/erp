@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FinancialYear;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
+use App\Models\StockLedger;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,7 +61,19 @@ class DashboardController extends Controller
         $gstInputCredit = (float) $confirmedPurchases->sum(DB::raw('cgst_total + sgst_total + igst_total'));
         $payableTax = $gstOutput - $gstInputCredit;
 
-        $pnl = $salesTotal - $purchaseTotal;
+        // Calculate Opening Stock (inventory value at start of period)
+        $openingStock = (float) StockLedger::where('company_id', $companyId)
+            ->where('created_at', '<', $range['from'])
+            ->sum('value');
+
+        // Calculate Closing Stock (inventory value at end of period)
+        $closingStock = (float) StockLedger::where('company_id', $companyId)
+            ->where('created_at', '<=', $range['to'])
+            ->sum('value');
+
+        // P&L = Sales - (Opening Stock + Purchases - Closing Stock)
+        // Simplified: P&L = Sales - Opening Stock - Purchases + Closing Stock
+        $pnl = $salesTotal - $openingStock - $purchaseTotal + $closingStock;
 
         return response()->json([
             'data' => [
@@ -69,6 +82,8 @@ class DashboardController extends Controller
                 'to' => $range['to']->toDateString(),
                 'total_sales' => round((float) $salesTotal, 2),
                 'total_purchase' => round((float) $purchaseTotal, 2),
+                'opening_stock' => round($openingStock, 2),
+                'closing_stock' => round($closingStock, 2),
                 'pnl' => round((float) $pnl, 2),
                 'net_revenue' => round($netRevenue, 2),
                 'gst_output' => round($gstOutput, 2),
