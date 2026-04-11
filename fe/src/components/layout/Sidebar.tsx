@@ -74,7 +74,6 @@ const navigation = [
       { name: 'Day Book', href: '/reports/account-books/day-book', icon: CalendarDays },
     ],
   },
-  { name: 'Branches', href: '/branches', icon: Building2 },
   {
     name: 'Settings',
     children: [
@@ -82,6 +81,7 @@ const navigation = [
       { name: 'Theme', href: '/settings/theme', icon: Palette },
       { name: 'Invoice Settings', href: '/settings/invoice', icon: FileText },
       { name: 'Thermal Templates', href: '/settings/thermal-templates', icon: FileText },
+      { name: 'Branches', href: '/branches', icon: Building2 },
       { name: 'Inventory', href: '/settings/inventory', icon: Package },
       { name: 'Units', href: '/settings/units', icon: Ruler },
       { name: 'Financial Years', href: '/settings/financial-years', icon: Calendar },
