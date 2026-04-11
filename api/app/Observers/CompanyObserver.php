@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\ItemGroup;
+use App\Services\DefaultGroupsService;
 use Carbon\Carbon;
 
 class CompanyObserver
@@ -30,10 +31,11 @@ class CompanyObserver
                 'is_locked' => false,
             ]);
 
-        ItemGroup::create([
-            'company_id' => $company->id,
-            'name' => 'Primary',
-            'is_active' => true,
-        ]);
+        ItemGroup::firstOrCreate(
+            ['company_id' => $company->id, 'name' => 'Primary'],
+            ['is_active' => true]
+        );
+
+        (new DefaultGroupsService)->load($company->id);
     }
 }
