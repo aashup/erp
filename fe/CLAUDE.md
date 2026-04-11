@@ -47,7 +47,7 @@ fe/src/
 │   ├── settings.ts, financialYears.ts, dashboard.ts
 ├── components/
 │   ├── layout/             # AppLayout, AuthLayout, Sidebar, Header
-│   └── ui/                 # Button, Input, Select, SlideSelect, Modal, Card, DataTable, Pagination, Badge
+│   └── ui/                 # Button, Input, Select, SlideSelect, Modal, Card, DataTable, Pagination, Badge, FilterPanel
 ├── hooks/                  # useFinancialYear, useSelectedFYId, useOnlineStatus, useSync, useDebounce
 ├── lib/
 │   ├── axios.ts            # Axios instance, auto-attaches JWT + financial_year_id
@@ -58,6 +58,7 @@ fe/src/
 │   ├── purchase/           # PurchaseOrders, PurchaseInvoices
 │   ├── sales/              # SalesOrders, SalesInvoices, SalesInvoiceFormPage
 │   ├── auth/               # Login, Register
+│   ├── reports/            # CashBook, BankBook, LedgerBook, DayBook (Account Books)
 │   ├── Parties.tsx, Branches.tsx, Settings.tsx
 │   └── dashboard/
 ├── store/                  # Zustand: authStore, fyStore, themeStore
@@ -120,6 +121,61 @@ Response wrappers: ApiResponse<T>, PaginatedResponse<T>
 - **authStore**: user, token, isAuthenticated, setAuth(), logout()
 - **fyStore**: selectedFY, allFYs, setSelectedFY() (persisted to localStorage)
 - **themeStore**: isDarkMode, toggleDarkMode()
+
+## FilterPanel Component (`fe/src/components/ui/FilterPanel.tsx`)
+
+Right-side slide-over panel for filters. **This is the standard filter UI** — use it on all list and report pages instead of inline filter dropdowns.
+
+```tsx
+import { FilterPanel } from '@/components/ui/FilterPanel';
+
+// State
+const [showFilterPanel, setShowFilterPanel] = useState(false);
+
+// Trigger button (in page header)
+<button onClick={() => setShowFilterPanel(true)}>
+  <Filter className="h-4 w-4" /> Filters{hasFilter ? ' (N)' : ''}
+</button>
+
+// Panel (at bottom of JSX)
+<FilterPanel open={showFilterPanel} onClose={() => setShowFilterPanel(false)}>
+  {/* filter inputs go here as children */}
+  <div>
+    <label>From Date</label>
+    <input type="date" ... />
+  </div>
+  <div className="flex gap-2 pt-2">
+    <button onClick={handleReset}>Reset</button>
+    <button onClick={handleApply}>Apply</button>
+  </div>
+</FilterPanel>
+```
+
+**Pattern for report pages (date range filter):**
+- Two states: draft (`dateFrom/dateTo`) and applied (`appliedDateFrom/appliedDateTo`)
+- Apply button triggers `setApplied*` and closes panel
+- Reset button clears both draft and applied
+- Show active filter badge: `Filters (1)` when date range is applied
+- Show applied range in subtitle under page title: `01-04-2024 → 31-03-2025`
+
+**Pages using FilterPanel:** Ledgers.tsx, CashBook.tsx, BankBook.tsx, LedgerBook.tsx, DayBook.tsx
+
+---
+
+## Date Formatting (`fe/src/lib/utils.ts`)
+
+Always use `formatDate()` to display dates — never render raw ISO strings (e.g. `2024-01-15`).
+
+```typescript
+import { formatDate } from '@/lib/utils';
+
+formatDate('2024-01-15')  // → "15 Jan 2024"  (locale: en-IN, format: dd MMM yyyy)
+```
+
+- Used in all report tables for `voucher_date`, `created_at`, etc.
+- Also available: `formatCurrency(amount)` → `₹1,000.00` (locale: en-IN, INR)
+
+---
 
 ## SlideSelect Component (`fe/src/components/ui/SlideSelect.tsx`)
 

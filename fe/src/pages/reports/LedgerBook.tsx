@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi, ledgersApi } from '@/api/accounting';
-import { formatCurrency } from '@/lib/utils';
-import { Filter, X, Printer } from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { Filter, Printer } from 'lucide-react';
+import { FilterPanel } from '@/components/ui/FilterPanel';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import type { Ledger } from '@/types';
 
@@ -27,7 +28,7 @@ function voucherTypeBadge(type: string): string {
 export default function LedgerBook() {
   usePageTitle('Ledger');
 
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [appliedDateFrom, setAppliedDateFrom] = useState('');
@@ -53,26 +54,22 @@ export default function LedgerBook() {
   const rows = data?.data ?? [];
   const closingBalance = data?.closing_balance ?? 0;
 
-  const openingBalance = ledger
-    ? ledger.opening_debit - ledger.opening_credit
-    : 0;
-
+  const openingBalance = ledger ? ledger.opening_debit - ledger.opening_credit : 0;
   const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
   const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
-
   const hasFilter = !!(appliedDateFrom || appliedDateTo);
 
   const handleApply = () => {
     setAppliedDateFrom(dateFrom);
     setAppliedDateTo(dateTo);
-    setFilterOpen(false);
+    setShowFilterPanel(false);
   };
+
   const handleReset = () => {
     setDateFrom('');
     setDateTo('');
     setAppliedDateFrom('');
     setAppliedDateTo('');
-    setFilterOpen(false);
   };
 
   return (
@@ -83,7 +80,12 @@ export default function LedgerBook() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Ledger</h1>
           {ledger && (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {ledger.name} {ledger.group_name ? `· ${ledger.group_name}` : ''}
+              {ledger.name}{ledger.group_name ? ` · ${ledger.group_name}` : ''}
+            </p>
+          )}
+          {hasFilter && (
+            <p className="text-xs text-primary-600 dark:text-primary-400">
+              {appliedDateFrom} → {appliedDateTo}
             </p>
           )}
         </div>
@@ -97,15 +99,15 @@ export default function LedgerBook() {
             Print
           </button>
           <button
-            onClick={() => setFilterOpen(!filterOpen)}
+            onClick={() => setShowFilterPanel(true)}
             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
               hasFilter
-                ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                ? 'border-primary-400 bg-primary-50 text-primary-700 dark:border-primary-600 dark:bg-primary-900/20 dark:text-primary-300'
                 : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'
             }`}
           >
-            {hasFilter ? <X className="h-4 w-4" /> : <Filter className="h-4 w-4" />}
-            {hasFilter ? 'Clear Filter' : 'Filter'}
+            <Filter className="h-4 w-4" />
+            Filters{hasFilter ? ' (1)' : ''}
           </button>
         </div>
       </div>
@@ -119,11 +121,7 @@ export default function LedgerBook() {
           panelTitle="Select Ledger"
           queryKey={['ledgers-slide']}
           queryFn={(params) => ledgersApi.list(params)}
-          mapFn={(item: Ledger) => ({
-            value: item.id,
-            label: item.name,
-            subtitle: undefined,
-          })}
+          mapFn={(item: Ledger) => ({ value: item.id, label: item.name })}
           value={ledgerId}
           displayValue={ledgerName}
           onChange={(val, opt) => {
@@ -133,58 +131,12 @@ export default function LedgerBook() {
         />
       </div>
 
-      {/* Filter Panel */}
-      {filterOpen && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 print:hidden">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                From Date
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                To Date
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={handleReset}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-            >
-              Reset
-            </button>
-            <button
-              onClick={handleApply}
-              className="flex-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Print Header */}
       <div className="hidden print:block text-center mb-4">
         <h2 className="text-xl font-bold">Ledger</h2>
         {ledger && <p className="text-sm">{ledger.name}</p>}
         {appliedDateFrom && appliedDateTo && (
-          <p className="text-sm">
-            {appliedDateFrom} to {appliedDateTo}
-          </p>
+          <p className="text-sm">{appliedDateFrom} to {appliedDateTo}</p>
         )}
       </div>
 
@@ -195,9 +147,7 @@ export default function LedgerBook() {
             Select a ledger above to view its account statement.
           </div>
         ) : isLoading ? (
-          <div className="flex items-center justify-center py-16 text-gray-400 dark:text-gray-500">
-            Loading...
-          </div>
+          <div className="flex items-center justify-center py-16 text-gray-400 dark:text-gray-500">Loading...</div>
         ) : (
           <table className="min-w-full text-sm">
             <thead>
@@ -244,10 +194,8 @@ export default function LedgerBook() {
                   key={`${row.voucher_id}-${row.voucher_date}`}
                   className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700/40 dark:hover:bg-gray-700/20"
                 >
-                  <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{row.voucher_date}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">
-                    {row.voucher_number}
-                  </td>
+                  <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{formatDate(row.voucher_date)}</td>
+                  <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">{row.voucher_number}</td>
                   <td className="px-4 py-2">
                     <span className={`rounded px-1.5 py-0.5 text-xs font-medium capitalize ${voucherTypeBadge(row.voucher_type)}`}>
                       {row.voucher_type}
@@ -270,12 +218,8 @@ export default function LedgerBook() {
               {rows.length > 0 && (
                 <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold dark:border-gray-600 dark:bg-gray-700/40">
                   <td colSpan={4} className="px-4 py-2 text-gray-700 dark:text-gray-300">Total</td>
-                  <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                    {formatCurrency(totalDebit)}
-                  </td>
-                  <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                    {formatCurrency(totalCredit)}
-                  </td>
+                  <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{formatCurrency(totalDebit)}</td>
+                  <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{formatCurrency(totalCredit)}</td>
                   <td className="px-4 py-2" />
                 </tr>
               )}
@@ -283,9 +227,7 @@ export default function LedgerBook() {
               {/* Closing Balance */}
               {ledger && (
                 <tr className="border-t border-gray-200 bg-primary-50/50 font-semibold dark:border-gray-700 dark:bg-primary-900/10">
-                  <td colSpan={4} className="px-4 py-2 text-gray-700 dark:text-gray-300">
-                    Closing Balance
-                  </td>
+                  <td colSpan={4} className="px-4 py-2 text-gray-700 dark:text-gray-300">Closing Balance</td>
                   <td colSpan={3} className="px-4 py-2 text-right text-primary-700 dark:text-primary-300">
                     {balanceLabel(closingBalance)}
                   </td>
@@ -295,6 +237,42 @@ export default function LedgerBook() {
           </table>
         )}
       </div>
+
+      {/* Filter Panel */}
+      <FilterPanel open={showFilterPanel} onClose={() => setShowFilterPanel(false)}>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">From Date</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">To Date</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button
+            onClick={handleReset}
+            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleApply}
+            className="flex-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            Apply
+          </button>
+        </div>
+      </FilterPanel>
     </div>
   );
 }
