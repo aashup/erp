@@ -455,11 +455,12 @@ class ReportController extends Controller
         $isProfit      = $netProfitLoss >= 0;
 
         // ── 5. Difference diagnostic ─────────────────────────────────────────
-        // Assets = Liabilities + Equity + Net Profit (if profit)
-        // Assets + Net Loss = Liabilities + Equity (if loss)
-        $liabEqWithPnl = $totalLiabEq + ($isProfit ? $netProfitLoss : 0);
-        $assetsWithLoss = $totalAssets + (!$isProfit ? abs($netProfitLoss) : 0);
-        $difference = round($assetsWithLoss - $liabEqWithPnl, 2);
+        // Correct balance-sheet equation (unified for profit and loss):
+        //   (Assets + Closing Stock) = (Liabilities + Equity + Net Profit/Loss)
+        // Net Profit/Loss already includes closing stock effect via COGS, so closing
+        // stock must be added to the Assets side to make both sides equal.
+        // $netProfitLoss is signed: positive = profit, negative = loss.
+        $difference = round(($totalAssets + $closingStock) - ($totalLiabEq + $netProfitLoss), 2);
 
         return response()->json([
             'data' => $rows,
