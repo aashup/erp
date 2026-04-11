@@ -19,6 +19,7 @@ import { LedgerBalanceBadge } from '@/components/accounting/LedgerBalanceBadge';
 import { TYPE_CONFIG, type VoucherTab } from './types';
 import { journalSchema, type JournalForm } from './schemas';
 import { VoucherFormHeader } from './VoucherFormHeader';
+import { useDateStore } from '@/store/dateStore';
 
 interface JournalVoucherFormProps {
   voucherType: VoucherTab;
@@ -29,6 +30,7 @@ export function JournalVoucherForm({ voucherType }: JournalVoucherFormProps) {
   const queryClient = useQueryClient();
   const fyId = useSelectedFYId();
   const config = TYPE_CONFIG[voucherType];
+  const { selectedDate } = useDateStore();
 
   usePageTitle(`New ${config.label} Voucher`);
 
@@ -48,7 +50,7 @@ export function JournalVoucherForm({ voucherType }: JournalVoucherFormProps) {
   const form = useForm<JournalForm>({
     resolver: zodResolver(journalSchema) as any,
     defaultValues: {
-      voucher_date: new Date().toISOString().split('T')[0],
+      voucher_date: selectedDate,
       voucher_type: voucherType,
       narration: '',
       lines: [

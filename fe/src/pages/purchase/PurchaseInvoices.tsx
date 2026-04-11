@@ -22,6 +22,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, CreditCard, TrendingDown } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import toast from 'react-hot-toast';
+import { useDateStore } from '@/store/dateStore';
 
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
   draft: 'default',
@@ -55,6 +56,7 @@ interface PaymentDialogProps {
 }
 
 function PaymentDialog({ invoice, onClose, onSuccess }: PaymentDialogProps) {
+  const { selectedDate } = useDateStore();
   const { data: partyLedgerData, isLoading: ledgerLoading } = useQuery({
     queryKey: ['party-ledger-balance', invoice.party_id],
     queryFn: () => reportsApi.partyLedger({ party_id: invoice.party_id }),
@@ -97,7 +99,7 @@ function PaymentDialog({ invoice, onClose, onSuccess }: PaymentDialogProps) {
     defaultValues: {
       amount: invoice.balance_due,
       payment_mode: 'cash',
-      payment_date: new Date().toISOString().split('T')[0],
+      payment_date: selectedDate,
       reference_number: '',
       bank_name: '',
       notes: `Payment for invoice ${invoice.invoice_number}`,

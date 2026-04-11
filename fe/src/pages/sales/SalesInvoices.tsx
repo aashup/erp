@@ -24,6 +24,7 @@ import { SlideSelect } from '@/components/ui/SlideSelect';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown, Eye, Banknote, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useDateStore } from '@/store/dateStore';
 
 const receiptSchema = z.object({
   account_ledger_id: z.string().min(1, 'Account is required'),
@@ -51,6 +52,7 @@ interface ReceiptDialogProps {
 }
 
 function ReceiptDialog({ invoice, onClose, onSuccess }: ReceiptDialogProps) {
+  const { selectedDate } = useDateStore();
   const { data: partyLedgerData, isLoading: ledgerLoading } = useQuery({
     queryKey: ['party-ledger-balance', invoice.party_id],
     queryFn: () => reportsApi.partyLedger({ party_id: invoice.party_id }),
@@ -93,7 +95,7 @@ function ReceiptDialog({ invoice, onClose, onSuccess }: ReceiptDialogProps) {
     defaultValues: {
       amount: invoice.balance_due,
       payment_mode: 'cash',
-      payment_date: new Date().toISOString().split('T')[0],
+      payment_date: selectedDate,
       reference_number: '',
       bank_name: '',
       notes: `Receipt for invoice ${invoice.invoice_number}`,

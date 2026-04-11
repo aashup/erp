@@ -18,6 +18,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { useDateStore } from '@/store/dateStore';
 
 const schema = z.object({
   party_id: z.string().min(1, 'Party is required'),
@@ -36,6 +37,7 @@ type PaymentForm = z.infer<typeof schema>;
 export default function Payments() {
   usePageTitle('Payments');
   const queryClient = useQueryClient();
+  const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -68,7 +70,7 @@ export default function Payments() {
 
   const openCreate = () => {
     setEditRecord(null);
-    reset({ type: 'receipt', payment_mode: 'cash', receipt_date: new Date().toISOString().split('T')[0], amount: undefined, receipt_number: '', party_id: '', reference_number: '', bank_name: '', notes: '' } as unknown as PaymentForm);
+    reset({ type: 'receipt', payment_mode: 'cash', receipt_date: selectedDate, amount: undefined, receipt_number: '', party_id: '', reference_number: '', bank_name: '', notes: '' } as unknown as PaymentForm);
     setShowModal(true);
   };
 

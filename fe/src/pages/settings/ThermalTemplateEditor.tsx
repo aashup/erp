@@ -10,6 +10,7 @@ import type { ThermalTemplate, SalesInvoice } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { Trash2, Save, Plus, ArrowLeft, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useDateStore } from '@/store/dateStore';
 
 const DEFAULT_THERMAL_TEMPLATE = `<!DOCTYPE html>
 <html>
@@ -92,6 +93,7 @@ interface EditorState {
 export default function ThermalTemplateEditor() {
   usePageTitle('Thermal Invoice Templates');
   const queryClient = useQueryClient();
+  const { selectedDate } = useDateStore();
   const [editorState, setEditorState] = useState<EditorState>({
     mode: 'list',
     editingTemplate: null,
@@ -240,7 +242,7 @@ export default function ThermalTemplateEditor() {
     sales_order_id: null,
     godown_id: null,
     invoice_number: 'INV-0001',
-    invoice_date: new Date().toISOString().split('T')[0],
+    invoice_date: selectedDate,
     due_date: null,
     is_inter_state: false,
     is_printed: false,

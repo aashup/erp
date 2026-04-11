@@ -18,6 +18,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Search, Eye, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { useDateStore } from '@/store/dateStore';
 
 const journalLineSchema = z.object({
   ledger_id: z.string().min(1, 'Ledger required'),
@@ -45,6 +46,7 @@ type JournalForm = z.infer<typeof journalSchema>;
 export default function JournalEntries() {
   usePageTitle('Journal Entries');
   const queryClient = useQueryClient();
+  const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('voucher_date');
@@ -92,7 +94,7 @@ export default function JournalEntries() {
 
   const openCreate = () => {
     reset({
-      voucher_date: new Date().toISOString().split('T')[0],
+      voucher_date: selectedDate,
       voucher_type: 'journal',
       narration: '',
       lines: [

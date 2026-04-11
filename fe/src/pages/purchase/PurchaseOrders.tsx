@@ -21,6 +21,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
+import { useDateStore } from '@/store/dateStore';
 
 const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
@@ -70,6 +71,7 @@ const statusLabels: Record<string, string> = {
 export default function PurchaseOrders() {
   usePageTitle('Purchase Orders');
   const queryClient = useQueryClient();
+  const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -151,7 +153,7 @@ export default function PurchaseOrders() {
     reset({
       po_number: '',
       party_id: '',
-      po_date: new Date().toISOString().split('T')[0],
+      po_date: selectedDate,
       expected_delivery_date: '',
       notes: '',
       lines: [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],

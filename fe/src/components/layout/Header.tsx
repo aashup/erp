@@ -1,10 +1,11 @@
 import { useAuthStore } from '@/store/authStore';
 import { useFYStore } from '@/store/fyStore';
+import { useDateStore } from '@/store/dateStore';
 import { useThemeStore } from '@/store/themeStore';
 import { authApi } from '@/api/auth';
 import { useSync } from '@/hooks/useSync';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings, Menu, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings, Menu, Calendar, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const { user, logout } = useAuthStore();
   const { selectedFY, allFYs, setSelectedFY } = useFYStore();
+  const { selectedDate, setSelectedDate, resetToToday } = useDateStore();
   const { showSidebar, setSidebarVisibility } = useThemeStore();
   const companyName = user?.company?.name?.trim() || 'ERP';
   const navigate = useNavigate();
@@ -20,8 +22,31 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
   const { resolvedTheme, toggleTheme } = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showFYDropdown, setShowFYDropdown] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fyDropdownRef = useRef<HTMLDivElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  const formatHeaderDate = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+  };
+
+  const localDateStr = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const shiftDate = (days: number) => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    setSelectedDate(localDateStr(d));
+  };
+
+  const todayStr = localDateStr(new Date());
+  const isToday = selectedDate === todayStr;
 
   const handleLogout = async () => {
     try {
@@ -46,16 +71,19 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
       if (fyDropdownRef.current && !fyDropdownRef.current.contains(event.target as Node)) {
         setShowFYDropdown(false);
       }
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false);
+      }
     };
 
-    if (showDropdown || showFYDropdown) {
+    if (showDropdown || showFYDropdown || showDatePicker) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showDropdown, showFYDropdown]);
+  }, [showDropdown, showFYDropdown, showDatePicker]);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 dark:border-gray-700 dark:bg-gray-900">
@@ -84,6 +112,66 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Date Selector */}
+        <div className="relative" ref={datePickerRef}>
+          <div className="flex items-center rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20">
+            <button
+              onClick={() => shiftDate(-1)}
+              className="rounded-l-lg p-1.5 text-amber-600 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/40"
+              title="Previous day"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex items-center gap-1.5 px-1.5 py-1.5 text-xs font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200"
+              title="Select working date"
+            >
+              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline whitespace-nowrap">{formatHeaderDate(selectedDate)}</span>
+            </button>
+            <button
+              onClick={() => shiftDate(1)}
+              className="rounded-r-lg p-1.5 text-amber-600 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/40"
+              title="Next day"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {showDatePicker && (
+            <div className="absolute right-0 mt-1 w-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 px-3 py-2 dark:border-gray-700">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Working Date</p>
+              </div>
+              <div className="p-3 space-y-3">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedDate(e.target.value);
+                      setShowDatePicker(false);
+                    }
+                  }}
+                  className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm text-gray-700 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-amber-500"
+                />
+                {!isToday && (
+                  <button
+                    onClick={() => {
+                      resetToToday();
+                      setShowDatePicker(false);
+                    }}
+                    className="w-full rounded-md bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                  >
+                    Reset to Today
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* FY Selector */}
         {selectedFY && (
           <div className="relative" ref={fyDropdownRef}>

@@ -16,6 +16,7 @@ import { SlideSelect } from '@/components/ui/SlideSelect';
 import { TYPE_CONFIG, type VoucherTab } from './types';
 import { paymentSchema, type PaymentForm } from './schemas';
 import { VoucherFormHeader } from './VoucherFormHeader';
+import { useDateStore } from '@/store/dateStore';
 
 interface PaymentReceiptFormProps {
   voucherType: VoucherTab;
@@ -26,6 +27,7 @@ export function PaymentReceiptForm({ voucherType }: PaymentReceiptFormProps) {
   const location = useLocation();
   const queryClient = useQueryClient();
   const config = TYPE_CONFIG[voucherType];
+  const { selectedDate } = useDateStore();
 
   const editRecord = (location.state as { edit?: PaymentReceipt } | null)?.edit ?? null;
   const isEdit = !!editRecord;
@@ -62,7 +64,7 @@ export function PaymentReceiptForm({ voucherType }: PaymentReceiptFormProps) {
       : {
           type:             voucherType as 'payment' | 'receipt',
           payment_mode:     'cash',
-          receipt_date:     new Date().toISOString().split('T')[0],
+          receipt_date:     selectedDate,
           amount:           undefined as unknown as number,
           receipt_number:   '',
           party_id:         '',

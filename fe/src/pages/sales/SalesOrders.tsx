@@ -21,6 +21,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FilterPanel } from '@/components/ui/FilterPanel';
+import { useDateStore } from '@/store/dateStore';
 
 const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
@@ -69,6 +70,7 @@ const allowedTransitions: Record<string, string[]> = {
 export default function SalesOrders() {
   usePageTitle('Sales Orders');
   const queryClient = useQueryClient();
+  const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -160,7 +162,7 @@ export default function SalesOrders() {
     reset({
       so_number: '',
       party_id: '',
-      so_date: new Date().toISOString().split('T')[0],
+      so_date: selectedDate,
       expected_delivery_date: '',
       notes: '',
       lines: [{ item_id: '', quantity: 1, rate: 0, discount_percent: 0, gst_rate: 18 }],

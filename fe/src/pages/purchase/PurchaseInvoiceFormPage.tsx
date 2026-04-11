@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAuthStore } from '@/store/authStore';
 import { useFYStore } from '@/store/fyStore';
+import { useDateStore } from '@/store/dateStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
 import { purchaseInvoicesApi } from '@/api/purchase';
@@ -58,6 +59,7 @@ export default function PurchaseInvoiceFormPage() {
   const queryClient = useQueryClient();
 
   const selectedFYId = useFYStore((state) => state.selectedFY?.id ?? '');
+  const { selectedDate } = useDateStore();
 
   const { data: vendorsData } = useQuery({
     queryKey: ['parties-vendors'],
@@ -96,9 +98,9 @@ export default function PurchaseInvoiceFormPage() {
       financial_year_id: selectedFYId,
       invoice_number: '',
       party_id: '',
-      invoice_date: new Date().toISOString().split('T')[0],
+      invoice_date: selectedDate,
       vendor_invoice_number: '',
-      due_date: new Date().toISOString().split('T')[0],
+      due_date: selectedDate,
       is_inter_state: false,
       notes: '',
       lines: [makeEmptyLine()],

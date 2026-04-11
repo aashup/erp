@@ -18,11 +18,13 @@ import { LedgerBalanceBadge } from '@/components/accounting/LedgerBalanceBadge';
 
 import { journalSchema, type JournalForm } from './schemas';
 import { VoucherFormHeader } from './VoucherFormHeader';
+import { useDateStore } from '@/store/dateStore';
 
 export function ContraVoucherForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fyId = useSelectedFYId();
+  const { selectedDate } = useDateStore();
 
   usePageTitle('New Contra Voucher');
 
@@ -41,7 +43,7 @@ export function ContraVoucherForm() {
   const form = useForm<JournalForm>({
     resolver: zodResolver(journalSchema) as any,
     defaultValues: {
-      voucher_date: new Date().toISOString().split('T')[0],
+      voucher_date: selectedDate,
       voucher_type: 'contra',
       narration: '',
       lines: [

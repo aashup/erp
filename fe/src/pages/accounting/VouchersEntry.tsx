@@ -34,6 +34,7 @@ import {
   ShoppingCart,
   Receipt,
 } from 'lucide-react';
+import { useDateStore } from '@/store/dateStore';
 
 // ─── Voucher Type Definitions ───────────────────────────────────────────────
 
@@ -160,6 +161,7 @@ export default function VouchersEntry() {
   usePageTitle('Vouchers Entry');
   const queryClient = useQueryClient();
   const fyId = useSelectedFYId();
+  const { selectedDate } = useDateStore();
   const [activeTab, setActiveTab] = useState<VoucherTab>('journal');
 
   // Whether the active tab is a "payment/receipt" type (uses PaymentReceipt CRUD)
@@ -243,7 +245,7 @@ export default function VouchersEntry() {
 
   const openJournalCreate = () => {
     journalForm.reset({
-      voucher_date: new Date().toISOString().split('T')[0],
+      voucher_date: selectedDate,
       voucher_type: activeTab,
       narration: '',
       lines: [
@@ -314,7 +316,7 @@ export default function VouchersEntry() {
     paymentForm.reset({
       type: activeTab as 'payment' | 'receipt',
       payment_mode: 'cash',
-      receipt_date: new Date().toISOString().split('T')[0],
+      receipt_date: selectedDate,
       amount: undefined as unknown as number,
       receipt_number: '',
       party_id: '',

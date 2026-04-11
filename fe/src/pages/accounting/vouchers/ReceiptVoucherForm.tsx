@@ -18,11 +18,13 @@ import { LedgerBalanceBadge } from '@/components/accounting/LedgerBalanceBadge';
 
 import { paymentVoucherSchema, type PaymentVoucherForm as ReceiptVoucherFormType } from './schemas';
 import { VoucherFormHeader } from './VoucherFormHeader';
+import { useDateStore } from '@/store/dateStore';
 
 export function ReceiptVoucherForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fyId = useSelectedFYId();
+  const { selectedDate } = useDateStore();
 
   usePageTitle('New Receipt Voucher');
 
@@ -48,7 +50,7 @@ export function ReceiptVoucherForm() {
   const form = useForm<ReceiptVoucherFormType>({
     resolver: zodResolver(paymentVoucherSchema) as any,
     defaultValues: {
-      voucher_date:   new Date().toISOString().split('T')[0],
+      voucher_date:   selectedDate,
       narration:      '',
       from_ledger_id: '',
       lines: [

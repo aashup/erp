@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAuthStore } from '@/store/authStore';
+import { useDateStore } from '@/store/dateStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
 import { salesInvoicesApi } from '@/api/sales';
@@ -53,6 +54,7 @@ export default function SalesInvoiceFormPage() {
   const { invoiceId } = useParams<{ invoiceId: string }>();
   const isEditMode = Boolean(invoiceId);
   const queryClient = useQueryClient();
+  const { selectedDate } = useDateStore();
 
   const { data: customersData } = useQuery({
     queryKey: ['parties-customers'],
@@ -90,7 +92,7 @@ export default function SalesInvoiceFormPage() {
     defaultValues: {
       invoice_number: '',
       party_id: '',
-      invoice_date: new Date().toISOString().split('T')[0],
+      invoice_date: selectedDate,
       due_date: '',
       is_inter_state: false,
       notes: '',
