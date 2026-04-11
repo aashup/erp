@@ -27,7 +27,9 @@ import {
   BookOpen,
   ShoppingCart,
   Receipt,
+  Filter,
 } from "lucide-react";
+import { FilterPanel } from "@/components/ui/FilterPanel";
 
 type VoucherTab =
   | "contra"
@@ -111,20 +113,38 @@ export default function VoucherTypeList() {
 
   usePageTitle(`${config.label} Vouchers`);
 
+  const today = new Date();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    .toISOString()
+    .split("T")[0];
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showDetail, setShowDetail] = useState<Voucher | null>(null);
   const [showPaymentDetail, setShowPaymentDetail] = useState<PaymentReceipt | null>(null);
 
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [dateFrom, setDateFrom] = useState(monthStart);
+  const [dateTo, setDateTo] = useState(monthEnd);
+  const [appliedDateFrom, setAppliedDateFrom] = useState(monthStart);
+  const [appliedDateTo, setAppliedDateTo] = useState(monthEnd);
+
+  const hasFilter = appliedDateFrom !== monthStart || appliedDateTo !== monthEnd;
+
   // ─── Journal/Contra/Sales/Purchase list ──────────────────────────────────
 
   const { data: journalData, isLoading: journalLoading } = useQuery({
-    queryKey: ["vouchers", voucherType, page, search],
+    queryKey: ["vouchers", voucherType, page, search, appliedDateFrom, appliedDateTo],
     queryFn: () =>
       vouchersApi.list({
         page: String(page),
         search,
         voucher_type: voucherType,
+        date_from: appliedDateFrom,
+        date_to: appliedDateTo,
       }),
     select: (res) => res.data,
     enabled: !isPaymentType,
@@ -133,12 +153,14 @@ export default function VoucherTypeList() {
   // ─── Payment/Receipt list ─────────────────────────────────────────────────
 
   const { data: paymentData, isLoading: paymentLoading } = useQuery({
-    queryKey: ["payment-receipts", voucherType, page, search],
+    queryKey: ["payment-receipts", voucherType, page, search, appliedDateFrom, appliedDateTo],
     queryFn: () =>
       paymentReceiptsApi.list({
         page: String(page),
         search,
         type: voucherType,
+        date_from: appliedDateFrom,
+        date_to: appliedDateTo,
       }),
     select: (res) => res.data,
     enabled: isPaymentType,
@@ -282,6 +304,8 @@ export default function VoucherTypeList() {
               <kbd className="px-1 py-0.5 text-[10px] font-mono bg-gray-100 dark:bg-gray-800 rounded">
                 {config.shortcut}
               </kbd>
+              {" · "}
+              {formatDate(appliedDateFrom)} → {formatDate(appliedDateTo)}
             </p>
           </div>
         </div>
@@ -303,13 +327,22 @@ export default function VoucherTypeList() {
                 }}
               />
             </div>
-            <Button
-              onClick={() =>
-                navigate(`/accounting/vouchers/${voucherType}/new`)
-              }
-            >
-              <Plus className="mr-2 h-4 w-4" /> New {config.label}
-            </Button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilterPanel(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Filter className="h-4 w-4" />
+                Filters{hasFilter ? " (1)" : ""}
+              </button>
+              <Button
+                onClick={() =>
+                  navigate(`/accounting/vouchers/${voucherType}/new`)
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" /> New {config.label}
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
@@ -353,6 +386,60 @@ export default function VoucherTypeList() {
         record={showPaymentDetail}
         onClose={() => setShowPaymentDetail(null)}
       />
+
+      {/* Date Range Filter Panel */}
+      <FilterPanel
+        open={showFilterPanel}
+        onClose={() => setShowFilterPanel(false)}
+      >
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            From Date
+          </label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            To Date
+          </label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button
+            onClick={() => {
+              setDateFrom(monthStart);
+              setDateTo(monthEnd);
+              setAppliedDateFrom(monthStart);
+              setAppliedDateTo(monthEnd);
+              setShowFilterPanel(false);
+            }}
+            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            Reset
+          </button>
+          <button
+            onClick={() => {
+              setAppliedDateFrom(dateFrom);
+              setAppliedDateTo(dateTo);
+              setPage(1);
+              setShowFilterPanel(false);
+            }}
+            className="flex-1 rounded-lg bg-primary-600 text-white px-3 py-2 text-sm hover:bg-primary-700"
+          >
+            Apply
+          </button>
+        </div>
+      </FilterPanel>
 
       {/* Journal Detail Modal */}
       <Modal

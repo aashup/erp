@@ -23,6 +23,8 @@ class PaymentReceiptController extends Controller
         $query = PaymentReceipt::with('party')
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))
             ->when($request->search, fn ($q, $s) => $q->where('receipt_number', 'like', "%{$s}%"))
+            ->when($request->date_from, fn ($q, $d) => $q->whereDate('receipt_date', '>=', $d))
+            ->when($request->date_to, fn ($q, $d) => $q->whereDate('receipt_date', '<=', $d))
             ->latest('receipt_date');
 
         $this->applyFYFilter($query, $request, 'receipt_date');
