@@ -388,9 +388,14 @@ export default function Items() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={openCreate} disabled={isUnitsLoading || unitOptions.length === 0}>
-            <Plus className="mr-2 h-4 w-4" /> Add Item
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button onClick={openCreate} disabled={isUnitsLoading || unitOptions.length === 0}>
+              <Plus className="mr-2 h-4 w-4" /> Add Item
+            </Button>
+            {!isUnitsLoading && unitOptions.length === 0 && (
+              <span className="text-xs text-red-500">Configure units in Settings first</span>
+            )}
+          </div>
         </div>
       </div>
 

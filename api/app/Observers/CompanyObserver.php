@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\ItemGroup;
+use App\Models\Unit;
 use App\Services\DefaultGroupsService;
 use Carbon\Carbon;
 
@@ -37,5 +38,21 @@ class CompanyObserver
         );
 
         (new DefaultGroupsService)->load($company->id);
+
+        foreach ([
+            ['value' => 'PCS',   'label' => 'Pieces'],
+            ['value' => 'KG',    'label' => 'Kilograms'],
+            ['value' => 'BOX',   'label' => 'Box'],
+            ['value' => 'STRIP', 'label' => 'Strip'],
+            ['value' => 'MTR',   'label' => 'Meter'],
+            ['value' => 'LTR',   'label' => 'Liter'],
+            ['value' => 'GM',    'label' => 'Gram'],
+            ['value' => 'PAK',   'label' => 'Pack'],
+        ] as $unit) {
+            Unit::firstOrCreate(
+                ['company_id' => $company->id, 'value' => $unit['value']],
+                ['label' => $unit['label'], 'status' => 'active']
+            );
+        }
     }
 }
