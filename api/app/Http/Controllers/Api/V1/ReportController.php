@@ -289,6 +289,192 @@ class ReportController extends Controller
     }
 
     /**
+     * Balance Sheet — Assets vs Liabilities + Equity as at a date.
+     *
+     * Tally convention:
+     *  - Left  : Liabilities & Equity (Capital, Loans, Creditors, Duties & Taxes)
+     *  - Right : Assets (Fixed Assets, Current Assets → Stock, Debtors, Bank, Cash)
+     *  - Net Profit (from P&L) is added to the Liabilities side under Capital.
+     *  - Closing Stock (from stock_ledger) is added to the Assets side.
+     */
+    public function balanceSheet(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Voucher::class);
+
+        $companyId = $request->user()->company_id;
+        [$dateFrom, $dateTo] = $this->resolveDateRange($request);
+
+        // ── 1. Balance-sheet groups & ledgers (asset, liability, equity only) ──
+        $groups = AccountingGroup::where('company_id', $companyId)
+            ->whereIn('type', ['asset', 'liability', 'equity'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $ledgers = Ledger::with('group')
+            ->where('company_id', $companyId)
+            ->whereHas('group', fn ($q) => $q->whereIn('type', ['asset', 'liability', 'equity']))
+            ->whereNull('deleted_at')
+            ->orderBy('name')
+            ->get();
+
+        // ── 2. Voucher-line totals for every ledger ──────────────────────────
+        $query = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true);
+
+        if ($dateFrom && $dateTo) {
+            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
+                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+        }
+
+        $totals = $query->select(
+            'voucher_lines.ledger_id',
+            DB::raw('SUM(voucher_lines.debit) as total_debit'),
+            DB::raw('SUM(voucher_lines.credit) as total_credit')
+        )
+            ->groupBy('voucher_lines.ledger_id')
+            ->get()
+            ->keyBy('ledger_id');
+
+        // ── 3. Build rows ─────────────────────────────────────────────────────
+        $rows          = [];
+        $totalAssets   = 0;
+        $totalLiabEq   = 0;
+
+        // Group rows — values are 0; frontend aggregates from children
+        foreach ($groups as $group) {
+            $rows[] = [
+                'account_id'     => $group->id,
+                'name'           => $group->name,
+                'code'           => $group->code ?? '',
+                'type'           => $group->type,
+                'parent_id'      => $group->parent_id,
+                'is_group'       => true,
+                'opening_debit'  => 0,
+                'opening_credit' => 0,
+                'txn_debit'      => 0,
+                'txn_credit'     => 0,
+                'closing_debit'  => 0,
+                'closing_credit' => 0,
+            ];
+        }
+
+        // Ledger rows — same calculation as trialBalance()
+        foreach ($ledgers as $ledger) {
+            $txn        = $totals[$ledger->id] ?? null;
+            $txnDebit   = (float) ($txn->total_debit ?? 0);
+            $txnCredit  = (float) ($txn->total_credit ?? 0);
+
+            $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+
+            $totalDebit  = $openingDebit + $txnDebit;
+            $totalCredit = $openingCredit + $txnCredit;
+
+            $net           = $totalDebit - $totalCredit;
+            $closingDebit  = $net > 0 ? round($net, 2) : 0;
+            $closingCredit = $net < 0 ? round(abs($net), 2) : 0;
+
+            $groupType = $ledger->group?->type;
+
+            if ($groupType === 'asset') {
+                $totalAssets += ($closingDebit - $closingCredit);
+            } else {
+                $totalLiabEq += ($closingCredit - $closingDebit);
+            }
+
+            $rows[] = [
+                'account_id'     => $ledger->id,
+                'name'           => $ledger->name,
+                'code'           => $ledger->group?->code ?? '',
+                'type'           => $groupType ?? 'asset',
+                'parent_id'      => $ledger->group_id,
+                'is_group'       => false,
+                'opening_debit'  => round($openingDebit, 2),
+                'opening_credit' => round($openingCredit, 2),
+                'txn_debit'      => round($txnDebit, 2),
+                'txn_credit'     => round($txnCredit, 2),
+                'closing_debit'  => $closingDebit,
+                'closing_credit' => $closingCredit,
+            ];
+        }
+
+        // ── 4. Net Profit/Loss from P&L (same logic as profitAndLoss()) ──────
+        $pnlLedgers = Ledger::with('group')
+            ->where('company_id', $companyId)
+            ->whereHas('group', fn ($q) => $q->whereIn('type', ['income', 'expense']))
+            ->whereNull('deleted_at')
+            ->get();
+
+        $pnlQuery = DB::table('voucher_lines')
+            ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.company_id', $companyId)
+            ->where('vouchers.is_posted', true)
+            ->whereIn('voucher_lines.ledger_id', $pnlLedgers->pluck('id'));
+
+        if ($dateFrom && $dateTo) {
+            $pnlQuery->whereDate('vouchers.voucher_date', '>=', $dateFrom)
+                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+        }
+
+        $pnlTotals = $pnlQuery->select(
+            'voucher_lines.ledger_id',
+            DB::raw('SUM(voucher_lines.debit) as total_debit'),
+            DB::raw('SUM(voucher_lines.credit) as total_credit')
+        )
+            ->groupBy('voucher_lines.ledger_id')
+            ->get()
+            ->keyBy('ledger_id');
+
+        $totalIncome  = 0;
+        $totalExpense = 0;
+
+        foreach ($pnlLedgers as $ledger) {
+            $txn    = $pnlTotals[$ledger->id] ?? null;
+            $debit  = (float) ($txn->total_debit ?? 0);
+            $credit = (float) ($txn->total_credit ?? 0);
+
+            $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+
+            $totalDebit  = $openingDebit + $debit;
+            $totalCredit = $openingCredit + $credit;
+
+            if ($ledger->group?->type === 'income') {
+                $totalIncome  += ($totalCredit - $totalDebit);
+            } else {
+                $totalExpense += ($totalDebit - $totalCredit);
+            }
+        }
+
+        [$openingStock, $closingStock] = $this->calcStockValues($companyId, $dateFrom, $dateTo);
+
+        $netProfitLoss = $totalIncome - $totalExpense + $closingStock - $openingStock;
+        $isProfit      = $netProfitLoss >= 0;
+
+        // ── 5. Difference diagnostic ─────────────────────────────────────────
+        // Assets = Liabilities + Equity + Net Profit (if profit)
+        // Assets + Net Loss = Liabilities + Equity (if loss)
+        $liabEqWithPnl = $totalLiabEq + ($isProfit ? $netProfitLoss : 0);
+        $assetsWithLoss = $totalAssets + (!$isProfit ? abs($netProfitLoss) : 0);
+        $difference = round($assetsWithLoss - $liabEqWithPnl, 2);
+
+        return response()->json([
+            'data' => $rows,
+            'summary' => [
+                'total_assets'             => round($totalAssets, 2),
+                'total_liabilities_equity' => round($totalLiabEq, 2),
+                'net_profit'               => round(abs($netProfitLoss), 2),
+                'is_profit'                => $isProfit,
+                'closing_stock'            => round($closingStock, 2),
+                'difference'               => $difference,
+            ],
+        ]);
+    }
+
+    /**
      * Profit & Loss Statement — hierarchical income/expense groups and ledgers.
      *
      * Returns a flat list of rows (groups + ledgers) that the frontend builds

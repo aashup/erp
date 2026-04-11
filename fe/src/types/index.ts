@@ -497,6 +497,23 @@ export interface ProfitAndLossResponse {
   };
 }
 
+// BalanceSheetRow: same shape as TrialBalanceRow, type restricted to asset/liability/equity
+export type BalanceSheetRow = Omit<TrialBalanceRow, 'type'> & {
+  type: 'asset' | 'liability' | 'equity';
+};
+
+export interface BalanceSheetResponse {
+  data: BalanceSheetRow[];
+  summary: {
+    total_assets: number;
+    total_liabilities_equity: number;
+    net_profit: number;
+    is_profit: boolean;
+    closing_stock: number;
+    difference: number; // diagnostic: should be ~0 if books are balanced
+  };
+}
+
 export interface PartyLedgerRow {
   voucher_number: string;
   voucher_date: string;

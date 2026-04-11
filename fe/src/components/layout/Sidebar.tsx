@@ -63,6 +63,7 @@ const navigation = [
       { name: 'Vouchers Entry', href: '/accounting/vouchers', icon: BookOpen },
       { name: 'Trial Balance', href: '/accounting/trial-balance', icon: Scale },
       { name: 'Profit & Loss', href: '/accounting/profit-and-loss', icon: TrendingUp },
+      { name: 'Balance Sheet', href: '/accounting/balance-sheet', icon: Scale },
     ],
   },
   {

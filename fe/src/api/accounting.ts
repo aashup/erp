@@ -8,6 +8,7 @@ import type {
   PaymentReceipt,
   TrialBalanceResponse,
   ProfitAndLossResponse,
+  BalanceSheetResponse,
   PartyLedgerResponse,
   LedgerTransactionsResponse,
   CashBookResponse,
@@ -67,6 +68,9 @@ export const reportsApi = {
 
   profitAndLoss: (params?: Record<string, string>) =>
     api.get<ProfitAndLossResponse>('/reports/profit-and-loss', { params }),
+
+  balanceSheet: (params?: Record<string, string>) =>
+    api.get<BalanceSheetResponse>('/reports/balance-sheet', { params }),
 
   partyLedger: (params: Record<string, string>) =>
     api.get<PartyLedgerResponse>('/reports/party-ledger', { params }),

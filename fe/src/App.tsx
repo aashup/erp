@@ -36,6 +36,7 @@ import VoucherTypeList from '@/pages/accounting/VoucherTypeList';
 import VoucherEntryForm from '@/pages/accounting/VoucherEntryForm';
 import TrialBalance from '@/pages/accounting/TrialBalance';
 import ProfitAndLoss from '@/pages/accounting/ProfitAndLoss';
+import BalanceSheet from '@/pages/accounting/BalanceSheet';
 import CashBook from '@/pages/reports/CashBook';
 import BankBook from '@/pages/reports/BankBook';
 import LedgerBook from '@/pages/reports/LedgerBook';
@@ -140,6 +141,7 @@ export default function App() {
             <Route path="/accounting/payments" element={<Payments />} />
             <Route path="/accounting/trial-balance" element={<TrialBalance />} />
             <Route path="/accounting/profit-and-loss" element={<ProfitAndLoss />} />
+            <Route path="/accounting/balance-sheet" element={<BalanceSheet />} />
 
             {/* Reports — Account Books */}
             <Route path="/reports/account-books/cash-book" element={<CashBook />} />
