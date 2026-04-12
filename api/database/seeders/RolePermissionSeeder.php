@@ -11,7 +11,7 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $modules = [
-            'inventory', 'purchase', 'sales', 'accounting', 'party', 'branch',
+            'inventory', 'purchase', 'sales', 'accounting', 'party', 'branch', 'user', 'role',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete'];

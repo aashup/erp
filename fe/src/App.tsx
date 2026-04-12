@@ -21,6 +21,8 @@ import OpeningStock from '@/pages/inventory/OpeningStock';
 import ItemMovements from '@/pages/inventory/ItemMovements';
 import Parties from '@/pages/Parties';
 import Branches from '@/pages/Branches';
+import Users from '@/pages/Users';
+import Groups from '@/pages/Groups';
 import PurchaseOrders from '@/pages/purchase/PurchaseOrders';
 import PurchaseInvoices from '@/pages/purchase/PurchaseInvoices';
 import PurchaseInvoiceFormPage from '@/pages/purchase/PurchaseInvoiceFormPage';
@@ -118,6 +120,10 @@ export default function App() {
 
             {/* Branches */}
             <Route path="/branches" element={<Branches />} />
+
+            {/* Users & Groups */}
+            <Route path="/users" element={<Users />} />
+            <Route path="/groups" element={<Groups />} />
 
             {/* Purchase */}
             <Route path="/purchase/orders" element={<PurchaseOrders />} />

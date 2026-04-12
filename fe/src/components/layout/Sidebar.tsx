@@ -9,6 +9,7 @@ import {
   IndianRupee,
   BookOpen,
   Users,
+  Users2,
   Warehouse,
   Building2,
   Settings,
@@ -41,6 +42,13 @@ const navigation = [
     ],
   },
   { name: 'Parties', href: '/parties', icon: Users },
+  {
+    name: 'Users & Groups',
+    children: [
+      { name: 'Users', href: '/users', icon: Users2 },
+      { name: 'Groups', href: '/groups', icon: Users2 },
+    ],
+  },
   {
     name: 'Purchase',
     children: [

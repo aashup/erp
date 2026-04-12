@@ -18,12 +18,14 @@ use App\Http\Controllers\Api\V1\PaymentReceiptController;
 use App\Http\Controllers\Api\V1\PurchaseInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
 use App\Http\Controllers\Api\V1\StockLedgerController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\ThermalTemplateController;
 use App\Http\Controllers\Api\V1\UnitController;
+use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VoucherController;
 use Illuminate\Support\Facades\Route;
 
@@ -82,6 +84,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Branches
     Route::apiResource('branches', BranchController::class);
+
+    // Users & Roles
+    Route::apiResource('users', UserController::class);
+    Route::apiResource('roles', RoleController::class);
+    Route::get('permissions', [RoleController::class, 'permissions']);
 
     // Purchase
     Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
