@@ -15,8 +15,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
-        // target: process.env.VITE_PROXY_TARGET || 'http://localhost:8000',
-        target: "https://api.xtrox.com/",
+        target: process.env.VITE_PROXY_TARGET || "http://localhost:8000",
         changeOrigin: true,
       },
     },
