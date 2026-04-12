@@ -1,15 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { usePermissions } from '@/hooks/usePermissions';
+import { MENU_CONFIG, type MenuItem } from '@/config/menuConfig';
+import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
   Package,
   FolderTree,
   ShoppingCart,
-  IndianRupee,
   BookOpen,
   Users,
-  Users2,
+  UserCog,
   Warehouse,
   Building2,
   Settings,
@@ -28,75 +30,33 @@ import {
   BookMarked,
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  {
-    name: 'Inventory',
-    children: [
-      { name: 'Stock Summary', href: '/inventory/stock-summary', icon: BarChart3 },
-      { name: 'Stock Ledger', href: '/inventory/stock-ledger', icon: BookOpenCheck },
-      { name: 'Item Groups', href: '/inventory/item-groups', icon: FolderTree },
-      { name: 'Items', href: '/inventory/items', icon: Package },
-      { name: 'Godowns', href: '/inventory/godowns', icon: Warehouse },
-      { name: 'Adjustment', href: '/inventory/stock-adjustment', icon: ClipboardEdit },
-    ],
-  },
-  { name: 'Parties', href: '/parties', icon: Users },
-  {
-    name: 'Users & Groups',
-    children: [
-      { name: 'Users', href: '/users', icon: Users2 },
-      { name: 'Groups', href: '/groups', icon: Users2 },
-    ],
-  },
-  {
-    name: 'Purchase',
-    children: [
-      { name: 'Purchase Orders', href: '/purchase/orders', icon: ShoppingCart },
-      { name: 'Purchase Invoices', href: '/purchase/invoices', icon: ShoppingCart },
-    ],
-  },
-  {
-    name: 'Sales',
-    children: [
-      { name: 'Sales Orders', href: '/sales/orders', icon: IndianRupee },
-      { name: 'Sales Invoices', href: '/sales/invoices', icon: IndianRupee },
-    ],
-  },
-  {
-    name: 'Accounting',
-    children: [
-      { name: 'Accounting Groups', href: '/accounting/accounts', icon: BookOpen },
-      { name: 'Ledgers', href: '/accounting/ledgers', icon: BookOpen },
-      { name: 'Vouchers Entry', href: '/accounting/vouchers', icon: BookOpen },
-      { name: 'Trial Balance', href: '/accounting/trial-balance', icon: Scale },
-      { name: 'Profit & Loss', href: '/accounting/profit-and-loss', icon: TrendingUp },
-      { name: 'Balance Sheet', href: '/accounting/balance-sheet', icon: Scale },
-    ],
-  },
-  {
-    name: 'Reports',
-    children: [
-      { name: 'Cash Book', href: '/reports/account-books/cash-book', icon: BookOpen },
-      { name: 'Bank Book', href: '/reports/account-books/bank-book', icon: Landmark },
-      { name: 'Ledger', href: '/reports/account-books/ledger', icon: BookMarked },
-      { name: 'Day Book', href: '/reports/account-books/day-book', icon: CalendarDays },
-    ],
-  },
-  {
-    name: 'Settings',
-    children: [
-      { name: 'Base Settings', href: '/settings/base', icon: Settings },
-      { name: 'Theme', href: '/settings/theme', icon: Palette },
-      { name: 'Invoice Settings', href: '/settings/invoice', icon: FileText },
-      { name: 'Thermal Templates', href: '/settings/thermal-templates', icon: FileText },
-      { name: 'Branches', href: '/branches', icon: Building2 },
-      { name: 'Inventory', href: '/settings/inventory', icon: Package },
-      { name: 'Units', href: '/settings/units', icon: Ruler },
-      { name: 'Financial Years', href: '/settings/financial-years', icon: Calendar },
-    ],
-  },
-];
+/**
+ * Map icon names from menuConfig to lucide icon components
+ */
+const ICON_MAP: Record<string, LucideIcon> = {
+  'grid': LayoutDashboard,
+  'box': Package,
+  'folder': FolderTree,
+  'shopping-cart': ShoppingCart,
+  'trending-up': TrendingUp,
+  'book-open': BookOpen,
+  'users': Users,
+  'user-cog': UserCog,
+  'warehouse': Warehouse,
+  'building': Building2,
+  'settings': Settings,
+  'ruler': Ruler,
+  'calendar': Calendar,
+  'bar-chart': BarChart3,
+  'book-check': BookOpenCheck,
+  'clipboard': ClipboardEdit,
+  'scale': Scale,
+  'palette': Palette,
+  'file-text': FileText,
+  'landmark': Landmark,
+  'calendar-days': CalendarDays,
+  'book-marked': BookMarked,
+};
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -108,10 +68,69 @@ export function Sidebar({ mobileOpen = false, onClose, sidebarVisible = true }: 
   const location = useLocation();
   const companyName = useAuthStore((state) => state.user?.company?.name?.trim() || 'ERP');
   const companyInitial = companyName.charAt(0).toUpperCase();
+  const { getVisibleMenuItems } = usePermissions();
+
+  const visibleMenu = getVisibleMenuItems(MENU_CONFIG);
+
+  const getIcon = (iconName?: string): LucideIcon => {
+    if (!iconName) return LayoutDashboard;
+    return ICON_MAP[iconName] || LayoutDashboard;
+  };
 
   const isActive = (href: string) => {
     if (href === '/') return location.pathname === '/';
     return location.pathname.startsWith(href);
+  };
+
+  const renderMenuItem = (item: MenuItem) => {
+    const Icon = getIcon(item.icon);
+
+    if (item.children && item.children.length > 0) {
+      // Parent menu item with children
+      return (
+        <div key={item.id} className="pt-3">
+          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            {item.label}
+          </p>
+          {item.children.map((child) => (
+            <NavLink
+              key={child.id}
+              to={child.href || '#'}
+              className={() =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive(child.href || '')
+                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+                )
+              }
+            >
+              <Icon className="h-4 w-4" />
+              {child.label}
+            </NavLink>
+          ))}
+        </div>
+      );
+    }
+
+    // Single menu item without children
+    return (
+      <NavLink
+        key={item.id}
+        to={item.href || '#'}
+        className={() =>
+          cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            isActive(item.href || '')
+              ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+          )
+        }
+      >
+        <Icon className="h-4 w-4" />
+        {item.label}
+      </NavLink>
+    );
   };
 
   return (
@@ -155,48 +174,7 @@ export function Sidebar({ mobileOpen = false, onClose, sidebarVisible = true }: 
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {navigation.map((item) =>
-            'children' in item ? (
-              <div key={item.name} className="pt-3">
-                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                  {item.name}
-                </p>
-                {item.children?.map((child) => (
-                  <NavLink
-                    key={child.href}
-                    to={child.href}
-                    className={() =>
-                      cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                        isActive(child.href)
-                          ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
-                      )
-                    }
-                  >
-                    <child.icon className="h-4 w-4" />
-                    {child.name}
-                  </NavLink>
-                ))}
-              </div>
-            ) : (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                className={() =>
-                  cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive(item.href)
-                      ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
-                  )
-                }
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-              </NavLink>
-            )
-          )}
+          {visibleMenu.map((item) => renderMenuItem(item))}
         </nav>
       </aside>
     </>

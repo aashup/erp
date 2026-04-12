@@ -54,10 +54,7 @@ export default function Groups() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: RoleForm) => rolesApi.create({
-      ...data,
-      permissions: data.permissions.map(id => ({ id } as any))
-    }),
+    mutationFn: (data: RoleForm) => rolesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       setShowModal(false);
@@ -65,10 +62,7 @@ export default function Groups() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<RoleForm> }) => rolesApi.update(id, {
-      ...data,
-      permissions: data.permissions ? data.permissions.map(id => ({ id } as any)) : undefined
-    }),
+    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<RoleForm> }) => rolesApi.update(uuid, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       setShowModal(false);
@@ -76,7 +70,7 @@ export default function Groups() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => rolesApi.delete(id),
+    mutationFn: (uuid: string) => rolesApi.delete(uuid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] }),
   });
 
@@ -93,13 +87,13 @@ export default function Groups() {
     setEditRole(r);
     reset({
       name: r.name,
-      permissions: r.permissions?.map(p => p.id) ?? [],
+      permissions: r.permissions?.map(p => p.uuid) ?? [],
     });
     setShowModal(true);
   };
 
   const onSubmit = (formData: RoleForm) => {
-    if (editRole) updateMutation.mutate({ id: editRole.id, data: formData });
+    if (editRole) updateMutation.mutate({ uuid: editRole.uuid, data: formData });
     else createMutation.mutate(formData);
   };
 
@@ -152,7 +146,7 @@ export default function Groups() {
             </button>
             {!isSystem && (
               <button
-                onClick={() => { if (confirm('Delete this role?')) deleteMutation.mutate(row.original.id); }}
+                onClick={() => { if (confirm('Delete this role?')) deleteMutation.mutate(row.original.uuid); }}
                 className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -246,7 +240,7 @@ export default function Groups() {
                   <button
                     type="button"
                     onClick={() => {
-                      const allPerms = Object.values(groupedPermissions).flat().map(p => p.id);
+                      const allPerms = Object.values(groupedPermissions).flat().map(p => p.uuid);
                       setValue('permissions', allPerms, { shouldValidate: true });
                     }}
                     className="rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
@@ -269,15 +263,15 @@ export default function Groups() {
                       <h4 className="mb-3 text-sm font-medium capitalize text-gray-900 dark:text-gray-100">{module}</h4>
                       <div className="space-y-2">
                         {perms.map((perm) => (
-                          <label key={perm.id} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <label key={perm.uuid} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                             <input
                               type="checkbox"
-                              checked={selectedPermissions.includes(perm.id)}
+                              checked={selectedPermissions.includes(perm.uuid)}
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  setValue('permissions', [...selectedPermissions, perm.id], { shouldValidate: true });
+                                  setValue('permissions', [...selectedPermissions, perm.uuid], { shouldValidate: true });
                                 } else {
-                                  setValue('permissions', selectedPermissions.filter(id => id !== perm.id), { shouldValidate: true });
+                                  setValue('permissions', selectedPermissions.filter(id => id !== perm.uuid), { shouldValidate: true });
                                 }
                               }}
                               className="rounded border-gray-300 dark:border-gray-600"

@@ -5,16 +5,31 @@ import { useFinancialYear } from '@/hooks/useFinancialYear';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { authApi } from '@/api/auth';
 
 export function AppLayout() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user, updateUser } = useAuthStore();
   const { showSidebar } = useThemeStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Initialize FY loading & auto-select
   useFinancialYear();
+
+  // Refresh permissions on app load — handles sessions created before permissions were introduced
+  useEffect(() => {
+    if (isAuthenticated && (!user?.permissions || user.permissions.length === 0)) {
+      authApi.me().then((res) => {
+        const data = res.data as { data: typeof user; permissions: string[] };
+        if (data.permissions && user) {
+          updateUser({ ...user, permissions: data.permissions });
+        }
+      }).catch(() => {
+        // Silently fail — user stays logged in, menu falls back to no filtering
+      });
+    }
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

@@ -38,8 +38,9 @@ class AuthController extends Controller
             $user->assignRole('admin');
 
             $token = $user->createToken($request->input('device_name', 'default'))->plainTextToken;
+            $permissions = $user->getPermissionNames()->toArray();
 
-            return compact('company', 'user', 'token');
+            return compact('company', 'user', 'token', 'permissions');
         });
 
         return response()->json([
@@ -65,11 +66,16 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken($request->device_name)->plainTextToken;
+        $user->load('company', 'branch');
 
         return response()->json([
             'message' => 'Login successful',
             'data' => [
-                'user' => $user->load('company', 'branch'),
+                'user' => $user,
+                'permissions' => $user->getPermissionsViaRoles()
+                    ->pluck('name')
+                    ->merge($user->getDirectPermissions()->pluck('name'))
+                    ->unique(),
                 'token' => $token,
             ],
         ]);
@@ -77,8 +83,11 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
+        $user = $request->user()->load('company', 'branch');
+
         return response()->json([
-            'data' => $request->user()->load('company', 'branch'),
+            'data' => $user,
+            'permissions' => $user->getPermissionNames()->toArray(),
         ]);
     }
 

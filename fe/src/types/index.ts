@@ -32,12 +32,13 @@ export interface User extends SyncColumns {
   phone: string | null;
   role: 'admin' | 'manager' | 'accountant' | 'salesman';
   is_active: boolean;
+  permissions?: string[]; // Array of permission names, e.g., ['inventory.view', 'sales.create']
   company?: Company;
   branch?: Branch;
 }
 
 export interface Permission {
-  id: string;
+  uuid: string;
   name: string;
   guard_name: string;
   created_at: string;
@@ -45,7 +46,7 @@ export interface Permission {
 }
 
 export interface Role {
-  id: string;
+  uuid: string;
   name: string;
   guard_name?: string;
   permissions?: Permission[];
@@ -646,6 +647,7 @@ export interface LoginResponse {
   message: string;
   data: {
     user: User;
+    permissions: string[];
     token: string;
   };
 }
@@ -656,5 +658,6 @@ export interface RegisterResponse {
     company: Company;
     user: User;
     token: string;
+    permissions: string[];
   };
 }

@@ -1,0 +1,54 @@
+/**
+ * Auth Store for Mobile (Zustand)
+ * Stores user, token, and permissions from login
+ */
+
+import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User } from '@/types';
+
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  setAuth: (user: User, token: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
+  loadAuth: () => Promise<void>;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+  isAuthenticated: false,
+
+  setAuth: async (user, token) => {
+    await AsyncStorage.setItem('user', JSON.stringify(user));
+    await AsyncStorage.setItem('token', token);
+    set({ user, token, isAuthenticated: true });
+  },
+
+  logout: async () => {
+    await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem('token');
+    set({ user: null, token: null, isAuthenticated: false });
+  },
+
+  updateUser: async (user) => {
+    await AsyncStorage.setItem('user', JSON.stringify(user));
+    set({ user });
+  },
+
+  loadAuth: async () => {
+    const storedUser = await AsyncStorage.getItem('user');
+    const storedToken = await AsyncStorage.getItem('token');
+
+    if (storedUser && storedToken) {
+      set({
+        user: JSON.parse(storedUser),
+        token: storedToken,
+        isAuthenticated: true,
+      });
+    }
+  },
+}));

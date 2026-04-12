@@ -84,3 +84,18 @@ Ledgers: cash, input_cgst, input_sgst, input_igst, output_cgst, output_sgst, out
 - Double-entry accounting: every voucher must balance (total debit = total credit)
 - All tables have sync columns for offline-first mobile support
 - `loadDefaults()` is one-time operation tracked in CompanySetting
+
+## Roles & Permissions — UUID Primary Keys
+
+The `permissions` and `roles` tables use **`uuid` as PRIMARY KEY** — no integer `id` column.
+- Defined in `2026_03_23_171617_create_permission_tables.php`
+- Both `App\Models\Permission` and `App\Models\Role` extend Spatie models with `$primaryKey = 'uuid'` + `HasUuid` trait
+- Route model binding resolves by UUID value
+- API validation: `'permissions.*' => 'exists:permissions,uuid'` — expects flat array of UUID strings
+- `Permission::whereIn('uuid', $uuids)->get()` to load permissions by UUID
+- JSON response includes `uuid` field (NOT `id`) — frontend must use `perm.uuid` / `role.uuid`
+
+**Auth response** includes `permissions: string[]` (flat array of permission names like `'inventory.view'`):
+- Returned in `login`, `register`, and `me` responses
+- Stored in `user.permissions` in Zustand auth store
+- Used by `usePermissions()` hook for menu filtering

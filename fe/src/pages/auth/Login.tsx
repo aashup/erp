@@ -36,7 +36,12 @@ export default function Login() {
         ...data,
         device_name: navigator.userAgent,
       });
-      setAuth(res.data.data.user, res.data.data.token);
+      // Merge permissions from response into user object
+      const userWithPermissions = {
+        ...res.data.data.user,
+        permissions: res.data.data.permissions,
+      };
+      setAuth(userWithPermissions, res.data.data.token);
       navigate('/');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };

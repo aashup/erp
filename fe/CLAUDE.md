@@ -192,3 +192,50 @@ Reusable searchable select that opens a right-side sliding panel. Use for entity
 - AuthLayout wraps /login, /register
 - AppLayout wraps all protected routes
 - React Query defaults: 1 retry, 30s staleTime, no refetch on window focus
+
+---
+
+## Roles & Permissions — UUID Primary Keys (IMPORTANT)
+
+The `permissions` and `roles` tables use **`uuid` as primary key** — there is NO integer `id` column.
+
+| Table | Primary Key Column | Type |
+|-------|-------------------|------|
+| `permissions` | `uuid` | UUID string |
+| `roles` | `uuid` | UUID string |
+
+**TypeScript interfaces** (`fe/src/types/index.ts`):
+```typescript
+interface Permission { uuid: string; name: string; ... }
+interface Role { uuid: string; name: string; permissions?: Permission[]; ... }
+```
+
+**Always use `perm.uuid` / `role.uuid`** — never `perm.id` / `role.id` (that field does not exist in JSON).
+
+**Backend validation** for create/update role expects flat UUID array:
+```
+'permissions.*' => 'exists:permissions,uuid'
+```
+
+**Frontend send format** (via `rolesApi`):
+```typescript
+// correct — flat array of UUID strings
+{ name: "salesman", permissions: ["uuid1", "uuid2", ...] }
+
+// wrong — objects or integer ids
+{ permissions: [{ id: 1 }, ...] }
+```
+
+**Permission-based menu** (`fe/src/hooks/usePermissions.ts`):
+- `user.permissions` = flat string array from login response: `['inventory.view', 'sales.create', ...]`
+- Fallback: if `user.permissions` is empty/null, show all menu items (handles old sessions)
+- Permission format: `module.action` (e.g. `inventory.view`, `sales.create`)
+- Menu config: `fe/src/config/menuConfig.ts` — each item has optional `requiredPermission` field
+
+**Role permissions from seeder** (`RolePermissionSeeder.php`):
+| Role | Permissions |
+|------|------------|
+| admin | all (32) |
+| manager | all except \*.delete (24) |
+| accountant | accounting.\* + \*.view (11) |
+| salesman | sales.\* + inventory.view + party.view (6) |
