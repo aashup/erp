@@ -10,7 +10,7 @@ import { partiesApi } from '@/api/parties';
 import { itemsApi } from '@/api/inventory';
 import type { SalesOrder } from '@/types';
 import { formatCurrency, formatDate, calcGST } from '@/lib/utils';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';

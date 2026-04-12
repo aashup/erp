@@ -17,7 +17,6 @@ import { companySettingsApi } from "@/api/settings";
 import type { User } from "@/types";
 import {
   Pencil,
-  Check,
   Database,
   Lock,
 } from "lucide-react";

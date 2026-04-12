@@ -7,7 +7,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { godownsApi } from '@/api/inventory';
 import type { Godown } from '@/types';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';

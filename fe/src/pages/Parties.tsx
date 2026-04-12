@@ -9,7 +9,7 @@ import { partiesApi } from '@/api/parties';
 import type { Party } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { INDIAN_STATES } from '@/lib/constants';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';

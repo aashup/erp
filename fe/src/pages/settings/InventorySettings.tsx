@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Card, CardHeader } from '@/components/ui/Card';
 import { ArrowLeftRight, PackageOpen } from 'lucide-react';
 
 const items = [

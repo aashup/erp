@@ -54,7 +54,10 @@ export default function Groups() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: RoleForm) => rolesApi.create(data),
+    mutationFn: (data: RoleForm) => rolesApi.create({
+      ...data,
+      permissions: data.permissions.map(id => ({ id } as any))
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       setShowModal(false);
@@ -62,7 +65,10 @@ export default function Groups() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<RoleForm> }) => rolesApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<RoleForm> }) => rolesApi.update(id, {
+      ...data,
+      permissions: data.permissions ? data.permissions.map(id => ({ id } as any)) : undefined
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       setShowModal(false);

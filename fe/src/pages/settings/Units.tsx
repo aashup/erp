@@ -177,7 +177,7 @@ export default function Units() {
         </button>
       ),
       cell: ({ getValue }) => (
-        <Badge variant={getValue() === 'active' ? 'success' : 'secondary'}>
+        <Badge variant={getValue() === 'active' ? 'success' : 'default'}>
           {getValue() === 'active' ? 'Active' : 'Inactive'}
         </Badge>
       )

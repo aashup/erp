@@ -35,7 +35,6 @@ interface SlideSelectProps {
 }
 
 export function SlideSelect({
-  name,
   label,
   placeholder = 'Select...',
   error,

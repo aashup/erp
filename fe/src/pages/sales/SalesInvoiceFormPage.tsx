@@ -279,12 +279,6 @@ export default function SalesInvoiceFormPage() {
   const calcLineTaxable = (line: InvoiceForm['lines'][number]) =>
     line.quantity * line.rate * (1 - (line.discount_percent ?? 0) / 100);
 
-  const calcLineTotal = (line: InvoiceForm['lines'][number]) => {
-    const taxable = calcLineTaxable(line);
-    const gst = calcGST(taxable, line.gst_rate ?? 18, isInterState ?? false);
-    return taxable + gst.cgst + gst.sgst + gst.igst;
-  };
-
   const totals = (watchedLines ?? []).reduce(
     (acc, line) => {
       const taxable = calcLineTaxable(line);

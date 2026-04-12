@@ -70,7 +70,7 @@ export function JournalVoucherForm({ voucherType }: JournalVoucherFormProps) {
     mutationFn: (data: Record<string, unknown>) => vouchersApi.create(data),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
-      const voucherNumber = response.data.voucher_number;
+      const voucherNumber = response.data.data.voucher_number;
       toast.success(`${config.label} ${voucherNumber} created successfully`);
       navigate(`/accounting/vouchers/${voucherType}`);
     },

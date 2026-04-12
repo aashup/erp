@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useThemeStore, type AccentColor, type LightSurfaceColor, type DarkSurfaceColor, type FontFamily } from '@/store/themeStore';
+import { useThemeStore, type AccentColor, type LightSurfaceColor, type DarkSurfaceColor, type FontFamily, type SurfaceColor } from '@/store/themeStore';
 
 const accentPalettes: Record<Exclude<AccentColor, 'blue'>, Record<string, string>> = {
   emerald: {

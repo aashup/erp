@@ -11,7 +11,7 @@ import { partiesApi } from '@/api/parties';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { PurchaseInvoice } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
@@ -354,12 +354,6 @@ export default function PurchaseInvoices() {
       ...(vendorFilter ? { party_id: vendorFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     }),
-    select: (res) => res.data,
-  });
-
-  const { data: vendorsData } = useQuery({
-    queryKey: ['parties-vendors'],
-    queryFn: () => partiesApi.list({ per_page: '500', type: 'vendor' }),
     select: (res) => res.data,
   });
 

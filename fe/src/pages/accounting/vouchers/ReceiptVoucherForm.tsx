@@ -68,7 +68,7 @@ export function ReceiptVoucherForm() {
     mutationFn: (data: Record<string, unknown>) => vouchersApi.create(data),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
-      const voucherNumber = response.data.voucher_number;
+      const voucherNumber = response.data.data.voucher_number;
       toast.success(`Receipt Voucher ${voucherNumber} created successfully`);
       navigate('/accounting/vouchers/receipt');
     },

@@ -79,8 +79,6 @@ function buildTree(accounts: AccountingGroup[]): Map<string, TreeNode[]> {
     childrenOf.get(key)!.push(a);
   });
 
-  // Determine which accounts are groups (have children)
-  const parentIds = new Set(accounts.filter((a) => a.parent_id).map((a) => a.parent_id!));
 
   function makeNode(account: AccountingGroup): TreeNode {
     const kids = (childrenOf.get(account.id) ?? []).map(makeNode);

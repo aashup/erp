@@ -13,7 +13,7 @@ import { thermalTemplatesApi } from '@/api/thermalTemplates';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { SalesInvoice, Party, ThermalTemplate } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';

@@ -1,23 +1,24 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   server: {
-    host: '0.0.0.0',
+    host: "0.0.0.0",
     port: 3000,
     proxy: {
-      '/api': {
-        target: process.env.VITE_PROXY_TARGET || 'http://localhost:8000',
+      "/api": {
+        // target: process.env.VITE_PROXY_TARGET || 'http://localhost:8000',
+        target: "https://api.xtrox.com/",
         changeOrigin: true,
       },
     },
   },
-})
+});

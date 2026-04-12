@@ -15,7 +15,6 @@ function GstRow({
   output: number;
   itc: number;
 }) {
-  const net = output - itc;
   return (
     <div className="grid grid-cols-3 gap-1 text-xs">
       <span className="text-gray-500 dark:text-gray-400">{label}</span>

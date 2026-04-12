@@ -114,8 +114,8 @@ export function SalesPurchaseChart() {
       },
       tooltip: {
         callbacks: {
-          label: (ctx: { dataset: { label?: string }; parsed: { y: number } }) =>
-            `${ctx.dataset.label}: ₹${ctx.parsed.y.toLocaleString("en-IN")}`,
+          label: (ctx: any) =>
+            `${ctx.dataset.label}: ₹${(ctx.parsed.y ?? 0).toLocaleString("en-IN")}`,
         },
       },
     },

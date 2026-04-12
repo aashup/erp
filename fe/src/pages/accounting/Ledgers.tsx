@@ -8,7 +8,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { ledgersApi, accountingGroupsApi } from '@/api/accounting';
 import type { AccountingGroup, Ledger } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
@@ -65,12 +65,6 @@ export default function Ledgers() {
     select: (res) => res.data,
   });
 
-  const { data: groupsData } = useQuery({
-    queryKey: ['accounting-groups-all'],
-    queryFn: () => accountingGroupsApi.list({ per_page: '500' }),
-    select: (res) => res.data,
-  });
-
   const createMutation = useMutation({
     mutationFn: (data: Partial<Ledger>) => ledgersApi.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ledgers'] }); closeModal(); toast.success('Ledger created'); },
@@ -94,8 +88,6 @@ export default function Ledgers() {
     resolver: zodResolver(ledgerSchema) as any,
     defaultValues,
   });
-
-  const groupOptions = (groupsData?.data ?? []).map((g) => ({ value: g.id, label: `${g.code} - ${g.name}` }));
 
   const openCreate = () => {
     setEditItem(null);

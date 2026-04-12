@@ -8,7 +8,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { itemsApi, itemGroupsApi, unitsApi } from '@/api/inventory';
 import type { Item, ItemGroup, Unit } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';

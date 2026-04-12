@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { thermalTemplatesApi } from '@/api/thermalTemplates';
 import { salesInvoicesApi } from '@/api/sales';
-import type { ThermalTemplate, SalesInvoice } from '@/types';
+import type { ThermalTemplate } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { Trash2, Save, Plus, ArrowLeft, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';

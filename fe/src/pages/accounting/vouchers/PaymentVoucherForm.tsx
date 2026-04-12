@@ -68,7 +68,7 @@ export function PaymentVoucherForm() {
     mutationFn: (data: Record<string, unknown>) => vouchersApi.create(data),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
-      const voucherNumber = response.data.voucher_number;
+      const voucherNumber = response.data.data.voucher_number;
       toast.success(`Payment Voucher ${voucherNumber} created successfully`);
       navigate('/accounting/vouchers/payment');
     },
@@ -166,7 +166,6 @@ export function PaymentVoucherForm() {
 
               <div className="space-y-3">
                 {fields.map((field, index) => {
-                  const fromId = form.watch('from_ledger_id');
                   const selectedElsewhere = new Set(
                     watchedLines
                       .filter((_, i) => i !== index)
