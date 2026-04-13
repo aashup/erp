@@ -99,3 +99,19 @@ The `permissions` and `roles` tables use **`uuid` as PRIMARY KEY** — no intege
 - Returned in `login`, `register`, and `me` responses
 - Stored in `user.permissions` in Zustand auth store
 - Used by `usePermissions()` hook for menu filtering
+
+### ⚠️ Critical: Spatie Permission Methods
+
+Always use `getAllPermissions()` when returning user permissions — NOT `getPermissionNames()`.
+
+```php
+// ✅ CORRECT — includes permissions assigned via the user's ROLE
+$user->getAllPermissions()->pluck('name')->toArray()
+
+// ❌ WRONG — returns DIRECT permissions only (empty for role-based users like salesman)
+$user->getPermissionNames()->toArray()
+```
+
+**Why:** `UserSeeder` assigns permissions to *roles* (e.g. `$salesman->syncPermissions(...)`), not directly to users. `getPermissionNames()` only returns direct permissions → returns `[]` for all role-based users → frontend shows no menu items (or shows all via fallback).
+
+`getAllPermissions()` = direct permissions + permissions via roles (what you always want).

@@ -228,9 +228,16 @@ interface Role { uuid: string; name: string; permissions?: Permission[]; ... }
 
 **Permission-based menu** (`fe/src/hooks/usePermissions.ts`):
 - `user.permissions` = flat string array from login response: `['inventory.view', 'sales.create', ...]`
-- Fallback: if `user.permissions` is empty/null, show all menu items (handles old sessions)
+- If `user.permissions` is empty/null → `hasPermission()` returns `false` (shows only Dashboard)
 - Permission format: `module.action` (e.g. `inventory.view`, `sales.create`)
 - Menu config: `fe/src/config/menuConfig.ts` — each item has optional `requiredPermission` field
+
+### ⚠️ Critical: Backend Must Use `getAllPermissions()`
+
+The API (`AuthController`) must use `$user->getAllPermissions()->pluck('name')->toArray()` — **not** `getPermissionNames()`.
+
+`getPermissionNames()` returns direct permissions only → empty for role-based users → all menu hidden.
+`getAllPermissions()` returns direct + via-role permissions → correct 6/11/24/32 items per role.
 
 **Role permissions from seeder** (`RolePermissionSeeder.php`):
 | Role | Permissions |

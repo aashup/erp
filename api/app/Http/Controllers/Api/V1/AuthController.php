@@ -38,7 +38,7 @@ class AuthController extends Controller
             $user->assignRole('admin');
 
             $token = $user->createToken($request->input('device_name', 'default'))->plainTextToken;
-            $permissions = $user->getPermissionNames()->toArray();
+            $permissions = $user->getAllPermissions()->pluck('name')->toArray();
 
             return compact('company', 'user', 'token', 'permissions');
         });
@@ -72,10 +72,7 @@ class AuthController extends Controller
             'message' => 'Login successful',
             'data' => [
                 'user' => $user,
-                'permissions' => $user->getPermissionsViaRoles()
-                    ->pluck('name')
-                    ->merge($user->getDirectPermissions()->pluck('name'))
-                    ->unique(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
                 'token' => $token,
             ],
         ]);
@@ -87,7 +84,7 @@ class AuthController extends Controller
 
         return response()->json([
             'data' => $user,
-            'permissions' => $user->getPermissionNames()->toArray(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
         ]);
     }
 
