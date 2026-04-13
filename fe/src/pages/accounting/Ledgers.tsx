@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { ledgersApi, accountingGroupsApi } from '@/api/accounting';
 import type { AccountingGroup, Ledger } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -50,6 +51,10 @@ const defaultValues: LedgerForm = {
 export default function Ledgers() {
   usePageTitle('Ledgers');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('accounting.create');
+  const canEdit = hasPermission('accounting.edit');
+  const canDelete = hasPermission('accounting.delete');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
@@ -211,22 +216,24 @@ export default function Ledgers() {
         <Badge variant={getValue() ? 'info' : 'default'}>{getValue() ? 'System' : 'Manual'}</Badge>
       )
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: { original: Ledger } }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
-            <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          </button>
-          {!row.original.is_system && (
+          {canEdit && (
+            <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+          )}
+          {canDelete && !row.original.is_system && (
             <button onClick={() => handleDelete(row.original)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
               <Trash2 className="h-4 w-4 text-red-500" />
             </button>
           )}
         </div>
       ),
-    },
+    } as ColumnDef<Ledger, unknown>] : []),
   ];
 
   return (
@@ -241,7 +248,7 @@ export default function Ledgers() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Ledger</Button>
+          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Ledger</Button>}
         </div>
       </div>
       <Card>

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { partiesApi } from '@/api/parties';
 import type { Party } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -44,6 +45,10 @@ type PartyForm = z.infer<typeof schema>;
 export default function Parties() {
   usePageTitle('Parties');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('party.create');
+  const canEdit = hasPermission('party.edit');
+  const canDelete = hasPermission('party.delete');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -194,15 +199,15 @@ export default function Parties() {
         return v ? formatCurrency(v) : '—';
       },
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions', header: '',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: { original: Party } }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>
-          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>
+          {canEdit && <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
+          {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
         </div>
       ),
-    },
+    } as ColumnDef<Party, unknown>] : []),
   ];
 
   return (
@@ -217,7 +222,7 @@ export default function Parties() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Party</Button>
+          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Party</Button>}
         </div>
       </div>
       <Card>

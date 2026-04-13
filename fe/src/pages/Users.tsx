@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { usersApi } from '@/api/users';
 import api from '@/lib/axios';
 import type { User, Branch, PaginatedResponse } from '@/types';
@@ -47,6 +48,10 @@ const roleColors: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
 export default function Users() {
   usePageTitle('Users');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('user.create');
+  const canEdit = hasPermission('user.edit');
+  const canDelete = hasPermission('user.delete');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -196,16 +201,16 @@ export default function Users() {
       ),
       cell: ({ row }) => <Badge variant={row.original.is_active ? 'success' : 'warning'}>{row.original.is_active ? 'Active' : 'Inactive'}</Badge>,
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: { original: User } }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>
-          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>
+          {canEdit && <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
+          {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
         </div>
       ),
-    },
+    } as ColumnDef<User, unknown>] : []),
   ];
 
   return (
@@ -220,7 +225,7 @@ export default function Users() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add User</Button>
+          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add User</Button>}
         </div>
       </div>
       <Card>

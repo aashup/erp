@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { paymentReceiptsApi } from '@/api/accounting';
 import { partiesApi } from '@/api/parties';
 import type { PaymentReceipt } from '@/types';
@@ -37,6 +38,10 @@ type PaymentForm = z.infer<typeof schema>;
 export default function Payments() {
   usePageTitle('Payments');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('accounting.create');
+  const canEdit = hasPermission('accounting.edit');
+  const canDelete = hasPermission('accounting.delete');
   const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -110,32 +115,38 @@ export default function Payments() {
     { accessorKey: 'amount', header: 'Amount', cell: ({ getValue }) => formatCurrency(getValue() as number) },
     { accessorKey: 'payment_mode', header: 'Mode', cell: ({ getValue }) => <Badge>{(getValue() as string).toUpperCase()}</Badge> },
     { accessorKey: 'reference_number', header: 'Reference' },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: { original: PaymentReceipt } }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
-            <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          </button>
-          <button
-            onClick={() => { if (confirm('Delete this record?')) deleteMutation.mutate(row.original.id); }}
-            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </button>
+          {canEdit && (
+            <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => { if (confirm('Delete this record?')) deleteMutation.mutate(row.original.id); }}
+              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </button>
+          )}
         </div>
       ),
-    },
+    } as ColumnDef<PaymentReceipt, unknown>] : []),
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payments & Receipts</h1>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" /> New Payment/Receipt
-        </Button>
+        {canCreate && (
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" /> New Payment/Receipt
+          </Button>
+        )}
       </div>
       <Card>
         <CardHeader>

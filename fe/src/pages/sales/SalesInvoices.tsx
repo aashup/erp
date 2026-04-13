@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { salesInvoicesApi } from '@/api/sales';
 import { partiesApi } from '@/api/parties';
 import { companySettingsApi } from '@/api/settings';
@@ -345,6 +346,10 @@ export default function SalesInvoices() {
   usePageTitle('Sales Invoices');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('sales.create');
+  const canEdit = hasPermission('sales.edit');
+  const canDelete = hasPermission('sales.delete');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -712,27 +717,27 @@ export default function SalesInvoices() {
                 Print to Thermal
               </span>
             </div>
-            {isDraft && (
-              <>
-                <button
-                  onClick={() => navigate(`/sales/invoices/${row.original.id}/edit`)}
-                  className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  title="Edit"
-                >
-                  <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Delete this invoice?')) {
-                      deleteMutation.mutate(row.original.id);
-                    }
-                  }}
-                  className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </button>
-              </>
+            {isDraft && canEdit && (
+              <button
+                onClick={() => navigate(`/sales/invoices/${row.original.id}/edit`)}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            )}
+            {isDraft && canDelete && (
+              <button
+                onClick={() => {
+                  if (confirm('Delete this invoice?')) {
+                    deleteMutation.mutate(row.original.id);
+                  }
+                }}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </button>
             )}
             <button
               onClick={() => setReceiptInvoice(row.original)}
@@ -760,9 +765,11 @@ export default function SalesInvoices() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={() => navigate('/sales/invoices/new')}>
-            <Plus className="mr-2 h-4 w-4" /> New Invoice
-          </Button>
+          {canCreate && (
+            <Button onClick={() => navigate('/sales/invoices/new')}>
+              <Plus className="mr-2 h-4 w-4" /> New Invoice
+            </Button>
+          )}
         </div>
       </div>
 

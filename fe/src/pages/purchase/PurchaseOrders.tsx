@@ -6,6 +6,7 @@ import { z } from 'zod';
 import toast from 'react-hot-toast';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { purchaseOrdersApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
 import { itemsApi } from '@/api/inventory';
@@ -71,6 +72,10 @@ const statusLabels: Record<string, string> = {
 export default function PurchaseOrders() {
   usePageTitle('Purchase Orders');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('purchase.create');
+  const canEdit = hasPermission('purchase.edit');
+  const canDelete = hasPermission('purchase.delete');
   const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -344,19 +349,19 @@ export default function PurchaseOrders() {
         );
       },
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions',
       header: '',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: { original: PurchaseOrder } }) => {
         const isDraft = row.original.status === 'draft';
         return (
           <div className="flex items-center gap-1">
-            {isDraft && (
+            {isDraft && canEdit && (
               <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
                 <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             )}
-            {isDraft && (
+            {isDraft && canDelete && (
               <button
                 onClick={() => { if (confirm('Delete this PO?')) deleteMutation.mutate(row.original.id); }}
                 className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -367,7 +372,7 @@ export default function PurchaseOrders() {
           </div>
         );
       },
-    },
+    } as ColumnDef<PurchaseOrder, unknown>] : []),
   ];
 
   return (
@@ -382,7 +387,7 @@ export default function PurchaseOrders() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New PO</Button>
+          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New PO</Button>}
         </div>
       </div>
       <Card>

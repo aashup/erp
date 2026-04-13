@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { stockLedgerApi, godownsApi, itemsApi } from '@/api/inventory';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,8 @@ const emptyRow = (): OpeningRow => ({ item_id: '', godown_id: '', quantity: '', 
 export default function OpeningStock() {
   usePageTitle('Opening Stock');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('inventory.create');
   const [rows, setRows] = useState<OpeningRow[]>([emptyRow()]);
   const [saving, setSaving] = useState(false);
 
@@ -90,9 +93,11 @@ export default function OpeningStock() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Enter Opening Stock</h2>
-            <Button variant="secondary" size="sm" onClick={addRow}>
-              <Plus className="mr-1 h-3 w-3" /> Add Row
-            </Button>
+            {canCreate && (
+              <Button variant="secondary" size="sm" onClick={addRow}>
+                <Plus className="mr-1 h-3 w-3" /> Add Row
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -134,9 +139,11 @@ export default function OpeningStock() {
               </div>
             ))}
           </div>
-          <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
-            <Button onClick={handleSaveAll} loading={saving}>Save All</Button>
-          </div>
+          {canCreate && (
+            <div className="flex justify-end pt-4 mt-4 border-t dark:border-gray-700">
+              <Button onClick={handleSaveAll} loading={saving}>Save All</Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

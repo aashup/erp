@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { purchaseInvoicesApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
@@ -331,6 +332,10 @@ export default function PurchaseInvoices() {
   usePageTitle('Purchase Invoices');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('purchase.create');
+  const canEdit = hasPermission('purchase.edit');
+  const canDelete = hasPermission('purchase.delete');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -494,16 +499,20 @@ export default function PurchaseInvoices() {
         const inv = row.original;
         return (
           <div className="flex items-center gap-1">
-            <button onClick={() => navigate(`/purchase/invoices/${inv.id}/edit`)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700" title="Edit">
-              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            </button>
-            <button
-              onClick={() => { if (confirm('Delete this invoice?')) deleteMutation.mutate(inv.id); }}
-              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4 text-red-500" />
-            </button>
+            {canEdit && (
+              <button onClick={() => navigate(`/purchase/invoices/${inv.id}/edit`)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700" title="Edit">
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={() => { if (confirm('Delete this invoice?')) deleteMutation.mutate(inv.id); }}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </button>
+            )}
             <button
               onClick={() => setPaymentInvoice(inv)}
               className="rounded p-1 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -530,7 +539,7 @@ export default function PurchaseInvoices() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={() => navigate('/purchase/invoices/new')}><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>
+          {canCreate && <Button onClick={() => navigate('/purchase/invoices/new')}><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>}
         </div>
       </div>
       <Card>

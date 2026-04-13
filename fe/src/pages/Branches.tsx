@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import api from '@/lib/axios';
 import type { Branch, PaginatedResponse, ApiResponse } from '@/types';
 import { INDIAN_STATES } from '@/lib/constants';
@@ -32,6 +33,10 @@ type BranchForm = z.infer<typeof schema>;
 export default function Branches() {
   usePageTitle('Branches');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('branch.create');
+  const canEdit = hasPermission('branch.edit');
+  const canDelete = hasPermission('branch.delete');
   const [showModal, setShowModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [editBranch, setEditBranch] = useState<Branch | null>(null);
@@ -143,15 +148,15 @@ export default function Branches() {
       ),
       cell: ({ getValue }) => <Badge variant={getValue() ? 'success' : 'danger'}>{getValue() ? 'Active' : 'Inactive'}</Badge>,
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions', header: '',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: { original: Branch } }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>
-          <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>
+          {canEdit && <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
+          {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
         </div>
       ),
-    },
+    } as ColumnDef<Branch, unknown>] : []),
   ];
 
   return (
@@ -168,7 +173,7 @@ export default function Branches() {
             </svg>
             Filters
           </button>
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Branch</Button>
+          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Branch</Button>}
         </div>
       </div>
       <Card>

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { vouchersApi, ledgersApi } from '@/api/accounting';
 import type { Voucher } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -46,6 +47,8 @@ type JournalForm = z.infer<typeof journalSchema>;
 export default function JournalEntries() {
   usePageTitle('Journal Entries');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('accounting.create');
   const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -199,7 +202,7 @@ export default function JournalEntries() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Journal Entries</h1>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Entry</Button>
+        {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Entry</Button>}
       </div>
       <Card>
         <CardHeader>

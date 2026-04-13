@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { itemGroupsApi } from '@/api/inventory';
 import type { ItemGroup } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -70,9 +71,11 @@ interface RowProps {
   searchTerm: string;
   onEdit: (group: ItemGroup) => void;
   onDelete: (id: string) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-function CollapsibleRow({ node, depth, expandedSet, toggleExpand, searchTerm, onEdit, onDelete }: RowProps) {
+function CollapsibleRow({ node, depth, expandedSet, toggleExpand, searchTerm, onEdit, onDelete, canEdit, canDelete }: RowProps) {
   const { group, children } = node;
   const isGroup = children.length > 0;
   const isExpanded = expandedSet.has(group.id);
@@ -127,23 +130,27 @@ function CollapsibleRow({ node, depth, expandedSet, toggleExpand, searchTerm, on
 
         <td className="px-4 py-2.5 text-right">
           <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit(group); }}
-              className="rounded p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
-              title="Edit"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm(`Delete "${group.name}"?`)) onDelete(group.id);
-              }}
-              className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
-              title="Delete"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            {canEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(group); }}
+                className="rounded p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
+                title="Edit"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Delete "${group.name}"?`)) onDelete(group.id);
+                }}
+                className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </td>
       </tr>
@@ -159,6 +166,8 @@ function CollapsibleRow({ node, depth, expandedSet, toggleExpand, searchTerm, on
             searchTerm={searchTerm}
             onEdit={onEdit}
             onDelete={onDelete}
+            canEdit={canEdit}
+            canDelete={canDelete}
           />
         ))}
     </>
@@ -290,6 +299,10 @@ function GroupModal({ open, editGroup, allGroups, onClose, onSave, saving }: Gro
 export default function ItemGroups() {
   usePageTitle('Item Groups');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('inventory.create');
+  const canEdit = hasPermission('inventory.edit');
+  const canDelete = hasPermission('inventory.delete');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
@@ -395,13 +408,15 @@ export default function ItemGroups() {
             <Filter className="h-3.5 w-3.5" />
             Filters
           </button>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add Group
-          </button>
+          {canCreate && (
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Group
+            </button>
+          )}
           <button
             onClick={expandAll}
             className="hidden sm:inline-block rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
@@ -437,9 +452,11 @@ export default function ItemGroups() {
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">
                     Group Name
                   </th>
-                  <th className="w-24 px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
-                    Actions
-                  </th>
+                  {(canEdit || canDelete) && (
+                    <th className="w-24 px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -453,6 +470,8 @@ export default function ItemGroups() {
                     searchTerm={searchTerm}
                     onEdit={openEdit}
                     onDelete={(id) => deleteMutation.mutate(id)}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
                   />
                 ))}
               </tbody>

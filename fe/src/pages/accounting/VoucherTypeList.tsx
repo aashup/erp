@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { usePermissions } from "@/hooks/usePermissions";
 import { vouchersApi, paymentReceiptsApi } from "@/api/accounting";
 import type { Voucher, PaymentReceipt } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -106,6 +107,10 @@ export default function VoucherTypeList() {
   const { type } = useParams<{ type: VoucherTab }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('accounting.create');
+  const canEdit = hasPermission('accounting.edit');
+  const canDelete = hasPermission('accounting.delete');
 
   const voucherType = (type ?? "journal") as VoucherTab;
   const config = TYPE_CONFIG[voucherType] ?? TYPE_CONFIG.journal;
@@ -252,25 +257,29 @@ export default function VoucherTypeList() {
           >
             <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </button>
-          <button
-            onClick={() =>
-              navigate(`/accounting/vouchers/${voucherType}/new`, {
-                state: { edit: row.original },
-              })
-            }
-            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          </button>
-          <button
-            onClick={() => {
-              if (confirm("Delete this record?"))
-                paymentDeleteMutation.mutate(row.original.id);
-            }}
-            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </button>
+          {canEdit && (
+            <button
+              onClick={() =>
+                navigate(`/accounting/vouchers/${voucherType}/new`, {
+                  state: { edit: row.original },
+                })
+              }
+              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => {
+                if (confirm("Delete this record?"))
+                  paymentDeleteMutation.mutate(row.original.id);
+              }}
+              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -335,13 +344,15 @@ export default function VoucherTypeList() {
                 <Filter className="h-4 w-4" />
                 Filters{hasFilter ? " (1)" : ""}
               </button>
-              <Button
-                onClick={() =>
-                  navigate(`/accounting/vouchers/${voucherType}/new`)
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" /> New {config.label}
-              </Button>
+              {canCreate && (
+                <Button
+                  onClick={() =>
+                    navigate(`/accounting/vouchers/${voucherType}/new`)
+                  }
+                >
+                  <Plus className="mr-2 h-4 w-4" /> New {config.label}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>

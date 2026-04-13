@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { accountingGroupsApi } from '@/api/accounting';
 import type { AccountingGroup, Ledger } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -169,6 +170,8 @@ interface RowProps {
   searchTerm: string;
   onEdit: (account: AccountingGroup) => void;
   onDelete: (id: string) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 function CollapsibleRow({
@@ -180,6 +183,8 @@ function CollapsibleRow({
   searchTerm,
   onEdit,
   onDelete,
+  canEdit,
+  canDelete,
 }: RowProps) {
   const { account, children, ledgers } = node;
   const isGroup = children.length > 0 || ledgers.length > 0;
@@ -252,14 +257,16 @@ function CollapsibleRow({
         {/* Actions */}
         <td className="px-4 py-2.5 text-right">
           <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit(account); }}
-              className="rounded p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
-              title="Edit"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            {!account.is_system && (
+            {canEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(account); }}
+                className="rounded p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
+                title="Edit"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {canDelete && !account.is_system && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -289,6 +296,8 @@ function CollapsibleRow({
               searchTerm={searchTerm}
               onEdit={onEdit}
               onDelete={onDelete}
+              canEdit={canEdit}
+              canDelete={canDelete}
             />
           ))}
           {ledgers.map((ledger) => (
@@ -716,6 +725,10 @@ function CreateModal({ open, allAccounts, onClose, onSave, saving }: CreateModal
 export default function AccountingGroups() {
   usePageTitle('Accounting Groups');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('accounting.create');
+  const canEdit = hasPermission('accounting.edit');
+  const canDelete = hasPermission('accounting.delete');
 
   // Filter state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -856,13 +869,15 @@ export default function AccountingGroups() {
               className="w-48 rounded-lg border border-gray-300 bg-white py-1.5 pl-9 pr-3 text-xs text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
             />
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add Group
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Group
+            </button>
+          )}
           <button
             onClick={() => expandAll(treeByType)}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
@@ -953,9 +968,11 @@ export default function AccountingGroups() {
                   <th className="w-28 px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">
                     Nature
                   </th>
-                  <th className="w-24 px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
-                    Actions
-                  </th>
+                  {(canEdit || canDelete) && (
+                    <th className="w-24 px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -992,6 +1009,8 @@ export default function AccountingGroups() {
                           searchTerm={searchTerm}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
+                          canEdit={canEdit}
+                          canDelete={canDelete}
                         />
                       ))}
                     </Fragment>

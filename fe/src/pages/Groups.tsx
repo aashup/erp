@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { rolesApi } from '@/api/roles';
 import type { Role, Permission } from '@/types';
 import { Card } from '@/components/ui/Card';
@@ -28,6 +29,10 @@ const SYSTEM_ROLES = ['admin', 'manager', 'accountant', 'salesman'];
 export default function Groups() {
   usePageTitle('Groups');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('role.create');
+  const canEdit = hasPermission('role.edit');
+  const canDelete = hasPermission('role.delete');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -134,17 +139,19 @@ export default function Groups() {
         return <span className="text-sm text-gray-600 dark:text-gray-400">{count} permission{count !== 1 ? 's' : ''}</span>;
       },
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions',
       header: '',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: { original: Role } }) => {
         const isSystem = SYSTEM_ROLES.includes(row.original.name);
         return (
           <div className="flex items-center gap-1">
-            <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
-              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            </button>
-            {!isSystem && (
+            {canEdit && (
+              <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            )}
+            {canDelete && !isSystem && (
               <button
                 onClick={() => { if (confirm('Delete this role?')) deleteMutation.mutate(row.original.uuid); }}
                 className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -155,7 +162,7 @@ export default function Groups() {
           </div>
         );
       },
-    },
+    } as ColumnDef<Role, unknown>] : []),
   ];
 
   // API returns already-grouped object: { module: Permission[] }
@@ -182,7 +189,7 @@ export default function Groups() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Role</Button>
+          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Role</Button>}
         </div>
       </div>
 

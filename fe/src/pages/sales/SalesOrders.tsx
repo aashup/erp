@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { salesOrdersApi } from '@/api/sales';
 import { partiesApi } from '@/api/parties';
 import { itemsApi } from '@/api/inventory';
@@ -70,6 +71,10 @@ const allowedTransitions: Record<string, string[]> = {
 export default function SalesOrders() {
   usePageTitle('Sales Orders');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('sales.create');
+  const canEdit = hasPermission('sales.edit');
+  const canDelete = hasPermission('sales.delete');
   const { selectedDate } = useDateStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -337,30 +342,30 @@ export default function SalesOrders() {
         );
       },
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions',
       header: '',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: { original: SalesOrder } }) => {
         const isDraft = row.original.status === 'draft';
         return (
           <div className="flex items-center gap-1">
-            {isDraft && (
-              <>
-                <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
-                  <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                </button>
-                <button
-                  onClick={() => { if (confirm('Delete this SO?')) deleteMutation.mutate(row.original.id); }}
-                  className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </button>
-              </>
+            {isDraft && canEdit && (
+              <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            )}
+            {isDraft && canDelete && (
+              <button
+                onClick={() => { if (confirm('Delete this SO?')) deleteMutation.mutate(row.original.id); }}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </button>
             )}
           </div>
         );
       },
-    },
+    } as ColumnDef<SalesOrder, unknown>] : []),
   ];
 
   return (
@@ -375,7 +380,7 @@ export default function SalesOrders() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New SO</Button>
+          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New SO</Button>}
         </div>
       </div>
       <Card>

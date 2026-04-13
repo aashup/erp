@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { usePermissions } from '@/hooks/usePermissions';
 import { itemsApi, itemGroupsApi, unitsApi } from '@/api/inventory';
 import type { Item, ItemGroup, Unit } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -40,6 +41,10 @@ type ItemForm = z.infer<typeof itemSchema>;
 export default function Items() {
   usePageTitle('Items');
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('inventory.create');
+  const canEdit = hasPermission('inventory.edit');
+  const canDelete = hasPermission('inventory.delete');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [skuFilter, setSkuFilter] = useState('');
@@ -355,25 +360,29 @@ export default function Items() {
         </Badge>
       ),
     },
-    {
+    ...(canEdit || canDelete ? [{
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: { original: Item } }) => (
         <div className="flex items-center gap-1">
-          <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
-            <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          </button>
-          <button
-            onClick={() => {
-              if (confirm('Delete this item?')) deleteMutation.mutate(row.original.id);
-            }}
-            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </button>
+          {canEdit && (
+            <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => {
+                if (confirm('Delete this item?')) deleteMutation.mutate(row.original.id);
+              }}
+              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </button>
+          )}
         </div>
       ),
-    },
+    } as ColumnDef<Item, unknown>] : []),
   ];
 
   return (
@@ -388,14 +397,16 @@ export default function Items() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          <div className="flex flex-col items-end gap-1">
-            <Button onClick={openCreate} disabled={isUnitsLoading || unitOptions.length === 0}>
-              <Plus className="mr-2 h-4 w-4" /> Add Item
-            </Button>
-            {!isUnitsLoading && unitOptions.length === 0 && (
-              <span className="text-xs text-red-500">Configure units in Settings first</span>
-            )}
-          </div>
+          {canCreate && (
+            <div className="flex flex-col items-end gap-1">
+              <Button onClick={openCreate} disabled={isUnitsLoading || unitOptions.length === 0}>
+                <Plus className="mr-2 h-4 w-4" /> Add Item
+              </Button>
+              {!isUnitsLoading && unitOptions.length === 0 && (
+                <span className="text-xs text-red-500">Configure units in Settings first</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
