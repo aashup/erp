@@ -20,7 +20,8 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, CreditCard, TrendingDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, CreditCard, TrendingDown, Upload } from 'lucide-react';
+import { OcrUploadDialog } from './OcrUploadDialog';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import toast from 'react-hot-toast';
 import { useDateStore } from '@/store/dateStore';
@@ -336,6 +337,7 @@ export default function PurchaseInvoices() {
   const canCreate = hasPermission('purchase.create');
   const canEdit = hasPermission('purchase.edit');
   const canDelete = hasPermission('purchase.delete');
+  const [showOcrUpload, setShowOcrUpload] = useState(false);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -539,6 +541,11 @@ export default function PurchaseInvoices() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
+          {canCreate && (
+            <Button variant="secondary" onClick={() => setShowOcrUpload(true)}>
+              <Upload className="mr-2 h-4 w-4" /> Import from Image
+            </Button>
+          )}
           {canCreate && <Button onClick={() => navigate('/purchase/invoices/new')}><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>}
         </div>
       </div>
@@ -670,6 +677,12 @@ export default function PurchaseInvoices() {
           Clear All Filters
         </button>
       </FilterPanel>
+
+      {/* OCR Upload Dialog */}
+      <OcrUploadDialog
+        open={showOcrUpload}
+        onClose={() => setShowOcrUpload(false)}
+      />
 
       {/* Make Payment Modal */}
       {paymentInvoice && (

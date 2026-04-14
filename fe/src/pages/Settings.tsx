@@ -19,6 +19,7 @@ import {
   Pencil,
   Database,
   Lock,
+  Bot,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -41,6 +42,14 @@ const profileSchema = z.object({
   phone: z.string().optional(),
 });
 
+const ocrSchema = z.object({
+  ocr_provider: z.string().default("openai"),
+  ocr_api_key: z.string().min(1, "API key is required"),
+  ocr_model: z.string().default("gpt-4o"),
+});
+
+type OcrForm = z.infer<typeof ocrSchema>;
+
 const passwordSchema = z
   .object({
     current_password: z.string().min(1, "Current password is required"),
@@ -55,6 +64,7 @@ const passwordSchema = z
 type CompanyForm = z.infer<typeof companySchema>;
 type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
+
 export default function Settings() {
   usePageTitle("Settings");
   const { user, updateUser } = useAuthStore();
@@ -62,6 +72,7 @@ export default function Settings() {
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
   const { data: companySettings } = useQuery({
@@ -134,6 +145,41 @@ export default function Settings() {
       setTimeout(() => setSuccessMsg(""), 3000);
     },
   });
+
+  // OCR / AI settings form
+  const ocrForm = useForm<OcrForm>({
+    resolver: zodResolver(ocrSchema),
+  });
+  const ocrMutation = useMutation({
+    mutationFn: (data: OcrForm) =>
+      companySettingsApi.update({
+        ocr_provider: data.ocr_provider,
+        ocr_api_key: data.ocr_api_key,
+        ocr_model: data.ocr_model,
+      }),
+    onSuccess: (res) => {
+      // Directly set the cache with the fresh response so the card
+      // reflects the new values instantly (no extra network round-trip)
+      queryClient.setQueryData(["company-settings"], res);
+      setShowOcrModal(false);
+      toast.success("AI / OCR settings saved");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to save OCR settings");
+    },
+  });
+
+  const openOcrEdit = () => {
+    ocrForm.reset({
+      ocr_provider: (companySettings?.ocr_provider as string) ?? "openai",
+      ocr_api_key: (companySettings?.ocr_api_key as string) ?? "",
+      ocr_model: (companySettings?.ocr_model as string) ?? "gpt-4o",
+    });
+    setShowOcrModal(true);
+  };
+
+  const ocrApiKey = (companySettings?.ocr_api_key as string) ?? "";
+  const ocrModel = (companySettings?.ocr_model as string) ?? "";
 
   const openCompanyEdit = () => {
     companyForm.reset({
@@ -349,6 +395,56 @@ export default function Settings() {
             )}
           </CardContent>
         </Card>
+
+        {/* AI / OCR Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bot className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <h3 className="text-lg font-semibold">AI / OCR Settings</h3>
+              </div>
+              <button
+                onClick={openOcrEdit}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+              Configure your AI provider API key to enable scanning purchase
+              invoices from photos.
+            </p>
+            <dl className="space-y-3">
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-500">Provider</dt>
+                <dd>
+                  <Badge variant="info">OpenAI</Badge>
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-500">API Key</dt>
+                <dd className="text-sm font-medium">
+                  {ocrApiKey ? (
+                    <span className="font-mono tracking-widest">••••••••</span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Not configured
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-500">Model</dt>
+                <dd className="text-sm font-medium">
+                  {ocrModel || <span className="text-gray-400">—</span>}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Company Edit Modal */}
@@ -460,6 +556,67 @@ export default function Settings() {
               Cancel
             </Button>
             <Button type="submit" loading={profileMutation.isPending}>
+              Save
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* AI / OCR Settings Modal */}
+      <Modal
+        open={showOcrModal}
+        onClose={() => setShowOcrModal(false)}
+        title="AI / OCR Settings"
+      >
+        <form
+          onSubmit={ocrForm.handleSubmit((d) => ocrMutation.mutate(d))}
+          className="space-y-4"
+        >
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Provider
+            </label>
+            <select
+              {...ocrForm.register("ocr_provider")}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+          <div>
+            <Input
+              id="ocr_api_key"
+              label="API Key"
+              type="password"
+              placeholder="sk-..."
+              error={ocrForm.formState.errors.ocr_api_key?.message}
+              {...ocrForm.register("ocr_api_key")}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Stored per-company and visible only to admins. Never exposed in API responses.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Model
+            </label>
+            <select
+              {...ocrForm.register("ocr_model")}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="gpt-4o">gpt-4o (Recommended)</option>
+              <option value="gpt-4-vision-preview">gpt-4-vision-preview</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowOcrModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={ocrMutation.isPending}>
               Save
             </Button>
           </div>

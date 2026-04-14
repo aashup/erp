@@ -15,6 +15,12 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  // When sending FormData (file upload), remove the hardcoded Content-Type so
+  // axios can set it automatically with the correct multipart/form-data boundary.
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+
   // Auto-attach financial_year_id to all GET requests
   if (config.method === 'get' || !config.method) {
     const storedFY = localStorage.getItem('selectedFY');

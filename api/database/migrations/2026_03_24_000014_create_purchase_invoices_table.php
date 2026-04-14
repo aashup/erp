@@ -69,10 +69,26 @@ return new class extends Migration
             $table->timestamp('updated_at_local')->useCurrent();
             $table->timestamps();
         });
+
+        // OCR invoice scan audit log (server-only, no sync columns)
+        Schema::create('ocr_invoice_logs', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->string('image_path');
+            $table->string('provider')->default('openai');
+            $table->string('model')->default('gpt-4o');
+            $table->json('raw_response')->nullable();
+            $table->json('extracted_data')->nullable();
+            $table->enum('status', ['success', 'partial', 'failed'])->default('failed');
+            $table->text('error_message')->nullable();
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('ocr_invoice_logs');
         Schema::dropIfExists('purchase_invoice_lines');
         Schema::dropIfExists('purchase_invoices');
     }

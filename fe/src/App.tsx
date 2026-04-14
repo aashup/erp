@@ -28,6 +28,7 @@ import Groups from '@/pages/Groups';
 import PurchaseOrders from '@/pages/purchase/PurchaseOrders';
 import PurchaseInvoices from '@/pages/purchase/PurchaseInvoices';
 import PurchaseInvoiceFormPage from '@/pages/purchase/PurchaseInvoiceFormPage';
+import OcrReviewPage from '@/pages/purchase/OcrReviewPage';
 import SalesOrders from '@/pages/sales/SalesOrders';
 import SalesInvoices from '@/pages/sales/SalesInvoices';
 import SalesInvoiceFormPage from '@/pages/sales/SalesInvoiceFormPage';
@@ -133,6 +134,7 @@ export default function App() {
             <Route path="/purchase/orders" element={<PurchaseOrders />} />
             <Route path="/purchase/invoices" element={<PurchaseInvoices />} />
             <Route path="/purchase/invoices/new" element={<PurchaseInvoiceFormPage />} />
+            <Route path="/purchase/invoices/ocr-review" element={<OcrReviewPage />} />
             <Route path="/purchase/invoices/:invoiceId/edit" element={<PurchaseInvoiceFormPage />} />
 
             {/* Sales */}

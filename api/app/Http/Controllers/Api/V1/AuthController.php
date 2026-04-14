@@ -101,4 +101,43 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'All sessions terminated']);
     }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $request->user()->id,
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $user = $request->user();
+        $user->update($request->only('name', 'email', 'phone'));
+        $user->load('company', 'branch');
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'data'    => $user,
+        ]);
+    }
+
+    public function updatePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password'      => 'required|string',
+            'password'              => 'required|string|min:8|confirmed',
+            'password_confirmation' => 'required|string',
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        return response()->json(['message' => 'Password changed successfully']);
+    }
 }

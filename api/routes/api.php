@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\ItemGroupController;
 use App\Http\Controllers\Api\V1\LedgerController;
 use App\Http\Controllers\Api\V1\PartyController;
 use App\Http\Controllers\Api\V1\PaymentReceiptController;
+use App\Http\Controllers\Api\V1\OcrInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -50,6 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Auth
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/auth/password', [AuthController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
 
@@ -95,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
+    Route::post('ocr/scan-invoice', [OcrInvoiceController::class, 'scan']);
 
     // Sales
     Route::patch('sales-orders/{sales_order}/status', [SalesOrderController::class, 'updateStatus']);
