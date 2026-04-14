@@ -91,6 +91,36 @@ Targets: retailers, wholesalers, pharma distributors, kirana stores.
 
 ---
 
+## Implemented Features Reference
+
+### Batch & Expiry Tracking (Inventory)
+
+**Backend** — fully implemented, no changes needed:
+- `items.is_batch_tracked` (boolean, default false) — marks an item as batch-tracked
+- `batches` table: `batch_number`, `manufacturing_date`, `expiry_date`, `purchase_price`, `selling_price`, `current_stock` (computed)
+- `BatchController`: CRUD + `expiring()` endpoint (`GET /batches/expiring?days=30`)
+- `StockLedger` has optional `batch_id` FK — all stock operations (opening, adjustment, transfer) support batch tracking
+
+**Frontend** — implemented:
+- `Items.tsx`: "Track batches & expiry" checkbox shows a blue info callout when checked; items with batch tracking show a **Batch** badge and a **PackageOpen** icon button in the Actions column
+- `ItemBatches.tsx` (`/inventory/items/:itemId/batches`): Full batch management page — list, add, edit, delete batches; expiry status badges (Expired/Expiring Soon/OK/No Expiry); alert banners for expired/expiring batches
+- `PurchaseInvoiceFormPage.tsx`: When a line item has `is_batch_tracked = true`, a blue batch selection row appears under the line — fetches & shows available batches via `batchesApi.list(itemId)`; guides user to create batches first if none exist; sends `batch_id` to backend on submit
+- `batchesApi` in `fe/src/api/inventory.ts`: `list(itemId)`, `create(itemId, data)`, `update(batchId, data)`, `delete(batchId)`, `expiring(params)`
+- Route added in `App.tsx`: `/inventory/items/:itemId/batches`
+
+**Workflow for batch-tracked purchase:**
+1. Create item with "Track batches & expiry" enabled
+2. Go to Items → Batches → Add batch (batch no, mfg date, expiry date)
+3. Create purchase invoice → select the batch-tracked item → a batch selection row appears → select the batch → save
+
+**Expiry status logic** (frontend, `ItemBatches.tsx`):
+- Red `Expired`: `expiry_date < today`
+- Orange `Expiring Soon`: within next 30 days
+- Green `OK`: more than 30 days away
+- Grey `No Expiry`: `expiry_date` is null
+
+---
+
 ## Phase 1 Modules (Months 1–4)
 
 ### 1. Auth & Multi-user

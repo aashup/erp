@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +18,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, PackageOpen, Info } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const itemSchema = z.object({
@@ -40,6 +41,7 @@ type ItemForm = z.infer<typeof itemSchema>;
 
 export default function Items() {
   usePageTitle('Items');
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission('inventory.create');
@@ -124,6 +126,7 @@ export default function Items() {
   });
 
   const igstValue = watch('igst');
+  const isBatchTracked = watch('is_batch_tracked');
 
   // Auto-calculate SGST and CGST from IGST
   useEffect(() => {
@@ -225,7 +228,14 @@ export default function Items() {
           {renderSortIcon('name')}
         </button>
       ),
-      accessorKey: 'name',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <span>{row.original.name}</span>
+          {row.original.is_batch_tracked && (
+            <Badge variant="info">Batch</Badge>
+          )}
+        </div>
+      ),
     },
     {
       id: 'sku',
@@ -360,11 +370,20 @@ export default function Items() {
         </Badge>
       ),
     },
-    ...(canEdit || canDelete ? [{
+    {
       id: 'actions',
       header: '',
       cell: ({ row }: { row: { original: Item } }) => (
         <div className="flex items-center gap-1">
+          {row.original.is_batch_tracked && (
+            <button
+              onClick={() => navigate(`/inventory/items/${row.original.id}/batches`)}
+              className="rounded p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+              title="Manage Batches"
+            >
+              <PackageOpen className="h-4 w-4 text-blue-500" />
+            </button>
+          )}
           {canEdit && (
             <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
               <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -382,7 +401,7 @@ export default function Items() {
           )}
         </div>
       ),
-    } as ColumnDef<Item, unknown>] : []),
+    } as ColumnDef<Item, unknown>,
   ];
 
   return (
@@ -475,6 +494,28 @@ export default function Items() {
             <input type="checkbox" id="is_batch_tracked" {...register('is_batch_tracked')} className="rounded" />
             <label htmlFor="is_batch_tracked" className="text-sm text-gray-700 dark:text-gray-300">Track batches & expiry</label>
           </div>
+          {isBatchTracked && (
+            <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+              <div className="text-sm text-blue-800 dark:text-blue-300">
+                <p className="font-medium">Batch tracking enabled</p>
+                <p className="mt-0.5 text-blue-700 dark:text-blue-400">
+                  During stock entries (purchase, opening stock, adjustments) you'll be required to specify:
+                </p>
+                <ul className="mt-1 list-inside list-disc space-y-0.5 text-blue-700 dark:text-blue-400">
+                  <li>Batch Number</li>
+                  <li>Manufacturing Date</li>
+                  <li>Expiry Date</li>
+                  <li>Batch-specific pricing (optional)</li>
+                </ul>
+                {editItem && (
+                  <p className="mt-2 text-blue-600 dark:text-blue-400">
+                    After saving, use the <strong>Batches</strong> button in the items list to add and manage batches.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button

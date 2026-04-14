@@ -84,6 +84,9 @@ export const stockLedgerApi = {
 };
 
 export const batchesApi = {
+  listAll: (params?: Record<string, string>) =>
+    api.get<ApiResponse<Batch[]>>('/batches', { params }),
+
   list: (itemId: string) =>
     api.get<ApiResponse<Batch[]>>(`/items/${itemId}/batches`),
 

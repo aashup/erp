@@ -81,6 +81,27 @@ class BatchController extends Controller
         return response()->json(['message' => 'Batch deleted']);
     }
 
+    public function allBatches(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Item::class);
+
+        $batches = Batch::with('item:id,name,sku,unit')
+            ->whereHas('item', fn ($q) => $q->where('company_id', $request->user()->company_id))
+            ->orderBy('expiry_date')
+            ->get();
+
+        $stockByBatch = StockLedger::whereIn('batch_id', $batches->pluck('id'))
+            ->groupBy('batch_id')
+            ->select('batch_id', DB::raw('SUM(quantity) as current_stock'))
+            ->pluck('current_stock', 'batch_id');
+
+        $batches->each(function ($batch) use ($stockByBatch) {
+            $batch->current_stock = (float) ($stockByBatch[$batch->id] ?? 0);
+        });
+
+        return response()->json(['data' => $batches]);
+    }
+
     public function expiring(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Item::class);

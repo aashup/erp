@@ -115,6 +115,8 @@ export interface Batch extends SyncColumns {
   expiry_date: string | null;
   purchase_price: number | null;
   selling_price: number | null;
+  current_stock?: number;
+  item?: Item;
 }
 
 export interface Godown extends SyncColumns {

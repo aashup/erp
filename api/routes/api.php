@@ -73,11 +73,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('items/{item}/movements', [StockLedgerController::class, 'itemMovements']);
 
     // Batches
+    Route::get('batches', [BatchController::class, 'allBatches']);
+    Route::get('batches/expiring', [BatchController::class, 'expiring']);
     Route::get('items/{item}/batches', [BatchController::class, 'index']);
     Route::post('items/{item}/batches', [BatchController::class, 'store']);
     Route::put('batches/{batch}', [BatchController::class, 'update']);
     Route::delete('batches/{batch}', [BatchController::class, 'destroy']);
-    Route::get('batches/expiring', [BatchController::class, 'expiring']);
 
     // Parties
     Route::apiResource('parties', PartyController::class);

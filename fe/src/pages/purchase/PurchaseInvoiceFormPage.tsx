@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,18 +9,20 @@ import { useAuthStore } from '@/store/authStore';
 import { useFYStore } from '@/store/fyStore';
 import { useDateStore } from '@/store/dateStore';
 import { partiesApi } from '@/api/parties';
-import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
+import { itemsApi, godownsApi, stockLedgerApi, batchesApi } from '@/api/inventory';
 import { purchaseInvoicesApi } from '@/api/purchase';
-import { formatCurrency, calcGST } from '@/lib/utils';
+import { formatCurrency, calcGST, formatDate } from '@/lib/utils';
+import type { Batch } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
-import { Plus, ArrowLeft, X } from 'lucide-react';
+import { Plus, ArrowLeft, X, PackageOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
+  batch_id: z.string().optional(),
   godown_id: z.string().min(1, 'Godown required'),
   quantity: z.coerce.number().min(1, 'Min 1'),
   rate: z.coerce.number().min(0, 'Rate required'),
@@ -44,6 +46,7 @@ type InvoiceForm = z.infer<typeof invoiceSchema>;
 
 const makeEmptyLine = (defaultGodownId = ''): InvoiceForm['lines'][number] => ({
   item_id: '',
+  batch_id: '',
   godown_id: defaultGodownId,
   quantity: 1,
   rate: 0,
@@ -112,6 +115,16 @@ export default function PurchaseInvoiceFormPage() {
   const isInterState = watch('is_inter_state');
   const company = useAuthStore((state) => state.user?.company);
 
+  // Cache of batches per item_id: { [itemId]: Batch[] }
+  const [batchesCache, setBatchesCache] = useState<Record<string, Batch[]>>({});
+
+  const loadBatches = (itemId: string) => {
+    if (!itemId || batchesCache[itemId] !== undefined) return;
+    batchesApi.list(itemId).then((res) => {
+      setBatchesCache((prev) => ({ ...prev, [itemId]: res.data.data as Batch[] }));
+    });
+  };
+
   useEffect(() => {
     if (isEditMode || !defaultGodownId) {
       return;
@@ -146,12 +159,21 @@ export default function PurchaseInvoiceFormPage() {
       notes: invoiceData.notes ?? '',
       lines: invoiceData.lines?.map((line) => ({
         item_id: line.item_id,
+        batch_id: line.batch_id ?? '',
         godown_id: (line as unknown as { godown_id?: string }).godown_id ?? defaultGodownId,
         quantity: line.quantity,
         rate: line.rate ?? 0,
         discount_percent: line.discount_percent,
         gst_rate: line.gst_rate,
       })) ?? [makeEmptyLine(defaultGodownId)],
+    });
+
+    // Load batches for any batch-tracked items in edit mode
+    invoiceData.lines?.forEach((line) => {
+      const item = itemMap.get(line.item_id);
+      if (item?.is_batch_tracked) {
+        loadBatches(line.item_id);
+      }
     });
   }, [defaultGodownId, invoiceData, navigate, reset]);
 
@@ -257,10 +279,16 @@ export default function PurchaseInvoiceFormPage() {
 
   const handleItemSelect = (index: number, itemId: string) => {
     setValue(`lines.${index}.item_id`, itemId, { shouldDirty: true, shouldValidate: true });
+    setValue(`lines.${index}.batch_id`, '', { shouldDirty: true }); // Clear batch when item changes
 
     const selectedItem = itemMap.get(itemId);
     if (!selectedItem) {
       return;
+    }
+
+    // Load batches for batch-tracked items
+    if (selectedItem.is_batch_tracked) {
+      loadBatches(itemId);
     }
 
     // Autofill rate from purchase_price
@@ -311,6 +339,7 @@ export default function PurchaseInvoiceFormPage() {
       ...formData,
       lines: formData.lines.map((line) => ({
         ...line,
+        batch_id: line.batch_id || null, // send null instead of empty string
         line_total: calcLineTaxable(line),
       })),
     } as Record<string, unknown>;
@@ -415,6 +444,17 @@ export default function PurchaseInvoiceFormPage() {
                   {fields.map((field, index) => {
                     const selectedItemIds = new Set((watchedLines ?? []).filter((_, i) => i !== index).map((l) => l.item_id).filter(Boolean));
                     const filteredItemOptions = itemOptions.filter((o) => !selectedItemIds.has(o.value));
+                    const lineItemId = watchedLines?.[index]?.item_id ?? '';
+                    const lineItem = itemMap.get(lineItemId);
+                    const isBatchTracked = lineItem?.is_batch_tracked ?? false;
+                    const lineBatches = batchesCache[lineItemId] ?? [];
+                    const batchOptions = lineBatches.map((b) => ({
+                      value: b.id,
+                      label: b.batch_number,
+                      subtitle: b.expiry_date ? `Exp: ${formatDate(b.expiry_date)}` : 'No expiry',
+                    }));
+                    const selectedBatchId = watch(`lines.${index}.batch_id`) ?? '';
+                    const selectedBatch = lineBatches.find((b) => b.id === selectedBatchId);
                     return (
                     <div key={field.id} className="space-y-2">
                       <div className="grid grid-cols-12 items-start gap-2">
@@ -464,6 +504,43 @@ export default function PurchaseInvoiceFormPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Batch selection row — only for batch-tracked items */}
+                      {isBatchTracked && (
+                        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-800 dark:bg-blue-900/20">
+                          <PackageOpen className="h-4 w-4 shrink-0 text-blue-500" />
+                          <div className="flex flex-1 items-center gap-3">
+                            <span className="text-xs font-medium text-blue-700 dark:text-blue-400 whitespace-nowrap">Batch:</span>
+                            <div className="w-56">
+                              <SlideSelect
+                                name={`lines.${index}.batch_id`}
+                                placeholder={lineBatches.length ? 'Select batch' : 'No batches — create one first'}
+                                panelTitle="Select Batch"
+                                options={batchOptions}
+                                value={selectedBatchId}
+                                onChange={(val) => setValue(`lines.${index}.batch_id`, val, { shouldDirty: true })}
+                                disabled={lineBatches.length === 0}
+                              />
+                            </div>
+                            {selectedBatch && (
+                              <div className="flex items-center gap-3 text-xs text-blue-700 dark:text-blue-400">
+                                {selectedBatch.expiry_date && (
+                                  <span>Exp: <strong>{formatDate(selectedBatch.expiry_date)}</strong></span>
+                                )}
+                                {selectedBatch.current_stock !== undefined && (
+                                  <span>Stock: <strong>{selectedBatch.current_stock} {lineItem?.unit ?? ''}</strong></span>
+                                )}
+                              </div>
+                            )}
+                            {lineBatches.length === 0 && (
+                              <span className="text-xs text-blue-600 dark:text-blue-400">
+                                Go to Items → Batches to add batches for this item first.
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {getLineGSTInfo(index) && (
                         <div className="text-xs text-gray-600 dark:text-gray-400 pl-1 flex justify-between items-center">
                           <span>{getLineGSTInfo(index)}</span>

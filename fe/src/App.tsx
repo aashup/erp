@@ -19,6 +19,8 @@ import StockTransfer from '@/pages/inventory/StockTransfer';
 import StockAdjustment from '@/pages/inventory/StockAdjustment';
 import OpeningStock from '@/pages/inventory/OpeningStock';
 import ItemMovements from '@/pages/inventory/ItemMovements';
+import ItemBatches from '@/pages/inventory/ItemBatches';
+import AllBatches from '@/pages/inventory/AllBatches';
 import Parties from '@/pages/Parties';
 import Branches from '@/pages/Branches';
 import Users from '@/pages/Users';
@@ -114,6 +116,8 @@ export default function App() {
             <Route path="/inventory/opening-stock" element={<OpeningStock />} />
             <Route path="/inventory/items/:itemId/movements" element={<ItemMovements />} />
             <Route path="/inventory/item-movements" element={<ItemMovements />} />
+            <Route path="/inventory/batches" element={<AllBatches />} />
+            <Route path="/inventory/items/:itemId/batches" element={<ItemBatches />} />
 
             {/* Parties */}
             <Route path="/parties" element={<Parties />} />
