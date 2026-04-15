@@ -13,7 +13,8 @@ type SyncTable =
   | 'salesInvoices'
   | 'vouchers'
   | 'paymentReceipts'
-  | 'accountingGroups';
+  | 'accountingGroups'
+  | 'ledgers';
 
 const tableToApiName: Record<SyncTable, string> = {
   items: 'items',
@@ -28,6 +29,7 @@ const tableToApiName: Record<SyncTable, string> = {
   vouchers: 'vouchers',
   paymentReceipts: 'payment_receipts',
   accountingGroups: 'accounting_groups',
+  ledgers: 'ledgers',
 };
 
 function getLastSyncedAt(): string | null {

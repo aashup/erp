@@ -12,6 +12,7 @@ import type {
   Voucher,
   PaymentReceipt,
   AccountingGroup,
+  Ledger,
 } from '@/types';
 
 class ErpDatabase extends Dexie {
@@ -27,6 +28,7 @@ class ErpDatabase extends Dexie {
   vouchers!: EntityTable<Voucher, 'id'>;
   paymentReceipts!: EntityTable<PaymentReceipt, 'id'>;
   accountingGroups!: EntityTable<AccountingGroup, 'id'>;
+  ledgers!: EntityTable<Ledger, 'id'>;
 
   constructor() {
     super('erpdb');
@@ -44,6 +46,10 @@ class ErpDatabase extends Dexie {
       vouchers: 'id, company_id, voucher_number, voucher_type, sync_status',
       paymentReceipts: 'id, company_id, party_id, receipt_number, sync_status',
       accountingGroups: 'id, company_id, type, code, sync_status',
+    });
+
+    this.version(2).stores({
+      ledgers: 'id, company_id, group_id, name, system_key, sync_status',
     });
   }
 }

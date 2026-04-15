@@ -6,6 +6,9 @@ import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useAuthStore } from '@/store/authStore';
+import { db } from '@/lib/db';
 import { ledgersApi, accountingGroupsApi } from '@/api/accounting';
 import type { AccountingGroup, Ledger } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -18,7 +21,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import toast from 'react-hot-toast';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, WifiOff } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
 const ledgerSchema = z.object({
@@ -52,6 +55,8 @@ export default function Ledgers() {
   usePageTitle('Ledgers');
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const isOnline = useOnlineStatus();
+  const { user } = useAuthStore();
   const canCreate = hasPermission('accounting.create');
   const canEdit = hasPermission('accounting.edit');
   const canDelete = hasPermission('accounting.delete');
@@ -65,8 +70,51 @@ export default function Ledgers() {
   const [editItem, setEditItem] = useState<Ledger | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['ledgers', page, search, groupFilter, sortBy, sortOrder],
-    queryFn: () => ledgersApi.list({ page: String(page), search, ...(groupFilter ? { group_id: groupFilter } : {}), sort_by: sortBy, sort_order: sortOrder }),
+    queryKey: ['ledgers', page, search, groupFilter, sortBy, sortOrder, isOnline],
+    queryFn: async () => {
+      if (!isOnline) {
+        // Offline: read from Dexie IndexedDB
+        let items = await db.ledgers
+          .where('company_id').equals(user!.company_id)
+          .toArray();
+        if (search) {
+          const q = search.toLowerCase();
+          items = items.filter(l =>
+            l.name.toLowerCase().includes(q) || (l.alias ?? '').toLowerCase().includes(q)
+          );
+        }
+        if (groupFilter) {
+          items = items.filter(l => l.group_id === groupFilter);
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        items.sort((a, b) => {
+          const av = String((a as any)[sortBy] ?? '');
+          const bv = String((b as any)[sortBy] ?? '');
+          return sortOrder === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+        return {
+          data: {
+            data: items,
+            current_page: 1,
+            last_page: 1,
+            total: items.length,
+            per_page: items.length,
+          },
+        };
+      }
+      // Online: fetch from API and cache results into Dexie
+      const res = await ledgersApi.list({
+        page: String(page),
+        search,
+        ...(groupFilter ? { group_id: groupFilter } : {}),
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      });
+      for (const ledger of res.data.data) {
+        await db.ledgers.put({ ...ledger, sync_status: 'synced' });
+      }
+      return res;
+    },
     select: (res) => res.data,
   });
 
@@ -222,12 +270,20 @@ export default function Ledgers() {
       cell: ({ row }: { row: { original: Ledger } }) => (
         <div className="flex items-center gap-1">
           {canEdit && (
-            <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button
+              onClick={() => openEdit(row.original)}
+              disabled={!isOnline}
+              className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"
+            >
               <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </button>
           )}
           {canDelete && !row.original.is_system && (
-            <button onClick={() => handleDelete(row.original)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
+            <button
+              onClick={() => handleDelete(row.original)}
+              disabled={!isOnline}
+              className="rounded p-1 hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-900/30"
+            >
               <Trash2 className="h-4 w-4 text-red-500" />
             </button>
           )}
@@ -248,9 +304,20 @@ export default function Ledgers() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Ledger</Button>}
+          {canCreate && (
+            <Button onClick={openCreate} disabled={!isOnline}>
+              <Plus className="mr-2 h-4 w-4" /> New Ledger
+            </Button>
+          )}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You are offline — showing cached ledgers. Create and edit actions are disabled.
+        </div>
+      )}
       <Card>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
         {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}

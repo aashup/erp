@@ -6,7 +6,7 @@ WORKDIR /app
 # gets initialized with the correct Linux/arm64 binaries on first container start.
 # Source code is still live-edited via the ./fe:/app bind mount.
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 EXPOSE 3000
 
