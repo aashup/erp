@@ -299,8 +299,16 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
             onClick={() => setShowDropdown(!showDropdown)}
             className="flex items-center gap-2 rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
-              <User className="h-4 w-4" />
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
+              {user?.profile_image_url ? (
+                <img
+                  src={user.profile_image_url}
+                  alt={user.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-4 w-4" />
+              )}
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{user?.name}</p>

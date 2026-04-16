@@ -10,6 +10,13 @@
 - **Do NOT start dev servers, preview, or run the application** unless the user explicitly asks to check errors or run the application.
 - **Do NOT create new migration files** for schema changes. This is the initial development phase — always modify the existing migration file directly. The database can be refreshed with `php artisan migrate:fresh --seed`.
 
+## MCP Servers (Always Use These)
+
+Two MCP servers are active — **always prefer them** over Bash equivalents:
+
+- **`mcp__filesystem`** — Use for all file operations (read, write, edit, list, search). Prefer over Read/Write/Bash file commands when working with project files.
+- **`mcp__mysql`** — Use `mcp__mysql__mysql_query` for all database inspection, queries, and verification. Never use Bash `mysql` CLI. Use this to check schema, run queries, verify migrations, and debug data issues.
+
 ---
 
 ## Accounting Reference (Tally / Marg ERP Style)

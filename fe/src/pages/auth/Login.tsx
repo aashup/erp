@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
+import { bootstrapAllData } from '@/lib/sync';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -22,6 +23,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const [error, setError] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const {
     register,
@@ -42,12 +44,25 @@ export default function Login() {
         permissions: res.data.data.permissions,
       };
       setAuth(userWithPermissions, res.data.data.token);
+
+      // Bootstrap — download all company data into IndexedDB for offline use
+      setIsSyncing(true);
+      try {
+        await bootstrapAllData();
+      } catch {
+        // Offline on first login or server error — sync will run automatically when online
+      } finally {
+        setIsSyncing(false);
+      }
+
       navigate('/');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message ?? 'Login failed');
     }
   };
+
+  const busy = isSubmitting || isSyncing;
 
   return (
     <Card>
@@ -77,8 +92,8 @@ export default function Login() {
             {...register('password')}
           />
 
-          <Button type="submit" className="w-full" loading={isSubmitting}>
-            Sign In
+          <Button type="submit" className="w-full" loading={busy}>
+            {isSyncing ? 'Syncing your data…' : 'Sign In'}
           </Button>
 
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">

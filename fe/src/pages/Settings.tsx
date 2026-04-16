@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,6 +20,8 @@ import {
   Database,
   Lock,
   Bot,
+  Camera,
+  Building2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -74,6 +76,9 @@ export default function Settings() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { data: companySettings } = useQuery({
     queryKey: ["company-settings"],
@@ -169,6 +174,36 @@ export default function Settings() {
     },
   });
 
+  // Logo upload
+  const logoMutation = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("logo", file);
+      return api.post(`/companies/${user?.company?.id}/logo`, fd);
+    },
+    onSuccess: (res) => {
+      const updatedCompany = res.data.data ?? res.data;
+      if (user) updateUser({ ...user, company: updatedCompany });
+      toast.success("Logo updated");
+    },
+    onError: () => toast.error("Failed to upload logo"),
+  });
+
+  // Avatar upload
+  const avatarMutation = useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("avatar", file);
+      return api.post("/auth/profile/avatar", fd);
+    },
+    onSuccess: (res) => {
+      const updated = res.data.data ?? res.data;
+      if (user) updateUser({ ...user, ...updated });
+      toast.success("Profile photo updated");
+    },
+    onError: () => toast.error("Failed to upload photo"),
+  });
+
   const openOcrEdit = () => {
     ocrForm.reset({
       ocr_provider: (companySettings?.ocr_provider as string) ?? "openai",
@@ -233,6 +268,50 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Company logo upload */}
+            <div className="mb-4 flex items-center gap-4">
+              <div className="group relative">
+                {user?.company?.logo_url ? (
+                  <img
+                    src={user.company.logo_url}
+                    alt="Company logo"
+                    className="h-16 w-40 rounded-lg border border-gray-200 object-contain dark:border-gray-600"
+                  />
+                ) : (
+                  <div className="flex h-16 w-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
+                    <Building2 className="h-7 w-7 text-gray-400 dark:text-gray-500" />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={logoMutation.isPending}
+                  className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100 disabled:cursor-not-allowed"
+                  title="Change company logo"
+                >
+                  {logoMutation.isPending ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white drop-shadow" />
+                  )}
+                </button>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) logoMutation.mutate(file);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Hover to change logo
+              </p>
+            </div>
+
             <dl className="space-y-3">
               {[
                 ["Company", user?.company?.name],
@@ -270,6 +349,53 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Avatar upload */}
+            <div className="mb-4 flex items-center gap-4">
+              <div className="group relative">
+                {user?.profile_image_url ? (
+                  <img
+                    src={user.profile_image_url}
+                    alt={user.name}
+                    className="h-20 w-20 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-600"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-100 ring-2 ring-gray-200 dark:bg-primary-900 dark:ring-gray-600">
+                    <span className="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+                      {user?.name?.charAt(0).toUpperCase() ?? "?"}
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarMutation.isPending}
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100 disabled:cursor-not-allowed"
+                  title="Change profile photo"
+                >
+                  {avatarMutation.isPending ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Camera className="h-5 w-5 text-white drop-shadow" />
+                  )}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) avatarMutation.mutate(file);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.name}</p>
+                <p className="text-xs capitalize text-gray-500 dark:text-gray-400">{user?.role}</p>
+              </div>
+            </div>
+
             <dl className="space-y-3">
               <div className="flex justify-between">
                 <dt className="text-sm text-gray-500">Name</dt>

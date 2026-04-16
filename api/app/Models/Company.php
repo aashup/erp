@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Observers\CompanyObserver;
 use App\Traits\HasSyncColumns;
 use App\Traits\HasUuid;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,15 @@ class Company extends Model
         'email',
         'logo_path',
     ];
+
+    protected $appends = ['logo_url'];
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->logo_path
+            ? Storage::disk('public')->url($this->logo_path)
+            : null;
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

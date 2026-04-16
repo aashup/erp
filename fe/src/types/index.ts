@@ -21,6 +21,7 @@ export interface Company extends SyncColumns {
   phone: string | null;
   email: string | null;
   logo_path: string | null;
+  logo_url?: string | null;
 }
 
 export interface User extends SyncColumns {
@@ -35,6 +36,8 @@ export interface User extends SyncColumns {
   permissions?: string[]; // Array of permission names, e.g., ['inventory.view', 'sales.create']
   company?: Company;
   branch?: Branch;
+  profile_image_path?: string | null;
+  profile_image_url?: string | null;
 }
 
 export interface Permission {

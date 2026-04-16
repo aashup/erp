@@ -11,6 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -116,6 +118,34 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profile updated successfully',
+            'data'    => $user,
+        ]);
+    }
+
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => 'required|file|image|mimes:jpeg,png,webp|max:2048',
+        ]);
+
+        $user = $request->user();
+
+        if ($user->profile_image_path) {
+            Storage::disk('public')->delete($user->profile_image_path);
+        }
+
+        $file = $request->file('avatar');
+        $path = $file->storeAs(
+            'profile-images/' . $user->id,
+            Str::uuid() . '.' . ($file->getClientOriginalExtension() ?: 'jpg'),
+            'public'
+        );
+
+        $user->update(['profile_image_path' => $path]);
+        $user->load('company', 'branch');
+
+        return response()->json([
+            'message' => 'Avatar updated successfully',
             'data'    => $user,
         ]);
     }

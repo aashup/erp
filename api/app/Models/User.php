@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasSyncColumns;
 use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -26,7 +27,10 @@ class User extends Authenticatable
         'password',
         'role',
         'is_active',
+        'profile_image_path',
     ];
+
+    protected $appends = ['profile_image_url'];
 
     protected $hidden = [
         'password',
@@ -40,6 +44,13 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function getProfileImageUrlAttribute(): ?string
+    {
+        return $this->profile_image_path
+            ? Storage::disk('public')->url($this->profile_image_path)
+            : null;
     }
 
     public function getActivitylogOptions(): LogOptions

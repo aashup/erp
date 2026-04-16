@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '@/types';
+import { clearLocalData } from '@/lib/sync';
 
 interface AuthState {
   user: User | null;
@@ -26,6 +27,8 @@ export const useAuthStore = create<AuthState>((set) => {
     },
 
     logout: () => {
+      // Wipe all local IndexedDB data so the next user starts clean
+      clearLocalData();
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       set({ user: null, token: null, isAuthenticated: false });

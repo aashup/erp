@@ -14,22 +14,38 @@ type SyncTable =
   | 'vouchers'
   | 'paymentReceipts'
   | 'accountingGroups'
-  | 'ledgers';
+  | 'ledgers'
+  | 'itemGroups'
+  | 'units'
+  | 'financialYears'
+  | 'purchaseInvoiceLines'
+  | 'salesInvoiceLines'
+  | 'poLines'
+  | 'soLines'
+  | 'voucherLines';
 
 const tableToApiName: Record<SyncTable, string> = {
-  items: 'items',
-  parties: 'parties',
-  godowns: 'godowns',
-  branches: 'branches',
-  batches: 'batches',
-  purchaseOrders: 'purchase_orders',
-  purchaseInvoices: 'purchase_invoices',
-  salesOrders: 'sales_orders',
-  salesInvoices: 'sales_invoices',
-  vouchers: 'vouchers',
-  paymentReceipts: 'payment_receipts',
-  accountingGroups: 'accounting_groups',
-  ledgers: 'ledgers',
+  items:                'items',
+  parties:              'parties',
+  godowns:              'godowns',
+  branches:             'branches',
+  batches:              'batches',
+  purchaseOrders:       'purchase_orders',
+  purchaseInvoices:     'purchase_invoices',
+  salesOrders:          'sales_orders',
+  salesInvoices:        'sales_invoices',
+  vouchers:             'vouchers',
+  paymentReceipts:      'payment_receipts',
+  accountingGroups:     'accounting_groups',
+  ledgers:              'ledgers',
+  itemGroups:           'item_groups',
+  units:                'units',
+  financialYears:       'financial_years',
+  purchaseInvoiceLines: 'purchase_invoice_lines',
+  salesInvoiceLines:    'sales_invoice_lines',
+  poLines:              'po_lines',
+  soLines:              'so_lines',
+  voucherLines:         'voucher_lines',
 };
 
 function getLastSyncedAt(): string | null {
@@ -120,6 +136,26 @@ export async function syncAll(): Promise<{ pushed: number; pulled: number }> {
   const pushed = await pushPendingChanges();
   const pulled = await pullServerChanges();
   return { pushed, pulled };
+}
+
+/**
+ * Full bootstrap pull — clears last_synced_at so ALL company data is fetched.
+ * Call once after login to seed Dexie with the complete dataset.
+ */
+export async function bootstrapAllData(): Promise<number> {
+  localStorage.removeItem('last_synced_at');
+  return pullServerChanges();
+}
+
+/**
+ * Wipe all local Dexie tables and clear sync timestamp.
+ * Call on logout so the next user starts with a clean slate.
+ */
+export async function clearLocalData(): Promise<void> {
+  await Promise.all(
+    Object.keys(tableToApiName).map((tableName) => db.table(tableName).clear())
+  );
+  localStorage.removeItem('last_synced_at');
 }
 
 export function getPendingCount(): Promise<number> {

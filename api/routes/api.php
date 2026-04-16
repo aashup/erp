@@ -52,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/auth/profile/avatar', [AuthController::class, 'uploadAvatar']);
     Route::put('/auth/password', [AuthController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
@@ -111,6 +112,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Company
     Route::get('companies/{company}', [CompanyController::class, 'show']);
     Route::put('companies/{company}', [CompanyController::class, 'update']);
+    Route::post('companies/{company}/logo', [CompanyController::class, 'uploadLogo']);
 
     // Invoice Templates & Company Settings
     Route::get('invoice-templates', [InvoiceTemplateController::class, 'index']);

@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('password');
             $table->enum('role', ['admin', 'manager', 'accountant', 'salesman']);
             $table->boolean('is_active')->default(true);
+            $table->string('profile_image_path')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
 
