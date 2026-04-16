@@ -26,10 +26,12 @@ import Branches from '@/pages/Branches';
 import Users from '@/pages/Users';
 import Groups from '@/pages/Groups';
 import PurchaseOrders from '@/pages/purchase/PurchaseOrders';
+import PurchaseOrderFormPage from '@/pages/purchase/PurchaseOrderFormPage';
 import PurchaseInvoices from '@/pages/purchase/PurchaseInvoices';
 import PurchaseInvoiceFormPage from '@/pages/purchase/PurchaseInvoiceFormPage';
 import OcrReviewPage from '@/pages/purchase/OcrReviewPage';
 import SalesOrders from '@/pages/sales/SalesOrders';
+import SalesOrderFormPage from '@/pages/sales/SalesOrderFormPage';
 import SalesInvoices from '@/pages/sales/SalesInvoices';
 import SalesInvoiceFormPage from '@/pages/sales/SalesInvoiceFormPage';
 import ChartOfAccounts from '@/pages/accounting/ChartOfAccounts';
@@ -132,6 +134,8 @@ export default function App() {
 
             {/* Purchase */}
             <Route path="/purchase/orders" element={<PurchaseOrders />} />
+            <Route path="/purchase/orders/new" element={<PurchaseOrderFormPage />} />
+            <Route path="/purchase/orders/:orderId/edit" element={<PurchaseOrderFormPage />} />
             <Route path="/purchase/invoices" element={<PurchaseInvoices />} />
             <Route path="/purchase/invoices/new" element={<PurchaseInvoiceFormPage />} />
             <Route path="/purchase/invoices/ocr-review" element={<OcrReviewPage />} />
@@ -139,6 +143,8 @@ export default function App() {
 
             {/* Sales */}
             <Route path="/sales/orders" element={<SalesOrders />} />
+            <Route path="/sales/orders/new" element={<SalesOrderFormPage />} />
+            <Route path="/sales/orders/:orderId/edit" element={<SalesOrderFormPage />} />
             <Route path="/sales/invoices" element={<SalesInvoices />} />
             <Route path="/sales/invoices/new" element={<SalesInvoiceFormPage />} />
             <Route path="/sales/invoices/:invoiceId/edit" element={<SalesInvoiceFormPage />} />
