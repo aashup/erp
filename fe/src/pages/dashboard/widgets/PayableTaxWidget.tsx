@@ -18,8 +18,12 @@ function GstRow({
   return (
     <div className="grid grid-cols-3 gap-1 text-xs">
       <span className="text-gray-500 dark:text-gray-400">{label}</span>
-      <span className="text-right text-amber-600 dark:text-amber-400">{formatCurrency(output)}</span>
-      <span className="text-right text-sky-600 dark:text-sky-400">{formatCurrency(itc)}</span>
+      <span className="text-right text-amber-600 dark:text-amber-400">
+        {formatCurrency(output)}
+      </span>
+      <span className="text-right text-sky-600 dark:text-sky-400">
+        {formatCurrency(itc)}
+      </span>
     </div>
   );
 }
@@ -48,7 +52,9 @@ export function PayableTaxWidget() {
           >
             <Landmark className="h-5 w-5" />
           </div>
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Payable Tax</h3>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Payable Tax
+          </h3>
         </div>
       </CardHeader>
       <CardContent>
@@ -72,15 +78,19 @@ export function PayableTaxWidget() {
               {/* Summary row */}
               <div className="mt-3 space-y-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">Output GST</span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Output GST
+                  </span>
                   <span className="text-amber-600 dark:text-amber-400">
                     +{formatCurrency(stats?.gst_output ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">Less ITC</span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Less ITC
+                  </span>
                   <span className="text-sky-600 dark:text-sky-400">
-                    -{formatCurrency(stats?.gst_input_credit ?? 0)}
+                    {formatCurrency(stats?.gst_input_credit ?? 0)}
                   </span>
                 </div>
 
@@ -115,7 +125,9 @@ export function PayableTaxWidget() {
 
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-1">
                   <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-gray-500 dark:text-gray-400">Net Payable</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Net Payable
+                    </span>
                     <span
                       className={
                         isPositive

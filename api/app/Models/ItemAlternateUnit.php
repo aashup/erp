@@ -18,6 +18,7 @@ class ItemAlternateUnit extends Model
         'item_id',
         'unit',
         'conversion_factor',
+        'selling_price',
         'is_default_purchase',
         'is_default_sale',
     ];
@@ -26,6 +27,7 @@ class ItemAlternateUnit extends Model
     {
         return [
             'conversion_factor' => 'decimal:4',
+            'selling_price' => 'decimal:2',
             'is_default_purchase' => 'boolean',
             'is_default_sale' => 'boolean',
         ];

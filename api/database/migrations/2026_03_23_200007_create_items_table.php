@@ -76,6 +76,7 @@ return new class extends Migration
             $table->foreignUuid('item_id')->constrained('items')->cascadeOnDelete();
             $table->string('unit', 20);                          // e.g. STRIP, BOX
             $table->decimal('conversion_factor', 15, 4);         // 1 of this unit = N base units
+            $table->decimal('selling_price', 15, 2)->nullable(); // override selling price for this unit
             $table->boolean('is_default_purchase')->default(false);
             $table->boolean('is_default_sale')->default(false);
 

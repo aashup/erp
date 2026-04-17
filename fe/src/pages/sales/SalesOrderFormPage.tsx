@@ -87,7 +87,7 @@ export default function SalesOrderFormPage() {
       so_number: "",
       party_id: "",
       so_date: selectedDate,
-      expected_delivery_date: "",
+      expected_delivery_date: selectedDate,
       is_inter_state: false,
       notes: "",
       lines: [makeEmptyLine()],
@@ -156,7 +156,11 @@ export default function SalesOrderFormPage() {
     setValue(`lines.${index}.item_id`, itemId, { shouldDirty: true });
     const item = itemMap.get(itemId);
     if (item) {
-      setValue(`lines.${index}.rate`, item.selling_price ?? 0, { shouldDirty: true });
+      const defaultAu = (item.alternate_units ?? []).find((au) => au.is_default_sale);
+      const rate = defaultAu?.selling_price != null
+        ? Number(defaultAu.selling_price)
+        : Number(item.selling_price ?? 0);
+      setValue(`lines.${index}.rate`, rate, { shouldDirty: true });
       const currentIsInterState = watch("is_inter_state");
       const igst = item.igst ?? 0;
       const sgst = item.sgst ?? 0;

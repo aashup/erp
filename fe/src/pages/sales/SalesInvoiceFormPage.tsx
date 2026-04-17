@@ -261,16 +261,17 @@ export default function SalesInvoiceFormPage() {
 
     // Auto-select default_sale alternate unit, else fall back to base unit
     const defaultAu = (selectedItem.alternate_units ?? []).find((au) => au.is_default_sale);
+    let unitRate: number;
     if (defaultAu) {
       setValue(`lines.${index}.unit`, defaultAu.unit, { shouldDirty: true });
       setValue(`lines.${index}.conversion_factor`, defaultAu.conversion_factor, { shouldDirty: true });
+      unitRate = defaultAu.selling_price != null ? Number(defaultAu.selling_price) : Number(selectedItem.selling_price ?? selectedItem.mrp ?? selectedItem.purchase_price ?? 0);
     } else {
       setValue(`lines.${index}.unit`, selectedItem.unit, { shouldDirty: true });
       setValue(`lines.${index}.conversion_factor`, 1, { shouldDirty: true });
+      unitRate = Number(selectedItem.selling_price ?? selectedItem.mrp ?? selectedItem.purchase_price ?? 0);
     }
-
-    const rate = selectedItem.selling_price ?? selectedItem.mrp ?? selectedItem.purchase_price ?? 0;
-    setValue(`lines.${index}.rate`, Number(rate), { shouldDirty: true, shouldValidate: true });
+    setValue(`lines.${index}.rate`, unitRate, { shouldDirty: true, shouldValidate: true });
 
     // Select appropriate GST rate
     const customerId = watch('party_id');
@@ -426,12 +427,20 @@ export default function SalesInvoiceFormPage() {
 
                     // Build unit options: base unit + alternate units
                     const baseUnitOption = lineItem
-                      ? { value: lineItem.unit, label: `${lineItem.unit} (base)`, factor: 1 }
+                      ? {
+                          value: lineItem.unit,
+                          label: `${lineItem.unit} (base)`,
+                          subtitle: lineItem.selling_price != null ? `₹${Number(lineItem.selling_price).toFixed(2)}` : undefined,
+                          factor: 1,
+                          sellingPrice: lineItem.selling_price ?? null,
+                        }
                       : null;
                     const altUnitOptions = (lineItem?.alternate_units ?? []).map((au) => ({
                       value: au.unit,
                       label: `${au.unit} (×${au.conversion_factor})`,
+                      subtitle: au.selling_price != null ? `₹${Number(au.selling_price).toFixed(2)}` : undefined,
                       factor: au.conversion_factor,
+                      sellingPrice: au.selling_price ?? null,
                     }));
                     const allUnitOptions = baseUnitOption ? [baseUnitOption, ...altUnitOptions] : [];
                     const currentLineUnit = watch(`lines.${index}.unit`);
@@ -470,6 +479,9 @@ export default function SalesInvoiceFormPage() {
                                 const selected = allUnitOptions.find((o) => o.value === val);
                                 setValue(`lines.${index}.unit`, val, { shouldDirty: true });
                                 setValue(`lines.${index}.conversion_factor`, selected?.factor ?? 1, { shouldDirty: true });
+                                if (selected?.sellingPrice != null) {
+                                  setValue(`lines.${index}.rate`, Number(selected.sellingPrice), { shouldDirty: true });
+                                }
                               }}
                             />
                           ) : (

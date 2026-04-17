@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
-use App\Models\ItemAlternateUnit;
 use App\Models\Unit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -75,6 +74,7 @@ class ItemController extends Controller
             'alternate_units' => 'nullable|array',
             'alternate_units.*.unit' => ['required', 'string', 'max:20', Rule::in($activeUnitValues)],
             'alternate_units.*.conversion_factor' => 'required|numeric|min:0.0001',
+            'alternate_units.*.selling_price' => 'nullable|numeric|min:0',
             'alternate_units.*.is_default_purchase' => 'boolean',
             'alternate_units.*.is_default_sale' => 'boolean',
         ]);
@@ -130,6 +130,7 @@ class ItemController extends Controller
             'alternate_units' => 'nullable|array',
             'alternate_units.*.unit' => ['required', 'string', 'max:20', Rule::in($activeUnitValues)],
             'alternate_units.*.conversion_factor' => 'required|numeric|min:0.0001',
+            'alternate_units.*.selling_price' => 'nullable|numeric|min:0',
             'alternate_units.*.is_default_purchase' => 'boolean',
             'alternate_units.*.is_default_sale' => 'boolean',
         ]);
@@ -153,6 +154,7 @@ class ItemController extends Controller
                     ['unit' => $unitValue],
                     [
                         'conversion_factor' => $au['conversion_factor'],
+                        'selling_price' => $au['selling_price'] ?? null,
                         'is_default_purchase' => $au['is_default_purchase'] ?? false,
                         'is_default_sale' => $au['is_default_sale'] ?? false,
                         'deleted_at' => null,

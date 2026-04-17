@@ -148,6 +148,7 @@ export interface ItemAlternateUnit {
   item_id: string;
   unit: string;
   conversion_factor: number;
+  selling_price: number | null;
   is_default_purchase: boolean;
   is_default_sale: boolean;
   created_at: string;

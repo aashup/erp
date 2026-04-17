@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export function Footer() {
-  const [currentDateTime, setCurrentDateTime] = useState<string>('');
+  const [currentDateTime, setCurrentDateTime] = useState<string>("");
 
   useEffect(() => {
     // Set initial time
     const updateTime = () => {
       const now = new Date();
-      const formatted = now.toLocaleString('en-IN', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
+      const formatted = now.toLocaleString("en-IN", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
         hour12: true,
       });
       setCurrentDateTime(formatted);
@@ -33,10 +33,10 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-3 sm:px-6 md:pl-80">
         <div className="flex flex-col items-center justify-between gap-2 sm:flex-row sm:gap-4">
           <div className="text-center sm:text-left">
-            <p>&copy; {currentYear} Your Company. All rights reserved.</p>
+            <p>&copy; {currentYear} XTROX. All rights reserved.</p>
           </div>
           <div className="text-center sm:text-right">
-            <p>{currentDateTime || 'Loading...'}</p>
+            <p>{currentDateTime || "Loading..."}</p>
           </div>
         </div>
       </div>
