@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -18,8 +18,15 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, PackageOpen, Info } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, PackageOpen, Info, X } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
+
+const alternateUnitSchema = z.object({
+  unit: z.string().min(1, 'Unit required'),
+  conversion_factor: z.coerce.number().min(0.0001, 'Must be > 0'),
+  is_default_purchase: z.boolean().optional().default(false),
+  is_default_sale: z.boolean().optional().default(false),
+});
 
 const itemSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -35,6 +42,7 @@ const itemSchema = z.object({
   selling_price: z.coerce.number().min(0).optional(),
   reorder_level: z.coerce.number().int().min(0).optional(),
   is_batch_tracked: z.boolean().optional(),
+  alternate_units: z.array(alternateUnitSchema).optional().default([]),
 });
 
 type ItemForm = z.infer<typeof itemSchema>;
@@ -118,15 +126,22 @@ export default function Items() {
     reset,
     watch,
     setValue,
+    control,
     formState: { errors },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<ItemForm>({
     resolver: zodResolver(itemSchema) as any,
-    defaultValues: { igst: 18, sgst: 9, cgst: 9, reorder_level: 0 },
+    defaultValues: { igst: 18, sgst: 9, cgst: 9, reorder_level: 0, alternate_units: [] },
+  });
+
+  const { fields: auFields, append: appendAu, remove: removeAu } = useFieldArray({
+    control,
+    name: 'alternate_units',
   });
 
   const igstValue = watch('igst');
   const isBatchTracked = watch('is_batch_tracked');
+  const currentBaseUnit = watch('unit');
 
   // Auto-calculate SGST and CGST from IGST
   useEffect(() => {
@@ -149,6 +164,7 @@ export default function Items() {
       cgst: 9,
       reorder_level: 0,
       is_batch_tracked: false,
+      alternate_units: [],
     });
     setShowModal(true);
   };
@@ -169,6 +185,12 @@ export default function Items() {
       selling_price: item.selling_price ?? undefined,
       reorder_level: item.reorder_level ?? undefined,
       is_batch_tracked: item.is_batch_tracked,
+      alternate_units: (item.alternate_units ?? []).map((au) => ({
+        unit: au.unit,
+        conversion_factor: au.conversion_factor,
+        is_default_purchase: au.is_default_purchase,
+        is_default_sale: au.is_default_sale,
+      })),
     });
     setShowModal(true);
   };
@@ -199,6 +221,9 @@ export default function Items() {
     editItem && !unitOptions.some((unit) => unit.value === editItem.unit)
       ? [...unitOptions, { value: editItem.unit, label: `${editItem.unit} (current)` }]
       : unitOptions;
+
+  // Unit options for alternate unit dropdowns — excludes current base unit
+  const altUnitOptions = formUnitOptions.filter((u) => u.value !== currentBaseUnit);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -277,7 +302,20 @@ export default function Items() {
           {renderSortIcon('unit')}
         </button>
       ),
-      accessorKey: 'unit',
+      cell: ({ row }) => {
+        const item = row.original;
+        const altUnits = item.alternate_units ?? [];
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium">{item.unit}</span>
+            {altUnits.length > 0 && (
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                +{altUnits.map((au) => `${au.unit}(×${au.conversion_factor})`).join(', ')}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: 'group_name',
@@ -458,7 +496,7 @@ export default function Items() {
             <Input id="hsn_code" label="HSN Code" {...register('hsn_code')} />
             <SlideSelect
               name="unit"
-              label="Unit"
+              label="Base Unit (Stock Unit)"
               placeholder="Select unit"
               panelTitle="Select Unit"
               options={formUnitOptions}
@@ -516,6 +554,106 @@ export default function Items() {
               </div>
             </div>
           )}
+
+          {/* Alternate Units Section */}
+          <div className="border-t dark:border-gray-700 pt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Alternate Units</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  Rate is always per base unit ({currentBaseUnit || '—'}). Alternate units are for entry convenience.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => appendAu({ unit: '', conversion_factor: 1, is_default_purchase: false, is_default_sale: false })}
+                disabled={altUnitOptions.length === 0}
+              >
+                <Plus className="mr-1 h-3 w-3" /> Add Unit
+              </Button>
+            </div>
+
+            {auFields.length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-gray-500 py-2">
+                No alternate units. The base unit ({currentBaseUnit || '—'}) is always available.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {/* Header row */}
+                <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 px-1">
+                  <div className="col-span-3">Unit</div>
+                  <div className="col-span-4">Conversion (1 unit = N base)</div>
+                  <div className="col-span-2 text-center">Default Buy</div>
+                  <div className="col-span-2 text-center">Default Sell</div>
+                  <div className="col-span-1" />
+                </div>
+                {auFields.map((auField, auIndex) => {
+                  const selectedAuUnit = watch(`alternate_units.${auIndex}.unit`);
+                  return (
+                    <div key={auField.id} className="grid grid-cols-12 items-center gap-2">
+                      {/* Unit selector */}
+                      <div className="col-span-3">
+                        <SlideSelect
+                          name={`alternate_units.${auIndex}.unit`}
+                          placeholder="Select unit"
+                          panelTitle="Select Unit"
+                          options={altUnitOptions}
+                          value={watch(`alternate_units.${auIndex}.unit`) ?? ''}
+                          onChange={(val) => setValue(`alternate_units.${auIndex}.unit`, val, { shouldValidate: true })}
+                          error={errors.alternate_units?.[auIndex]?.unit?.message}
+                        />
+                      </div>
+
+                      {/* Conversion factor */}
+                      <div className="col-span-4 flex items-center gap-1.5">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">1 {selectedAuUnit || 'unit'} =</span>
+                        <input
+                          type="number"
+                          min="0.0001"
+                          step="0.0001"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 px-2 py-1.5 text-sm"
+                          {...register(`alternate_units.${auIndex}.conversion_factor`, { valueAsNumber: true })}
+                        />
+                        <span className="text-xs text-gray-500 whitespace-nowrap">{currentBaseUnit || 'base'}</span>
+                      </div>
+
+                      {/* Default purchase */}
+                      <div className="col-span-2 flex justify-center">
+                        <input
+                          type="checkbox"
+                          {...register(`alternate_units.${auIndex}.is_default_purchase`)}
+                          className="h-4 w-4 rounded"
+                        />
+                      </div>
+
+                      {/* Default sale */}
+                      <div className="col-span-2 flex justify-center">
+                        <input
+                          type="checkbox"
+                          {...register(`alternate_units.${auIndex}.is_default_sale`)}
+                          className="h-4 w-4 rounded"
+                        />
+                      </div>
+
+                      {/* Remove */}
+                      <div className="col-span-1 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => removeAu(auIndex)}
+                          className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30"
+                        >
+                          <X className="h-4 w-4 text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button

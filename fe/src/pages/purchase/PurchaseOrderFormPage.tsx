@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -118,7 +118,10 @@ export default function PurchaseOrderFormPage() {
     }
   }, [existingPO, reset]);
 
-  const itemMap = new Map((itemsData?.data ?? []).map((i) => [i.id, i]));
+  const itemMap = useMemo(
+    () => new Map((itemsData?.data ?? []).map((i) => [i.id, i])),
+    [itemsData?.data]
+  );
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) =>
@@ -151,15 +154,18 @@ export default function PurchaseOrderFormPage() {
   };
 
   const handleItemChange = (index: number, itemId: string) => {
-    setValue(`lines.${index}.item_id`, itemId);
+    setValue(`lines.${index}.item_id`, itemId, { shouldDirty: true });
     const item = itemMap.get(itemId);
     if (item) {
-      setValue(`lines.${index}.rate`, item.purchase_price ?? 0);
+      setValue(`lines.${index}.rate`, item.purchase_price ?? 0, { shouldDirty: true });
       const currentIsInterState = watch("is_inter_state");
+      const igst = item.igst ?? 0;
+      const sgst = item.sgst ?? 0;
+      const cgst = item.cgst ?? 0;
       const gstRate = currentIsInterState
-        ? (item.igst ?? 0) || 18
-        : (item.sgst ?? 0) + (item.cgst ?? 0) || 18;
-      setValue(`lines.${index}.gst_rate`, Number(gstRate));
+        ? (igst > 0 ? igst : 18)
+        : ((sgst + cgst) > 0 ? (sgst + cgst) : 18);
+      setValue(`lines.${index}.gst_rate`, gstRate, { shouldDirty: true, shouldValidate: true });
     }
   };
 

@@ -73,6 +73,8 @@ class SalesInvoiceController extends Controller
             'lines.*.item_id' => 'required|uuid|exists:items,id',
             'lines.*.batch_id' => 'nullable|uuid|exists:batches,id',
             'lines.*.quantity' => 'required|numeric|min:0.001',
+            'lines.*.unit' => 'nullable|string|max:20',
+            'lines.*.conversion_factor' => 'nullable|numeric|min:0.0001',
             'lines.*.rate' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate' => 'required|numeric|min:0',
@@ -119,11 +121,15 @@ class SalesInvoiceController extends Controller
             ]);
 
             foreach ($validated['lines'] as $line) {
-                $taxable = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
+                $baseQuantity = $line['quantity'] * $conversionFactor;
+                $taxable = ($baseQuantity * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
                 $gstAmt = $taxable * $line['gst_rate'] / 100;
 
                 $invoice->lines()->create([
                     ...$line,
+                    'unit' => $line['unit'] ?? null,
+                    'conversion_factor' => $conversionFactor,
                     'taxable_amount' => $taxable,
                     'cgst' => $isInterState ? 0 : $gstAmt / 2,
                     'sgst' => $isInterState ? 0 : $gstAmt / 2,
@@ -133,7 +139,7 @@ class SalesInvoiceController extends Controller
                     'updated_by' => null,
                 ]);
 
-                // Stock ledger entry (stock out)
+                // Stock ledger entry — always in base units (negative = stock out)
                 StockLedger::create([
                     'company_id' => $request->user()->company_id,
                     'item_id' => $line['item_id'],
@@ -142,9 +148,9 @@ class SalesInvoiceController extends Controller
                     'type' => 'sale',
                     'reference_type' => SalesInvoice::class,
                     'reference_id' => $invoice->id,
-                    'quantity' => -$line['quantity'],
+                    'quantity' => -$baseQuantity,
                     'rate' => $line['rate'],
-                    'value' => $line['quantity'] * $line['rate'],
+                    'value' => $baseQuantity * $line['rate'],
                     'created_by' => $request->user()->id,
                 ]);
             }
@@ -199,6 +205,8 @@ class SalesInvoiceController extends Controller
             'lines.*.item_id' => 'required|uuid|exists:items,id',
             'lines.*.batch_id' => 'nullable|uuid|exists:batches,id',
             'lines.*.quantity' => 'required|numeric|min:0.001',
+            'lines.*.unit' => 'nullable|string|max:20',
+            'lines.*.conversion_factor' => 'nullable|numeric|min:0.0001',
             'lines.*.rate' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate' => 'required|numeric|min:0',
@@ -226,11 +234,15 @@ class SalesInvoiceController extends Controller
                 ->delete();
 
             foreach ($validated['lines'] as $line) {
-                $taxable = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
+                $baseQuantity = $line['quantity'] * $conversionFactor;
+                $taxable = ($baseQuantity * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
                 $gstAmt = $taxable * $line['gst_rate'] / 100;
 
                 $salesInvoice->lines()->create([
                     ...$line,
+                    'unit' => $line['unit'] ?? null,
+                    'conversion_factor' => $conversionFactor,
                     'taxable_amount' => $taxable,
                     'cgst' => $isInterState ? 0 : $gstAmt / 2,
                     'sgst' => $isInterState ? 0 : $gstAmt / 2,
@@ -248,9 +260,9 @@ class SalesInvoiceController extends Controller
                     'type' => 'sale',
                     'reference_type' => SalesInvoice::class,
                     'reference_id' => $salesInvoice->id,
-                    'quantity' => -$line['quantity'],
+                    'quantity' => -$baseQuantity,
                     'rate' => $line['rate'],
-                    'value' => $line['quantity'] * $line['rate'],
+                    'value' => $baseQuantity * $line['rate'],
                     'created_by' => $request->user()->id,
                 ]);
             }
@@ -320,6 +332,7 @@ class SalesInvoiceController extends Controller
                     ->first();
 
                 foreach ($salesInvoice->lines as $line) {
+                    $baseQuantity = (float) $line->quantity * (float) ($line->conversion_factor ?? 1.0);
                     StockLedger::create([
                         'company_id' => $salesInvoice->company_id,
                         'item_id' => $line->item_id,
@@ -328,9 +341,9 @@ class SalesInvoiceController extends Controller
                         'type' => 'sale',
                         'reference_type' => SalesInvoice::class,
                         'reference_id' => $salesInvoice->id,
-                        'quantity' => -$line->quantity,
+                        'quantity' => -$baseQuantity,
                         'rate' => $line->rate,
-                        'value' => $line->quantity * $line->rate,
+                        'value' => $baseQuantity * $line->rate,
                         'narration' => "Invoice #{$salesInvoice->invoice_number} confirmed",
                         'created_by' => $request->user()->id,
                     ]);
@@ -350,6 +363,7 @@ class SalesInvoiceController extends Controller
                     ->first();
 
                 foreach ($salesInvoice->lines as $line) {
+                    $baseQuantity = (float) $line->quantity * (float) ($line->conversion_factor ?? 1.0);
                     StockLedger::create([
                         'company_id' => $salesInvoice->company_id,
                         'item_id' => $line->item_id,
@@ -358,9 +372,9 @@ class SalesInvoiceController extends Controller
                         'type' => 'sale_reversal',
                         'reference_type' => SalesInvoice::class,
                         'reference_id' => $salesInvoice->id,
-                        'quantity' => $line->quantity,
+                        'quantity' => $baseQuantity,
                         'rate' => $line->rate,
-                        'value' => $line->quantity * $line->rate,
+                        'value' => $baseQuantity * $line->rate,
                         'narration' => "Reversal: Invoice #{$salesInvoice->invoice_number} cancelled",
                         'created_by' => $request->user()->id,
                     ]);

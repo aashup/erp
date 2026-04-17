@@ -66,4 +66,9 @@ class Item extends Model
     {
         return $this->hasMany(StockLedger::class);
     }
+
+    public function alternateUnits()
+    {
+        return $this->hasMany(ItemAlternateUnit::class);
+    }
 }

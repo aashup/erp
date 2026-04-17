@@ -51,6 +51,8 @@ return new class extends Migration
             $table->foreignUuid('item_id')->constrained('items');
             $table->foreignUuid('batch_id')->nullable()->constrained('batches')->nullOnDelete();
             $table->decimal('quantity', 15, 3);
+            $table->string('unit', 20)->nullable();                     // selected unit (null = item base unit)
+            $table->decimal('conversion_factor', 15, 4)->default(1.0000); // 1 if base unit
             $table->decimal('rate', 15, 2);
             $table->decimal('discount_percent', 5, 2)->default(0);
             $table->decimal('taxable_amount', 15, 2)->default(0);

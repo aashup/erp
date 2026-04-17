@@ -16,6 +16,8 @@ class PurchaseInvoiceLine extends Model
         'item_id',
         'batch_id',
         'quantity',
+        'unit',
+        'conversion_factor',
         'godown_id',
         'rate',
         'discount_percent',
@@ -33,6 +35,7 @@ class PurchaseInvoiceLine extends Model
     {
         return [
             'quantity' => 'decimal:3',
+            'conversion_factor' => 'decimal:4',
             'rate' => 'decimal:2',
             'discount_percent' => 'decimal:2',
             'taxable_amount' => 'decimal:2',

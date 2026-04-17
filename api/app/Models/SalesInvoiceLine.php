@@ -17,6 +17,8 @@ class SalesInvoiceLine extends Model
         'batch_id',
         'godown_id',
         'quantity',
+        'unit',
+        'conversion_factor',
         'rate',
         'discount_percent',
         'taxable_amount',
@@ -33,6 +35,7 @@ class SalesInvoiceLine extends Model
     {
         return [
             'quantity' => 'decimal:3',
+            'conversion_factor' => 'decimal:4',
             'rate' => 'decimal:2',
             'discount_percent' => 'decimal:2',
             'taxable_amount' => 'decimal:2',

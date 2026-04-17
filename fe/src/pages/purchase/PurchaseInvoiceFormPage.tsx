@@ -24,7 +24,9 @@ const lineSchema = z.object({
   item_id: z.string().min(1, 'Item required'),
   batch_id: z.string().optional(),
   godown_id: z.string().min(1, 'Godown required'),
-  quantity: z.coerce.number().min(1, 'Min 1'),
+  quantity: z.coerce.number().min(0.001, 'Min 0.001'),
+  unit: z.string().optional(),
+  conversion_factor: z.coerce.number().optional().default(1),
   rate: z.coerce.number().min(0, 'Rate required'),
   discount_percent: z.coerce.number().min(0).max(100).optional().default(0),
   gst_rate: z.coerce.number().min(0).optional().default(18),
@@ -49,6 +51,8 @@ const makeEmptyLine = (defaultGodownId = ''): InvoiceForm['lines'][number] => ({
   batch_id: '',
   godown_id: defaultGodownId,
   quantity: 1,
+  unit: undefined,
+  conversion_factor: 1,
   rate: 0,
   discount_percent: 0,
   gst_rate: 18,
@@ -162,6 +166,8 @@ export default function PurchaseInvoiceFormPage() {
         batch_id: line.batch_id ?? '',
         godown_id: (line as unknown as { godown_id?: string }).godown_id ?? defaultGodownId,
         quantity: line.quantity,
+        unit: line.unit ?? undefined,
+        conversion_factor: line.conversion_factor ?? 1,
         rate: line.rate ?? 0,
         discount_percent: line.discount_percent,
         gst_rate: line.gst_rate,
@@ -272,9 +278,9 @@ export default function PurchaseInvoiceFormPage() {
     const key = `${line.item_id}:${line.godown_id}`;
     const qty = stockSummaryMap.get(key) ?? 0;
     const item = itemMap.get(line.item_id);
-    const unit = item?.unit ?? '';
+    const baseUnit = item?.unit ?? '';
 
-    return `${qty} ${unit}`;
+    return `${qty} ${baseUnit} (stock)`;
   };
 
   const handleItemSelect = (index: number, itemId: string) => {
@@ -282,16 +288,24 @@ export default function PurchaseInvoiceFormPage() {
     setValue(`lines.${index}.batch_id`, '', { shouldDirty: true }); // Clear batch when item changes
 
     const selectedItem = itemMap.get(itemId);
-    if (!selectedItem) {
-      return;
-    }
+    if (!selectedItem) return;
 
     // Load batches for batch-tracked items
     if (selectedItem.is_batch_tracked) {
       loadBatches(itemId);
     }
 
-    // Autofill rate from purchase_price
+    // Auto-select default_purchase alternate unit, else fall back to base unit
+    const defaultAu = (selectedItem.alternate_units ?? []).find((au) => au.is_default_purchase);
+    if (defaultAu) {
+      setValue(`lines.${index}.unit`, defaultAu.unit, { shouldDirty: true });
+      setValue(`lines.${index}.conversion_factor`, defaultAu.conversion_factor, { shouldDirty: true });
+    } else {
+      setValue(`lines.${index}.unit`, selectedItem.unit, { shouldDirty: true });
+      setValue(`lines.${index}.conversion_factor`, 1, { shouldDirty: true });
+    }
+
+    // Autofill rate from purchase_price (rate is always per base unit)
     if (selectedItem.purchase_price) {
       setValue(`lines.${index}.rate`, selectedItem.purchase_price, { shouldDirty: true, shouldValidate: true });
     }
@@ -314,9 +328,10 @@ export default function PurchaseInvoiceFormPage() {
     setValue(`lines.${index}.gst_rate`, gstRate, { shouldDirty: true, shouldValidate: true });
   };
 
+  // Rate is per base unit; taxable = base_quantity * rate * (1 - discount%)
   const calcLineTaxable = (line: InvoiceForm['lines'][number]) => {
-    const lineAmount = (line.rate ?? 0) * (line.quantity ?? 1);
-    return lineAmount * (1 - (line.discount_percent ?? 0) / 100);
+    const baseQty = (line.quantity ?? 0) * (line.conversion_factor ?? 1);
+    return baseQty * (line.rate ?? 0) * (1 - (line.discount_percent ?? 0) / 100);
   };
 
   const totals = (watchedLines ?? []).reduce(
@@ -339,7 +354,9 @@ export default function PurchaseInvoiceFormPage() {
       ...formData,
       lines: formData.lines.map((line) => ({
         ...line,
-        batch_id: line.batch_id || null, // send null instead of empty string
+        unit: line.unit || null,
+        conversion_factor: line.conversion_factor ?? 1,
+        batch_id: line.batch_id || null,
         line_total: calcLineTaxable(line),
       })),
     } as Record<string, unknown>;
@@ -435,10 +452,10 @@ export default function PurchaseInvoiceFormPage() {
                     <div className="col-span-3">Item</div>
                     <div className="col-span-2">Godown</div>
                     <div className="col-span-1">Qty</div>
-                    <div className="col-span-2">Rate (₹)</div>
-                    <div className="col-span-2">Disc %</div>
+                    <div className="col-span-2">Unit</div>
+                    <div className="col-span-2">Rate/Base (₹)</div>
+                    <div className="col-span-1">Disc %</div>
                     <div className="col-span-1 text-right">Taxable</div>
-                    <div className="col-span-1"></div>
                   </div>
 
                   {fields.map((field, index) => {
@@ -455,24 +472,60 @@ export default function PurchaseInvoiceFormPage() {
                     }));
                     const selectedBatchId = watch(`lines.${index}.batch_id`) ?? '';
                     const selectedBatch = lineBatches.find((b) => b.id === selectedBatchId);
+
+                    // Build unit options for this line: base unit + alternate units
+                    const baseUnitOption = lineItem
+                      ? { value: lineItem.unit, label: `${lineItem.unit} (base)`, factor: 1 }
+                      : null;
+                    const altUnitOptions = (lineItem?.alternate_units ?? []).map((au) => ({
+                      value: au.unit,
+                      label: `${au.unit} (×${au.conversion_factor})`,
+                      factor: au.conversion_factor,
+                    }));
+                    const allUnitOptions = baseUnitOption ? [baseUnitOption, ...altUnitOptions] : [];
+                    const currentLineUnit = watch(`lines.${index}.unit`);
+
                     return (
                     <div key={field.id} className="space-y-2">
                       <div className="grid grid-cols-12 items-start gap-2">
+                        {/* Item */}
                         <div className="col-span-3">
                           <SlideSelect name={`lines.${index}.item_id`} placeholder="Select item" panelTitle="Select Item" options={filteredItemOptions} value={watch(`lines.${index}.item_id`)} onChange={(val) => handleItemSelect(index, val)} />
                         </div>
+                        {/* Godown */}
                         <div className="col-span-2">
                           <SlideSelect name={`lines.${index}.godown_id`} placeholder="Select godown" panelTitle="Select Godown" options={godownOptions} value={watch(`lines.${index}.godown_id`)} onChange={(val) => setValue(`lines.${index}.godown_id`, val, { shouldValidate: true })} />
                         </div>
+                        {/* Qty */}
                         <div className="col-span-1">
                           <input
                             type="number"
-                            min="1"
-                            step="1"
+                            min="0.001"
+                            step="0.001"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                             {...register(`lines.${index}.quantity`)}
                           />
                         </div>
+                        {/* Unit selector */}
+                        <div className="col-span-2">
+                          {allUnitOptions.length > 0 ? (
+                            <SlideSelect
+                              name={`lines.${index}.unit`}
+                              placeholder="Unit"
+                              panelTitle="Select Unit"
+                              options={allUnitOptions}
+                              value={currentLineUnit ?? lineItem?.unit ?? ''}
+                              onChange={(val) => {
+                                const selected = allUnitOptions.find((o) => o.value === val);
+                                setValue(`lines.${index}.unit`, val, { shouldDirty: true });
+                                setValue(`lines.${index}.conversion_factor`, selected?.factor ?? 1, { shouldDirty: true });
+                              }}
+                            />
+                          ) : (
+                            <div className="flex items-center h-9 px-2 text-xs text-gray-400">—</div>
+                          )}
+                        </div>
+                        {/* Rate per base unit */}
                         <div className="col-span-2">
                           <input
                             type="number"
@@ -483,7 +536,8 @@ export default function PurchaseInvoiceFormPage() {
                             {...register(`lines.${index}.rate`)}
                           />
                         </div>
-                        <div className="col-span-2">
+                        {/* Discount */}
+                        <div className="col-span-1">
                           <input
                             type="number"
                             min="0"
@@ -493,12 +547,13 @@ export default function PurchaseInvoiceFormPage() {
                             {...register(`lines.${index}.discount_percent`)}
                           />
                         </div>
-                        <div className="col-span-1 flex items-center justify-end py-2 text-sm font-medium">
-                          {formatCurrency(calcLineTaxable(watchedLines?.[index] ?? { item_id: '', godown_id: '', quantity: 0, rate: 0, discount_percent: 0, gst_rate: 0 }))}
-                        </div>
-                        <div className="col-span-1 flex items-center justify-center">
+                        {/* Taxable + remove */}
+                        <div className="col-span-1 flex items-center gap-1">
+                          <span className="flex-1 text-right text-sm font-medium py-2">
+                            {formatCurrency(calcLineTaxable(watchedLines?.[index] ?? { item_id: '', godown_id: '', quantity: 0, conversion_factor: 1, rate: 0, discount_percent: 0, gst_rate: 0 }))}
+                          </span>
                           {fields.length > 1 && (
-                            <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30">
+                            <button type="button" onClick={() => remove(index)} className="rounded p-1 hover:bg-red-50 dark:hover:bg-red-900/30 shrink-0">
                               <X className="h-4 w-4 text-red-500" />
                             </button>
                           )}
@@ -544,7 +599,7 @@ export default function PurchaseInvoiceFormPage() {
                       {getLineGSTInfo(index) && (
                         <div className="text-xs text-gray-600 dark:text-gray-400 pl-1 flex justify-between items-center">
                           <span>{getLineGSTInfo(index)}</span>
-                          {getLineAvailableQty(index) && <span className="text-right bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded text-blue-900 dark:text-blue-200 font-semibold">Available Qty: {getLineAvailableQty(index)}</span>}
+                          {getLineAvailableQty(index) && <span className="text-right bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded text-blue-900 dark:text-blue-200 font-semibold">Available: {getLineAvailableQty(index)}</span>}
                         </div>
                       )}
                     </div>

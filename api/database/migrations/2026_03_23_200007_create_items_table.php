@@ -51,7 +51,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('sku')->nullable();
             $table->string('hsn_code')->nullable();
-            $table->string('unit'); // e.g. PCS, KG, BOX, STRIP
+            $table->string('unit'); // e.g. PCS, KG, BOX, STRIP — base/stock unit
             $table->decimal('igst', 5, 2)->default(0);
             $table->decimal('sgst', 5, 2)->default(0);
             $table->decimal('cgst', 5, 2)->default(0);
@@ -70,10 +70,30 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+
+        Schema::create('item_alternate_units', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
+            $table->foreignUuid('item_id')->constrained('items')->cascadeOnDelete();
+            $table->string('unit', 20);                          // e.g. STRIP, BOX
+            $table->decimal('conversion_factor', 15, 4);         // 1 of this unit = N base units
+            $table->boolean('is_default_purchase')->default(false);
+            $table->boolean('is_default_sale')->default(false);
+
+            // Sync columns
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
+            $table->timestamp('synced_at')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->unique(['item_id', 'unit']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('item_alternate_units');
         Schema::dropIfExists('items');
         Schema::dropIfExists('item_groups');
         Schema::dropIfExists('units');

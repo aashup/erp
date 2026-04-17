@@ -108,6 +108,7 @@ export interface Item extends SyncColumns {
   is_active: boolean;
   item_group?: ItemGroup;
   batches?: Batch[];
+  alternate_units?: ItemAlternateUnit[];
 }
 
 export interface Batch extends SyncColumns {
@@ -140,6 +141,17 @@ export interface Unit extends SyncColumns {
   value: string;
   label: string;
   status: 'active' | 'inactive';
+}
+
+export interface ItemAlternateUnit {
+  id: string;
+  item_id: string;
+  unit: string;
+  conversion_factor: number;
+  is_default_purchase: boolean;
+  is_default_sale: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Party extends SyncColumns {
@@ -235,6 +247,8 @@ export interface PurchaseInvoiceLine extends SyncColumns {
   item_id: string;
   batch_id: string | null;
   quantity: number;
+  unit: string | null;
+  conversion_factor: number;
   rate: number;
   discount_percent: number;
   taxable_amount: number;
@@ -316,6 +330,8 @@ export interface SalesInvoiceLine extends SyncColumns {
   item_id: string;
   batch_id: string | null;
   quantity: number;
+  unit: string | null;
+  conversion_factor: number;
   rate: number;
   discount_percent: number;
   taxable_amount: number;

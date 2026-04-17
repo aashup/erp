@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Item;
+use App\Models\ItemAlternateUnit;
 use App\Models\Unit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ class ItemController extends Controller
     {
         $this->authorize('viewAny', Item::class);
 
-        $items = Item::with(['batches', 'itemGroup'])
+        $items = Item::with(['batches', 'itemGroup', 'alternateUnits'])
             ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%"))
             ->when($request->sku, fn ($q, $s) => $q->where('sku', 'like', "%{$s}%"))
             ->when($request->item_group_id, fn ($q, $g) => $q->where('item_group_id', $g))
@@ -71,18 +72,35 @@ class ItemController extends Controller
             'selling_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'nullable|integer|min:0',
             'is_batch_tracked' => 'boolean',
+            'alternate_units' => 'nullable|array',
+            'alternate_units.*.unit' => ['required', 'string', 'max:20', Rule::in($activeUnitValues)],
+            'alternate_units.*.conversion_factor' => 'required|numeric|min:0.0001',
+            'alternate_units.*.is_default_purchase' => 'boolean',
+            'alternate_units.*.is_default_sale' => 'boolean',
         ]);
 
         $item = Item::create($validated);
 
-        return response()->json(['data' => $item], 201);
+        foreach ($validated['alternate_units'] ?? [] as $au) {
+            if ($au['unit'] === $validated['unit']) {
+                continue; // skip if same as base unit
+            }
+            $item->alternateUnits()->create([
+                'unit' => $au['unit'],
+                'conversion_factor' => $au['conversion_factor'],
+                'is_default_purchase' => $au['is_default_purchase'] ?? false,
+                'is_default_sale' => $au['is_default_sale'] ?? false,
+            ]);
+        }
+
+        return response()->json(['data' => $item->load('alternateUnits')], 201);
     }
 
     public function show(Item $item): JsonResponse
     {
         $this->authorize('view', $item);
 
-        return response()->json(['data' => $item->load('batches')]);
+        return response()->json(['data' => $item->load('batches', 'alternateUnits')]);
     }
 
     public function update(Request $request, Item $item): JsonResponse
@@ -109,11 +127,41 @@ class ItemController extends Controller
             'reorder_level' => 'nullable|integer|min:0',
             'is_batch_tracked' => 'boolean',
             'is_active' => 'boolean',
+            'alternate_units' => 'nullable|array',
+            'alternate_units.*.unit' => ['required', 'string', 'max:20', Rule::in($activeUnitValues)],
+            'alternate_units.*.conversion_factor' => 'required|numeric|min:0.0001',
+            'alternate_units.*.is_default_purchase' => 'boolean',
+            'alternate_units.*.is_default_sale' => 'boolean',
         ]);
 
         $item->update($validated);
 
-        return response()->json(['data' => $item]);
+        if ($request->has('alternate_units')) {
+            $baseUnit = $item->unit;
+            $incomingUnits = collect($validated['alternate_units'] ?? [])
+                ->filter(fn ($au) => $au['unit'] !== $baseUnit)
+                ->keyBy('unit');
+
+            // Soft-delete removed alternate units
+            $item->alternateUnits()
+                ->whereNotIn('unit', $incomingUnits->keys()->toArray())
+                ->delete();
+
+            // Upsert kept/new alternate units
+            foreach ($incomingUnits as $unitValue => $au) {
+                $item->alternateUnits()->withTrashed()->updateOrCreate(
+                    ['unit' => $unitValue],
+                    [
+                        'conversion_factor' => $au['conversion_factor'],
+                        'is_default_purchase' => $au['is_default_purchase'] ?? false,
+                        'is_default_sale' => $au['is_default_sale'] ?? false,
+                        'deleted_at' => null,
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['data' => $item->load('alternateUnits')]);
     }
 
     public function destroy(Item $item): JsonResponse

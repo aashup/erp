@@ -70,6 +70,8 @@ class PurchaseInvoiceController extends Controller
             'lines.*.item_id' => 'required|uuid|exists:items,id',
             'lines.*.batch_id' => 'nullable|uuid|exists:batches,id',
             'lines.*.quantity' => 'required|numeric|min:0.001',
+            'lines.*.unit' => 'nullable|string|max:20',
+            'lines.*.conversion_factor' => 'nullable|numeric|min:0.0001',
             'lines.*.rate' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate' => 'required|numeric|min:0',
@@ -108,11 +110,15 @@ class PurchaseInvoiceController extends Controller
             ]);
 
             foreach ($validated['lines'] as $line) {
-                $taxable = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
+                $baseQuantity = $line['quantity'] * $conversionFactor;
+                $taxable = ($baseQuantity * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
                 $gstAmt = $taxable * $line['gst_rate'] / 100;
 
-                $invoiceLine = $invoice->lines()->create([
+                $invoice->lines()->create([
                     ...$line,
+                    'unit' => $line['unit'] ?? null,
+                    'conversion_factor' => $conversionFactor,
                     'taxable_amount' => $taxable,
                     'cgst' => $isInterState ? 0 : $gstAmt / 2,
                     'sgst' => $isInterState ? 0 : $gstAmt / 2,
@@ -122,7 +128,7 @@ class PurchaseInvoiceController extends Controller
                     'updated_by' => null,
                 ]);
 
-                // Stock ledger entry
+                // Stock ledger entry — always in base units
                 StockLedger::create([
                     'company_id' => $request->user()->company_id,
                     'item_id' => $line['item_id'],
@@ -131,9 +137,9 @@ class PurchaseInvoiceController extends Controller
                     'type' => 'purchase',
                     'reference_type' => PurchaseInvoice::class,
                     'reference_id' => $invoice->id,
-                    'quantity' => $line['quantity'],
+                    'quantity' => $baseQuantity,
                     'rate' => $line['rate'],
-                    'value' => $line['quantity'] * $line['rate'],
+                    'value' => $baseQuantity * $line['rate'],
                     'created_by' => $request->user()->id,
                 ]);
             }
