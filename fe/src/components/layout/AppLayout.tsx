@@ -43,9 +43,7 @@ export function AppLayout() {
       <div className={cn('flex flex-1 flex-col', showSidebar ? 'md:pl-64' : '')}>
         <Header onMobileMenuToggle={() => setMobileMenuOpen(true)} />
         <main className="flex-1 p-4 sm:p-6 pb-20 sm:pb-24">
-          <div className="mx-auto max-w-7xl">
-            <Outlet />
-          </div>
+          <Outlet />
         </main>
       </div>
 
