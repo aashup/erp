@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('sales_invoices', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
-            $table->foreignUuid('party_id')->constrained('parties');
+            $table->foreignUuid('party_id')->nullable()->constrained('parties')->nullOnDelete();
             $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->foreignUuid('sales_order_id')->nullable()->constrained('sales_orders')->nullOnDelete();
             $table->foreignUuid('godown_id')->nullable()->constrained('godowns')->nullOnDelete();
@@ -32,6 +32,10 @@ return new class extends Migration
             $table->decimal('amount_paid', 15, 2)->default(0);
             $table->decimal('balance_due', 15, 2)->default(0);
             $table->text('notes')->nullable();
+            $table->boolean('pos_held')->default(false);
+            $table->string('pos_payment_mode', 20)->nullable();
+            $table->decimal('amount_tendered', 15, 2)->default(0);
+            $table->decimal('change_amount', 15, 2)->default(0);
             $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignUuid('updated_by')->nullable()->constrained('users')->nullOnDelete();
 

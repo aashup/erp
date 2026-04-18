@@ -40,9 +40,10 @@ class InvoicePdfService
 
         $viewName = InvoiceTemplateRegistry::getViewName($templateSlug);
 
-        // Calculate round-off
+        // Round-off: fraction > 0.6 → ceil, else → floor
         $grandTotal = (float) $invoice->grand_total;
-        $roundedTotal = round($grandTotal);
+        $fraction = round($grandTotal - floor($grandTotal), 2);
+        $roundedTotal = $fraction > 0.6 ? (int) ceil($grandTotal) : (int) floor($grandTotal);
         $roundOff = $roundedTotal - $grandTotal;
 
         // Prepare view data
@@ -89,9 +90,10 @@ class InvoicePdfService
 
         $viewName = InvoiceTemplateRegistry::getViewName($templateSlug);
 
-        // Calculate round-off
+        // Round-off: fraction > 0.6 → ceil, else → floor
         $grandTotal = (float) $invoice->grand_total;
-        $roundedTotal = round($grandTotal);
+        $fraction = round($grandTotal - floor($grandTotal), 2);
+        $roundedTotal = $fraction > 0.6 ? (int) ceil($grandTotal) : (int) floor($grandTotal);
         $roundOff = $roundedTotal - $grandTotal;
 
         // Prepare view data

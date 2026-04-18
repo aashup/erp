@@ -274,15 +274,14 @@
             </div>
             @endif
 
-            @if($roundOff != 0)
+            @php $roundOffFmt = $roundOff >= 0 ? '+'.number_format($roundOff, 2) : number_format($roundOff, 2); @endphp
             <div class="total-row">
                 <span class="total-label">Round Off:</span>
-                <span class="total-value">{{ number_format($roundOff, 0) }}</span>
+                <span class="total-value" style="{{ $roundOff != 0 ? 'font-style:italic;' : 'color:#999;' }}">{{ $roundOffFmt }}</span>
             </div>
-            @endif
 
             <div class="total-row grand-total-row">
-                <span>TOTAL:</span>
+                <span>NET PAYABLE:</span>
                 <span>₹{{ number_format($netPayable, 0) }}</span>
             </div>
         </div>

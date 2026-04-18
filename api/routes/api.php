@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountingGroupController;
+use App\Http\Controllers\Api\V1\POSController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\BranchController;
@@ -133,6 +134,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('vouchers', VoucherController::class)->except(['update']);
     Route::get('payment-receipts/{payment_receipt}/journal', [PaymentReceiptController::class, 'journal']);
     Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);
+
+    // POS
+    Route::get('pos/items', [POSController::class, 'items']);
+    Route::post('pos/checkout', [POSController::class, 'checkout']);
+    Route::post('pos/hold', [POSController::class, 'hold']);
+    Route::get('pos/held', [POSController::class, 'heldList']);
+    Route::delete('pos/held/{salesInvoice}', [POSController::class, 'deleteHeld']);
+    Route::post('pos/quick-party', [POSController::class, 'quickParty']);
 
     // Reports
     Route::get('reports/trial-balance', [ReportController::class, 'trialBalance']);

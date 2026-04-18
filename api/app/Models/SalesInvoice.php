@@ -37,6 +37,10 @@ class SalesInvoice extends Model
         'amount_paid',
         'balance_due',
         'notes',
+        'pos_held',
+        'pos_payment_mode',
+        'amount_tendered',
+        'change_amount',
         'created_by',
         'updated_by',
     ];
@@ -57,6 +61,9 @@ class SalesInvoice extends Model
             'grand_total' => 'decimal:2',
             'amount_paid' => 'decimal:2',
             'balance_due' => 'decimal:2',
+            'pos_held' => 'boolean',
+            'amount_tendered' => 'decimal:2',
+            'change_amount' => 'decimal:2',
         ];
     }
 

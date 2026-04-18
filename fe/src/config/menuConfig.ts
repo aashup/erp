@@ -24,6 +24,13 @@ export const MENU_CONFIG: MenuItem[] = [
     icon: "grid",
   },
   {
+    id: "pos",
+    label: "POS",
+    href: "/pos",
+    icon: "shopping-cart",
+    requiredPermission: "sales.create",
+  },
+  {
     id: "inventory",
     label: "Inventory",
     icon: "box",

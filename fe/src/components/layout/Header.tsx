@@ -5,7 +5,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { authApi } from '@/api/auth';
 import { useSync } from '@/hooks/useSync';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings, Menu, Calendar, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, User, Wifi, WifiOff, RefreshCw, CloudOff, Sun, Moon, Settings, Menu, Calendar, CalendarDays, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -248,6 +248,16 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
           ) : (
             <ChevronRight className="h-4 w-4" />
           )}
+        </button>
+
+        {/* POS button */}
+        <button
+          onClick={() => navigate('/pos')}
+          className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+          title="Open POS"
+        >
+          <ShoppingCart className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">POS</span>
         </button>
 
         {/* Theme Toggle */}

@@ -12,10 +12,19 @@
 
 ## MCP Servers (Always Use These)
 
-Two MCP servers are active — **always prefer them** over Bash equivalents:
+Two MCP servers are active — **always use them**. Never use Bash equivalents.
 
-- **`mcp__filesystem`** — Use for all file operations (read, write, edit, list, search). Prefer over Read/Write/Bash file commands when working with project files.
-- **`mcp__mysql`** — Use `mcp__mysql__mysql_query` for all database inspection, queries, and verification. Never use Bash `mysql` CLI. Use this to check schema, run queries, verify migrations, and debug data issues.
+### `mcp__mysql` — ALL MySQL operations
+- Use `mcp__mysql__mysql_query` for **every** database operation: SELECT, INSERT, UPDATE, DELETE, ALTER TABLE, CREATE TABLE, DROP TABLE.
+- **Never** use Bash `mysql` CLI or `docker-compose exec` for database tasks.
+- Fully enabled: SELECT · INSERT · UPDATE · DELETE · DDL (ALTER/CREATE/DROP TABLE).
+- Use this to: inspect schema, run queries, verify data, apply schema changes, debug issues.
+
+### `mcp__filesystem` — ALL file operations
+- Use `mcp__filesystem__*` tools for **every** file operation: read, write, edit, list directory, search files.
+- **Never** use Bash `cat`, `ls`, `find`, `grep`, `echo >`, or `cp` for project files.
+- Available tools: `read_file`, `write_file`, `edit_file`, `list_directory`, `search_files`, `create_directory`, `move_file`, `get_file_info`.
+- Covers the entire `/Users/aashu/erp/` project tree.
 
 ---
 

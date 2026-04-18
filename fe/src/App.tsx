@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -55,6 +55,7 @@ import InventorySettings from '@/pages/settings/InventorySettings';
 import InvoiceSettings from '@/pages/settings/InvoiceSettings';
 import ThermalTemplateEditor from '@/pages/settings/ThermalTemplateEditor';
 import Theme from '@/pages/settings/Theme';
+import POSPage from '@/pages/pos/POSPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +66,12 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
 
 function DocumentTitleManager() {
   const pageTitle = usePageTitleStore((s) => s.pageTitle);
@@ -169,6 +176,7 @@ export default function App() {
 
             {/* Settings */}
             <Route path="/settings/base" element={<Settings />} />
+
             <Route path="/settings/theme" element={<Theme />} />
             <Route path="/settings/invoice" element={<InvoiceSettings />} />
             <Route path="/settings/thermal-templates" element={<ThermalTemplateEditor />} />
@@ -176,6 +184,16 @@ export default function App() {
             <Route path="/settings/units" element={<Units />} />
             <Route path="/settings/inventory" element={<InventorySettings />} />
           </Route>
+
+          {/* POS — full screen, no ERP shell */}
+          <Route
+            path="/pos"
+            element={
+              <RequireAuth>
+                <POSPage />
+              </RequireAuth>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

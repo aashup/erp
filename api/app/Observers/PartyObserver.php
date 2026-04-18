@@ -29,7 +29,7 @@ class PartyObserver
                 'sundry_debtors',
                 $party->type === 'both' ? "{$party->name} (Buyer)" : $party->name,
                 $party,
-                $party->type === 'customer' ? $party->opening_balance : 0,
+                $party->type === 'customer' ? (float) ($party->opening_balance ?? 0) : 0,
                 $party->type === 'customer' ? ($party->balance_type ?: 'dr') : 'dr',
                 $userId,
             );
@@ -44,7 +44,7 @@ class PartyObserver
                 'sundry_creditors',
                 $party->type === 'both' ? "{$party->name} (Vendor)" : $party->name,
                 $party,
-                $party->type === 'vendor' ? $party->opening_balance : 0,
+                $party->type === 'vendor' ? (float) ($party->opening_balance ?? 0) : 0,
                 $party->type === 'vendor' ? ($party->balance_type ?: 'cr') : 'cr',
                 $userId,
             );
