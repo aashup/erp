@@ -103,6 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Purchase
     Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
+    Route::post('purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive']);
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
     Route::post('ocr/scan-invoice', [OcrInvoiceController::class, 'scan']);

@@ -88,6 +88,7 @@ class ItemController extends Controller
             $item->alternateUnits()->create([
                 'unit' => $au['unit'],
                 'conversion_factor' => $au['conversion_factor'],
+                'selling_price' => $au['selling_price'] ?? null,
                 'is_default_purchase' => $au['is_default_purchase'] ?? false,
                 'is_default_sale' => $au['is_default_sale'] ?? false,
             ]);

@@ -18,6 +18,12 @@ export const purchaseOrdersApi = {
 
   updateStatus: (id: string, status: string) =>
     api.patch<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}/status`, { status }),
+
+  receiveItems: (id: string, data: {
+    receipt_date?: string;
+    notes?: string;
+    lines: { po_line_id: string; quantity: number }[];
+  }) => api.post<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}/receive`, data),
 };
 
 export const purchaseInvoicesApi = {

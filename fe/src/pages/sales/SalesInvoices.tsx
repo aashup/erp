@@ -766,6 +766,11 @@ export default function SalesInvoices() {
             Filters
           </button>
           {canCreate && (
+            <Button variant="outline" onClick={() => navigate('/sales/invoices/new-2')}>
+              <Plus className="mr-2 h-4 w-4" /> SI-2
+            </Button>
+          )}
+          {canCreate && (
             <Button onClick={() => navigate('/sales/invoices/new')}>
               <Plus className="mr-2 h-4 w-4" /> New Invoice
             </Button>

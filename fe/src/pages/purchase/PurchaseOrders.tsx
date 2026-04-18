@@ -15,8 +15,9 @@ import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, PackageCheck } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
+import { ReceiveItemsDialog } from './ReceiveItemsDialog';
 
 const statusVariant: Record<string, 'default' | 'info' | 'success' | 'warning' | 'danger'> = {
   draft: 'default',
@@ -28,8 +29,8 @@ const statusVariant: Record<string, 'default' | 'info' | 'success' | 'warning' |
 
 const allowedTransitions: Record<string, string[]> = {
   draft: ['confirmed', 'cancelled'],
-  confirmed: ['partially_received', 'received', 'cancelled'],
-  partially_received: ['received', 'cancelled'],
+  confirmed: ['cancelled'],
+  partially_received: ['cancelled'],
   received: [],
   cancelled: [],
 };
@@ -58,6 +59,7 @@ export default function PurchaseOrders() {
   const [vendorFilter, setVendorFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [receivingPo, setReceivingPo] = useState<PurchaseOrder | null>(null);
   const [sortBy, setSortBy] = useState('po_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -90,11 +92,16 @@ export default function PurchaseOrders() {
     },
   });
 
+  const fetchPoForReceive = async (po: PurchaseOrder) => {
+    const res = await purchaseOrdersApi.get(po.id);
+    setReceivingPo(res.data.data);
+  };
+
   const handleStatusChange = (po: PurchaseOrder, newStatus: string) => {
     if (newStatus === po.status) return;
     const label = statusLabels[newStatus] ?? newStatus;
     const confirmMsg = newStatus === 'confirmed'
-      ? `Confirm PO "${po.po_number}"? This will auto-create a Purchase Invoice and add stock.`
+      ? `Confirm PO "${po.po_number}"? This will mark it ready for goods receiving.`
       : newStatus === 'cancelled'
         ? `Cancel PO "${po.po_number}"? This cannot be undone.`
         : `Change status of "${po.po_number}" to "${label}"?`;
@@ -187,12 +194,23 @@ export default function PurchaseOrders() {
       id: 'actions',
       header: '',
       cell: ({ row }: { row: { original: PurchaseOrder } }) => {
-        const isDraft = row.original.status === 'draft';
+        const po = row.original;
+        const isDraft = po.status === 'draft';
+        const canReceive = (po.status === 'confirmed' || po.status === 'partially_received') && canEdit;
         return (
           <div className="flex items-center gap-1">
+            {canReceive && (
+              <button
+                onClick={() => fetchPoForReceive(po)}
+                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Receive Items"
+              >
+                <PackageCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </button>
+            )}
             {isDraft && canEdit && (
               <button
-                onClick={() => navigate(`/purchase/orders/${row.original.id}/edit`)}
+                onClick={() => navigate(`/purchase/orders/${po.id}/edit`)}
                 className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                 title="Edit"
               >
@@ -201,7 +219,7 @@ export default function PurchaseOrders() {
             )}
             {isDraft && canDelete && (
               <button
-                onClick={() => { if (confirm('Delete this PO?')) deleteMutation.mutate(row.original.id); }}
+                onClick={() => { if (confirm('Delete this PO?')) deleteMutation.mutate(po.id); }}
                 className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                 title="Delete"
               >
@@ -238,6 +256,19 @@ export default function PurchaseOrders() {
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
         {data && <Pagination currentPage={data.current_page} lastPage={data.last_page} total={data.total} onPageChange={setPage} />}
       </Card>
+
+      {receivingPo && (
+        <ReceiveItemsDialog
+          po={receivingPo}
+          open={!!receivingPo}
+          onClose={() => setReceivingPo(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] });
+            setReceivingPo(null);
+          }}
+        />
+      )}
 
       <FilterPanel open={showFilterPanel} onClose={() => setShowFilterPanel(false)}>
         {/* Search */}

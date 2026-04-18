@@ -20,6 +20,7 @@ import StockAdjustment from '@/pages/inventory/StockAdjustment';
 import OpeningStock from '@/pages/inventory/OpeningStock';
 import ItemMovements from '@/pages/inventory/ItemMovements';
 import ItemBatches from '@/pages/inventory/ItemBatches';
+import ItemFormPage from '@/pages/inventory/ItemFormPage';
 import AllBatches from '@/pages/inventory/AllBatches';
 import Parties from '@/pages/Parties';
 import Branches from '@/pages/Branches';
@@ -34,6 +35,7 @@ import SalesOrders from '@/pages/sales/SalesOrders';
 import SalesOrderFormPage from '@/pages/sales/SalesOrderFormPage';
 import SalesInvoices from '@/pages/sales/SalesInvoices';
 import SalesInvoiceFormPage from '@/pages/sales/SalesInvoiceFormPage';
+import SalesInvoiceFormPage2 from '@/pages/sales/SalesInvoiceFormPage2';
 import ChartOfAccounts from '@/pages/accounting/ChartOfAccounts';
 import Ledgers from '@/pages/accounting/Ledgers';
 import JournalEntries from '@/pages/accounting/JournalEntries';
@@ -127,6 +129,8 @@ export default function App() {
             <Route path="/inventory/items/:itemId/movements" element={<ItemMovements />} />
             <Route path="/inventory/item-movements" element={<ItemMovements />} />
             <Route path="/inventory/batches" element={<AllBatches />} />
+            <Route path="/inventory/items/new" element={<ItemFormPage />} />
+            <Route path="/inventory/items/:itemId/edit" element={<ItemFormPage />} />
             <Route path="/inventory/items/:itemId/batches" element={<ItemBatches />} />
 
             {/* Parties */}
@@ -154,6 +158,7 @@ export default function App() {
             <Route path="/sales/orders/:orderId/edit" element={<SalesOrderFormPage />} />
             <Route path="/sales/invoices" element={<SalesInvoices />} />
             <Route path="/sales/invoices/new" element={<SalesInvoiceFormPage />} />
+            <Route path="/sales/invoices/new-2" element={<SalesInvoiceFormPage2 />} />
             <Route path="/sales/invoices/:invoiceId/edit" element={<SalesInvoiceFormPage />} />
 
             {/* Accounting */}
