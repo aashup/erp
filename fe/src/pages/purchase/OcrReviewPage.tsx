@@ -39,7 +39,7 @@ const createItemSchema = z.object({
   unit: z.string().min(1, 'Unit is required'),
   purchase_price: z.coerce.number().min(0, 'Must be ≥ 0'),
   selling_price: z.coerce.number().min(0, 'Must be ≥ 0'),
-  igst: z.coerce.number().min(0).max(100).default(0),
+  igst: z.coerce.number().min(0).max(100),
 });
 type CreateItemForm = z.infer<typeof createItemSchema>;
 
@@ -58,7 +58,7 @@ function CreateItemDialog({ open, onClose, ocrItem, onCreated }: CreateItemDialo
   });
 
   const form = useForm<CreateItemForm>({
-    resolver: zodResolver(createItemSchema),
+    resolver: zodResolver(createItemSchema) as any,
     defaultValues: {
       name: ocrItem.item_name,
       hsn_code: ocrItem.hsn_code ?? '',

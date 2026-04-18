@@ -2,12 +2,11 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingCart, X, PauseCircle, Trash2, FileText, Printer,
-  MessageSquare, RefreshCw, WifiOff, Clock,
+  MessageSquare, WifiOff, Clock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { posApi } from '@/api/pos';
 import { godownsApi } from '@/api/inventory';
-import { salesInvoicesApi } from '@/api/sales';
 import { companySettingsApi } from '@/api/settings';
 import type { CompanySettings } from '@/types';
 import { calcGST, calcRoundOff, formatCurrency } from '@/lib/utils';

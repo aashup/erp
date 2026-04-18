@@ -45,9 +45,9 @@ const profileSchema = z.object({
 });
 
 const ocrSchema = z.object({
-  ocr_provider: z.string().default("openai"),
+  ocr_provider: z.string().min(1, "Provider is required"),
   ocr_api_key: z.string().min(1, "API key is required"),
-  ocr_model: z.string().default("gpt-4o"),
+  ocr_model: z.string().min(1, "Model is required"),
 });
 
 type OcrForm = z.infer<typeof ocrSchema>;
@@ -154,6 +154,7 @@ export default function Settings() {
   // OCR / AI settings form
   const ocrForm = useForm<OcrForm>({
     resolver: zodResolver(ocrSchema),
+    defaultValues: { ocr_provider: 'openai', ocr_api_key: '', ocr_model: 'gpt-4o' },
   });
   const ocrMutation = useMutation({
     mutationFn: (data: OcrForm) =>

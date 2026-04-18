@@ -69,7 +69,7 @@ export default function SalesOrderFormPage() {
     queryKey: ["sales-order", orderId],
     queryFn: () => salesOrdersApi.get(orderId!),
     enabled: isEditMode,
-    select: (res) => res.data,
+    select: (res) => res.data.data,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -238,7 +238,7 @@ export default function SalesOrderFormPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Header fields */}
         <Card>
-          <CardHeader title="Order Details" />
+          <CardHeader><span className="font-semibold text-gray-700 dark:text-gray-200">Order Details</span></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Input

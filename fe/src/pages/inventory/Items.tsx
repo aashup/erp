@@ -126,7 +126,7 @@ export default function Items() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: ItemForm) => itemsApi.create(data),
+    mutationFn: (data: ItemForm) => itemsApi.create(data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["items"] });
       queryClient.invalidateQueries({ queryKey: ["items-all"] });
@@ -136,7 +136,7 @@ export default function Items() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<ItemForm> }) =>
-      itemsApi.update(id, data),
+      itemsApi.update(id, data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["items"] });
       queryClient.invalidateQueries({ queryKey: ["items-all"] });
@@ -354,11 +354,10 @@ export default function Items() {
       ),
       cell: ({ row }) => {
         const item = row.original;
-        const altUnits = item.alternate_units ?? [];
         return (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">{item.unit}</span>
-            {/* {altUnits.length > 0 && (
+            {/* {(item.alternate_units ?? []).length > 0 && (
               <span className="text-xs text-gray-400 dark:text-gray-500">
                 +
                 {altUnits
