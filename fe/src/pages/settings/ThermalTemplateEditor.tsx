@@ -8,7 +8,7 @@ import { thermalTemplatesApi } from '@/api/thermalTemplates';
 import { salesInvoicesApi } from '@/api/sales';
 import type { ThermalTemplate } from '@/types';
 import { formatDate } from '@/lib/utils';
-import { Trash2, Save, Plus, ArrowLeft, Eye } from 'lucide-react';
+import { Trash2, Save, Plus, ArrowLeft, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDateStore } from '@/store/dateStore';
 
@@ -168,6 +168,19 @@ export default function ThermalTemplateEditor() {
     onError: () => {
       toast.error('Failed to delete template');
     },
+  });
+
+  const loadDefaultsMutation = useMutation({
+    mutationFn: () => thermalTemplatesApi.loadDefaults(),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['thermal-templates'] });
+      const created = res.data.data?.created ?? [];
+      toast.success(created.length
+        ? `Default templates loaded: ${created.join(', ')}`
+        : 'Default templates already exist for all paper sizes'
+      );
+    },
+    onError: () => toast.error('Failed to load default templates'),
   });
 
   const handleCreate = () => {
@@ -428,9 +441,20 @@ export default function ThermalTemplateEditor() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Thermal Invoice Templates</h1>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" /> New Template
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => loadDefaultsMutation.mutate()}
+              disabled={loadDefaultsMutation.isPending}
+              title="Create built-in default templates for 2-inch and 3-inch paper if not already present"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {loadDefaultsMutation.isPending ? 'Loading…' : 'Load Defaults'}
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" /> New Template
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -438,7 +462,17 @@ export default function ThermalTemplateEditor() {
         ) : !templates || templates.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
-              <p className="text-center text-gray-500">No custom thermal templates yet. Create one to get started!</p>
+              <div className="flex flex-col items-center gap-3 py-4">
+                <p className="text-center text-gray-500">No thermal templates yet. Load the built-in defaults or create a custom template.</p>
+                <Button
+                  variant="secondary"
+                  onClick={() => loadDefaultsMutation.mutate()}
+                  disabled={loadDefaultsMutation.isPending}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {loadDefaultsMutation.isPending ? 'Loading…' : 'Load Default Templates (2" + 3")'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (

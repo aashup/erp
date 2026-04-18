@@ -28,8 +28,9 @@ return new class extends Migration
             $table->softDeletes();
 
             // Indices
+            // Only a plain index — uniqueness of is_default=true per paper_size
+            // is enforced in the controller (MySQL can't do partial unique indexes)
             $table->index(['company_id', 'paper_size']);
-            $table->unique(['company_id', 'paper_size', 'is_default']);
         });
     }
 

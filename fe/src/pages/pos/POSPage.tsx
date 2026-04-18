@@ -5,6 +5,7 @@ import {
   MessageSquare, WifiOff, Clock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '@/lib/axios';
 import { posApi } from '@/api/pos';
 import { godownsApi } from '@/api/inventory';
 import { companySettingsApi } from '@/api/settings';
@@ -292,16 +293,17 @@ export default function POSPage() {
   async function handlePrint(invoiceId: string) {
     try {
       // Fetch HTML with auth token (Bearer token not sent via window.open)
-      const { default: api } = await import('@/lib/axios');
+      // POS always uses thermal printing — never A4
       const paperSize = companySettings?.thermal_printer_paper_size ?? '2inch';
-      const template  = companySettings?.default_invoice_template ?? 'thermal-custom';
       const res = await api.get(`/sales-invoices/${invoiceId}/html`, {
-        params: { template, paper_size: paperSize },
+        params: { template: 'thermal-custom', paper_size: paperSize },
         responseType: 'text',
       });
       const blob = new Blob([res.data], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      const win = window.open(url, '_blank', 'width=420,height=700');
+      // Window width matches paper: 3inch (80mm) → 380px, 2inch (58mm) → 300px
+      const winWidth = paperSize === '3inch' ? 380 : 300;
+      const win = window.open(url, '_blank', `width=${winWidth},height=650`);
       if (win) {
         win.onload = () => { win.focus(); win.print(); };
         // Revoke blob URL after print dialog closes

@@ -122,6 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Invoice Templates & Company Settings
     Route::get('invoice-templates', [InvoiceTemplateController::class, 'index']);
+    Route::post('thermal-templates/load-defaults', [ThermalTemplateController::class, 'loadDefaults']);
     Route::patch('thermal-templates/{thermal_template}/set-default', [ThermalTemplateController::class, 'setDefault']);
     Route::apiResource('thermal-templates', ThermalTemplateController::class);
     Route::get('company-settings', [CompanySettingController::class, 'index']);

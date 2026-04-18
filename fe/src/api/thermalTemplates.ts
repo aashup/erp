@@ -19,4 +19,7 @@ export const thermalTemplatesApi = {
 
   setDefault: (id: string) =>
     api.patch<ApiResponse<ThermalTemplate>>(`/thermal-templates/${id}/set-default`, {}),
+
+  loadDefaults: () =>
+    api.post<ApiResponse<{ created: string[] }>>('/thermal-templates/load-defaults', {}),
 };

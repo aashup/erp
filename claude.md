@@ -5,6 +5,42 @@
 
 ---
 
+## Invoice Printing System
+
+There are **two completely separate printing systems**. Never mix them up.
+
+### 1. A4 / Default Invoice Template (PDF)
+- Used in: **Sales Invoice list page** — "Print A4" button
+- Paper: A4 (210×297mm)
+- Backend: `InvoicePdfService::generate()` → renders `resources/views/invoices/templates/default.blade.php` (or user-selected template from `invoice_templates` table)
+- Frontend API call: `GET /sales-invoices/{id}/pdf` → downloads PDF
+- Settings page: **Invoice Settings** → "Default Invoice Template" section
+- Template stored in: `invoice_templates` table (different from thermal)
+
+### 2. Thermal Printer Template (HTML → browser print)
+- Used in: **POS print button** + **Sales Invoice list page** "Print Thermal" button
+- Paper: 2-inch (58mm) or 3-inch (80mm) roll paper
+- Backend flow:
+  1. `GET /sales-invoices/{id}/html?template=thermal-custom&paper_size=2inch`
+  2. `SalesInvoiceController@html` looks up `ThermalTemplate` where `company_id`, `paper_size`, `is_default=true`
+  3. If found → renders via `ThermalTemplateRenderer::render()` (variable substitution: `{{company_name}}`, `{{items_table}}`, etc.)
+  4. If NOT found → falls back to built-in Blade template: `resources/views/invoices/templates/thermal.blade.php`
+- Frontend: fetches HTML with Bearer token → creates Blob URL → `window.open()` → `window.print()`
+- Settings page: **Thermal Invoice Templates** (`/settings/thermal-templates`) — `ThermalTemplateEditor.tsx`
+- Template stored in: `thermal_templates` table (fields: `name`, `html_content`, `paper_size`, `is_default`, `company_id`)
+- **Load Defaults**: `POST /thermal-templates/load-defaults` creates built-in 2inch + 3inch default templates for the company (skips if already exist)
+- Paper size preference: stored in `company_settings` as key `thermal_printer_paper_size` ('2inch'|'3inch')
+- Default template preference: stored in `company_settings` as key `default_invoice_template`
+- POS reads these settings on mount via `companySettingsApi.get()` and uses them in `handlePrint()`
+
+### Key constraint
+- `thermal_templates` has no MySQL unique partial index (MySQL limitation). Controller logic enforces "one default per paper_size" by setting others to `is_default=false` before inserting a new default.
+
+### Template variables available in ThermalTemplateRenderer
+`{{company_name}}`, `{{company_gstin}}`, `{{company_address}}`, `{{company_phone}}`, `{{company_email}}`, `{{invoice_number}}`, `{{invoice_date}}`, `{{invoice_date_formatted}}`, `{{customer_name}}`, `{{customer_gstin}}`, `{{customer_address}}`, `{{customer_city}}`, `{{customer_phone}}`, `{{subtotal}}`, `{{cgst_total}}`, `{{sgst_total}}`, `{{igst_total}}`, `{{round_off}}`, `{{grand_total}}`, `{{balance_due}}`, `{{amount_in_words}}`, `{{items_table}}`, `{{gst_summary}}`
+
+---
+
 ## Development Rules
 
 - **Do NOT start dev servers, preview, or run the application** unless the user explicitly asks to check errors or run the application.
