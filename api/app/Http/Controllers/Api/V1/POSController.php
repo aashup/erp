@@ -70,6 +70,7 @@ class POSController extends Controller
             'is_inter_state'       => 'boolean',
             'invoice_date'         => 'required|date',
             'notes'                => 'nullable|string',
+            'post_payment'         => 'boolean',
             'amount_tendered'      => 'nullable|numeric|min:0',
             'change_amount'        => 'nullable|numeric|min:0',
             'lines'                => 'required|array|min:1',
@@ -81,11 +82,27 @@ class POSController extends Controller
             'lines.*.rate'         => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate'     => 'required|numeric|min:0',
-            'payments'             => 'required|array|min:1',
-            'payments.*.mode'      => 'required|in:cash,upi,card',
-            'payments.*.amount'    => 'required|numeric|min:0.01',
+            'payments'             => 'nullable|array',
+            'payments.*.mode'      => 'required_with:payments|in:cash,upi,card',
+            'payments.*.amount'    => 'required_with:payments|numeric|min:0.01',
             'payments.*.reference' => 'nullable|string',
         ]);
+
+        $isPostPayment = ! empty($validated['post_payment']);
+
+        // Post payment requires a real registered customer — not Walk-in
+        if ($isPostPayment && empty($validated['party_id'])) {
+            throw ValidationException::withMessages([
+                'party_id' => 'Post payment requires a registered customer to be selected.',
+            ]);
+        }
+
+        // Normal payment mode requires at least one payment entry
+        if (! $isPostPayment && empty($validated['payments'])) {
+            throw ValidationException::withMessages([
+                'payments' => 'At least one payment is required.',
+            ]);
+        }
 
         // Resolve party BEFORE transaction — PartyObserver creates ledger entries
         // which must not be nested inside the checkout transaction
@@ -101,7 +118,7 @@ class POSController extends Controller
             $partyId = $walkIn->id;
         }
 
-        $invoice = DB::transaction(function () use ($validated, $request, $companyId, $userId, $partyId) {
+        $invoice = DB::transaction(function () use ($validated, $request, $companyId, $userId, $partyId, $isPostPayment) {
             $isInterState = $validated['is_inter_state'] ?? false;
 
             // Find financial year for invoice date
@@ -127,7 +144,7 @@ class POSController extends Controller
             $invoiceNumber = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
             // Determine primary payment mode for display
-            $primaryMode = $validated['payments'][0]['mode'];
+            $primaryMode = $isPostPayment ? 'post' : ($validated['payments'][0]['mode'] ?? 'cash');
 
             $invoice = SalesInvoice::create([
                 'party_id'          => $partyId,
@@ -186,70 +203,90 @@ class POSController extends Controller
             }
 
             $invoice->load('lines');
-            $grandTotal  = $invoice->lines->sum('line_total');
-            $totalPaid   = collect($validated['payments'])->sum('amount');
-            $balanceDue  = max(0, $grandTotal - $totalPaid);
+            $grandTotal = $invoice->lines->sum('line_total');
 
-            $invoice->update([
-                'total_amount'   => $invoice->lines->sum('taxable_amount'),
-                'taxable_amount' => $invoice->lines->sum('taxable_amount'),
-                'cgst_total'     => $invoice->lines->sum('cgst'),
-                'sgst_total'     => $invoice->lines->sum('sgst'),
-                'igst_total'     => $invoice->lines->sum('igst'),
-                'grand_total'    => $grandTotal,
-                'amount_paid'    => min($totalPaid, $grandTotal),
-                'balance_due'    => $balanceDue,
-            ]);
-
-            // Auto-post sales journal entry
-            $invoice->refresh();
-            app(AccountingService::class)->postSalesInvoice($invoice, $userId);
-
-            // Resolve cash and bank ledgers
-            $cashLedger = Ledger::findBySystemKey($companyId, 'cash');
-            $bankLedger = Ledger::where('company_id', $companyId)
-                ->whereHas('group', fn ($q) => $q->where('system_key', 'bank_account'))
-                ->first();
-
-            // Create receipt-number counter prefix
-            $receiptPrefix = 'RCP';
-            $receiptBase   = now()->format('ymdHis');
-
-            foreach ($validated['payments'] as $idx => $payment) {
-                // Map mode to ledger: cash/upi → cash; card → bank
-                $modeLedger = in_array($payment['mode'], ['cash', 'upi']) ? $cashLedger : $bankLedger;
-                $paymentMode = $payment['mode'] === 'card' ? 'bank' : $payment['mode'];
-
-                $receiptNumber = $receiptPrefix . '-' . $receiptBase . ($idx > 0 ? "-{$idx}" : '');
-
-                $receipt = PaymentReceipt::create([
-                    'company_id'       => $companyId,
-                    'party_id'         => $partyId,
-                    'type'             => 'receipt',
-                    'receipt_number'   => $receiptNumber,
-                    'receipt_date'     => $validated['invoice_date'],
-                    'amount'           => $payment['amount'],
-                    'payment_mode'     => $paymentMode,
-                    'reference_number' => $payment['reference'] ?? null,
-                    'notes'            => "POS #{$invoiceNumber}",
-                    'sales_invoice_id' => $invoice->id,
-                    'created_by'       => $userId,
+            if ($isPostPayment) {
+                // Credit sale — no payment collected now; full amount goes to party ledger
+                $invoice->update([
+                    'total_amount'   => $invoice->lines->sum('taxable_amount'),
+                    'taxable_amount' => $invoice->lines->sum('taxable_amount'),
+                    'cgst_total'     => $invoice->lines->sum('cgst'),
+                    'sgst_total'     => $invoice->lines->sum('sgst'),
+                    'igst_total'     => $invoice->lines->sum('igst'),
+                    'grand_total'    => $grandTotal,
+                    'amount_paid'    => 0,
+                    'balance_due'    => $grandTotal,
                 ]);
 
-                // Post receipt journal (Dr Cash/Bank, Cr Party)
-                $party = Party::find($partyId);
-                if ($party) {
-                    app(AccountingService::class)->postReceipt(
-                        $companyId,
-                        $party,
-                        (float) $payment['amount'],
-                        $paymentMode,
-                        $validated['invoice_date'],
-                        "POS Receipt #{$invoiceNumber} ({$payment['mode']})",
-                        $userId,
-                        PaymentReceipt::class,
-                        $receipt->id,
-                    );
+                // Post sales journal only (Dr: Party A/c, Cr: Sales + GST)
+                // No receipt journal — payment is deferred
+                $invoice->refresh();
+                app(AccountingService::class)->postSalesInvoice($invoice, $userId);
+            } else {
+                $totalPaid  = collect($validated['payments'])->sum('amount');
+                $balanceDue = max(0, $grandTotal - $totalPaid);
+
+                $invoice->update([
+                    'total_amount'   => $invoice->lines->sum('taxable_amount'),
+                    'taxable_amount' => $invoice->lines->sum('taxable_amount'),
+                    'cgst_total'     => $invoice->lines->sum('cgst'),
+                    'sgst_total'     => $invoice->lines->sum('sgst'),
+                    'igst_total'     => $invoice->lines->sum('igst'),
+                    'grand_total'    => $grandTotal,
+                    'amount_paid'    => min($totalPaid, $grandTotal),
+                    'balance_due'    => $balanceDue,
+                ]);
+
+                // Auto-post sales journal entry
+                $invoice->refresh();
+                app(AccountingService::class)->postSalesInvoice($invoice, $userId);
+
+                // Resolve cash and bank ledgers
+                $cashLedger = Ledger::findBySystemKey($companyId, 'cash');
+                $bankLedger = Ledger::where('company_id', $companyId)
+                    ->whereHas('group', fn ($q) => $q->where('system_key', 'bank_account'))
+                    ->first();
+
+                // Create receipt-number counter prefix
+                $receiptPrefix = 'RCP';
+                $receiptBase   = now()->format('ymdHis');
+
+                foreach ($validated['payments'] as $idx => $payment) {
+                    // Map mode to ledger: cash/upi → cash; card → bank
+                    $modeLedger  = in_array($payment['mode'], ['cash', 'upi']) ? $cashLedger : $bankLedger;
+                    $paymentMode = $payment['mode'] === 'card' ? 'bank' : $payment['mode'];
+
+                    $receiptNumber = $receiptPrefix . '-' . $receiptBase . ($idx > 0 ? "-{$idx}" : '');
+
+                    $receipt = PaymentReceipt::create([
+                        'company_id'       => $companyId,
+                        'party_id'         => $partyId,
+                        'type'             => 'receipt',
+                        'receipt_number'   => $receiptNumber,
+                        'receipt_date'     => $validated['invoice_date'],
+                        'amount'           => $payment['amount'],
+                        'payment_mode'     => $paymentMode,
+                        'reference_number' => $payment['reference'] ?? null,
+                        'notes'            => "POS #{$invoiceNumber}",
+                        'sales_invoice_id' => $invoice->id,
+                        'created_by'       => $userId,
+                    ]);
+
+                    // Post receipt journal (Dr Cash/Bank, Cr Party)
+                    $party = Party::find($partyId);
+                    if ($party) {
+                        app(AccountingService::class)->postReceipt(
+                            $companyId,
+                            $party,
+                            (float) $payment['amount'],
+                            $paymentMode,
+                            $validated['invoice_date'],
+                            "POS Receipt #{$invoiceNumber} ({$payment['mode']})",
+                            $userId,
+                            PaymentReceipt::class,
+                            $receipt->id,
+                        );
+                    }
                 }
             }
 

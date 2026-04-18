@@ -34,6 +34,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->boolean('pos_held')->default(false);
             $table->string('pos_payment_mode', 20)->nullable();
+            $table->string('share_token', 64)->nullable()->unique();
             $table->decimal('amount_tendered', 15, 2)->default(0);
             $table->decimal('change_amount', 15, 2)->default(0);
             $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();

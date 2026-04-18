@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import { posApi } from '@/api/pos';
 import { godownsApi } from '@/api/inventory';
 import { salesInvoicesApi } from '@/api/sales';
+import { companySettingsApi } from '@/api/settings';
+import type { CompanySettings } from '@/types';
 import { calcGST, calcRoundOff, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -61,8 +63,16 @@ export default function POSPage() {
   const [lastInvoice, setLastInvoice] = useState<SalesInvoice | null>(null);
   const [successModal, setSuccessModal] = useState(false);
   const [negativeAlert, setNegativeAlert] = useState<NegativeStockAlert | null>(null);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Load company settings (paper size, invoice template) on mount
+  useEffect(() => {
+    companySettingsApi.get().then((res) => {
+      setCompanySettings(res.data.data ?? null);
+    }).catch(() => {});
+  }, []);
 
   // Load default godown on mount
   useEffect(() => {
@@ -247,7 +257,7 @@ export default function POSPage() {
     toast.success('Bill resumed');
   }
 
-  async function handleCheckout(payments: PaymentEntry[], amountTendered: number, changeAmount: number) {
+  async function handleCheckout(payments: PaymentEntry[], amountTendered: number, changeAmount: number, postPayment?: boolean) {
     if (!godown) { toast.error('No godown configured'); return; }
     setCheckoutLoading(true);
     try {
@@ -266,9 +276,7 @@ export default function POSPage() {
           discount_percent: l.discountPct,
           gst_rate: l.gstRate,
         })),
-        payments,
-        amount_tendered: amountTendered,
-        change_amount: changeAmount,
+        ...(postPayment ? { post_payment: true } : { payments, amount_tendered: amountTendered, change_amount: changeAmount }),
       });
       const inv = res.data.data;
       setLastInvoice(inv);
@@ -286,8 +294,10 @@ export default function POSPage() {
     try {
       // Fetch HTML with auth token (Bearer token not sent via window.open)
       const { default: api } = await import('@/lib/axios');
+      const paperSize = companySettings?.thermal_printer_paper_size ?? '2inch';
+      const template  = companySettings?.default_invoice_template ?? 'thermal-custom';
       const res = await api.get(`/sales-invoices/${invoiceId}/html`, {
-        params: { template: 'thermal-custom', paper_size: '2inch' },
+        params: { template, paper_size: paperSize },
         responseType: 'text',
       });
       const blob = new Blob([res.data], { type: 'text/html;charset=utf-8' });
@@ -304,10 +314,41 @@ export default function POSPage() {
   }
 
   function handleWhatsApp(invoice: SalesInvoice) {
-    const msg = encodeURIComponent(
-      `Invoice #${invoice.invoice_number}\nAmount: ${formatCurrency(Number(invoice.grand_total))}\nThank you!`
-    );
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
+    // Build public share URL using the invoice's share_token
+    const shareUrl = invoice.share_token
+      ? `${window.location.origin}/api/v1/public/invoices/${invoice.share_token}`
+      : null;
+
+    // Round off for display
+    const { netPayable } = calcRoundOff(Number(invoice.grand_total));
+
+    const partyName = invoice.party?.name && invoice.party.name !== 'Walk-in Customer'
+      ? invoice.party.name
+      : null;
+
+    const lines = [
+      `🧾 *Invoice ${invoice.invoice_number}*`,
+      partyName ? `Customer: ${partyName}` : null,
+      `Amount: ₹${netPayable}`,
+      `Date: ${new Date(invoice.invoice_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      shareUrl ? `\n📄 View & Download Invoice:\n${shareUrl}` : null,
+      `\nThank you for your business! 🙏`,
+    ].filter(Boolean).join('\n');
+
+    const msg = encodeURIComponent(lines);
+
+    // Pre-fill phone if customer has one (strip non-digits, add India country code)
+    const rawPhone = invoice.party?.phone?.replace(/\D/g, '') ?? '';
+    let waPhone = '';
+    if (rawPhone.length === 10) {
+      waPhone = `91${rawPhone}`;
+    } else if (rawPhone.length === 12 && rawPhone.startsWith('91')) {
+      waPhone = rawPhone;
+    } else if (rawPhone.length === 11 && rawPhone.startsWith('0')) {
+      waPhone = `91${rawPhone.slice(1)}`;
+    }
+
+    window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
   }
 
   return (
@@ -531,6 +572,7 @@ export default function POSPage() {
           grandTotal={grandTotal}
           netPayable={netPayable}
           roundOff={roundOff}
+          customer={customer}
           onConfirm={handleCheckout}
           onClose={() => setPaymentModal(false)}
           loading={checkoutLoading}
@@ -542,6 +584,7 @@ export default function POSPage() {
         open={reprintPanel}
         onClose={() => setReprintPanel(false)}
         onPrint={handlePrint}
+        onWhatsApp={handleWhatsApp}
       />
 
       {/* Held bills drawer */}

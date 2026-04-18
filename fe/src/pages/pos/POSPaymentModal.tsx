@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { X, Banknote, Smartphone, CreditCard, Scissors, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { X, Banknote, Smartphone, CreditCard, Scissors, CheckCircle, BookOpen, Clock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import type { Party } from '@/types';
 
 export type PaymentMode = 'cash' | 'upi' | 'card';
 
@@ -14,26 +15,15 @@ interface Props {
   grandTotal: number;   // raw total before round-off
   netPayable: number;   // rounded total (what customer pays)
   roundOff: number;     // difference (signed)
-  onConfirm: (payments: PaymentEntry[], amountTendered: number, changeAmount: number) => void;
+  customer: Party | null;
+  onConfirm: (payments: PaymentEntry[], amountTendered: number, changeAmount: number, postPayment?: boolean) => void;
   onClose: () => void;
   loading?: boolean;
 }
 
-const MODE_ICONS: Record<PaymentMode, React.ReactNode> = {
-  cash: <Banknote className="h-5 w-5" />,
-  upi: <Smartphone className="h-5 w-5" />,
-  card: <CreditCard className="h-5 w-5" />,
-};
+type Tab = 'cash' | 'upi' | 'card' | 'split' | 'post';
 
-const MODE_LABELS: Record<PaymentMode, string> = {
-  cash: 'Cash',
-  upi: 'UPI',
-  card: 'Card',
-};
-
-type Tab = 'cash' | 'upi' | 'card' | 'split';
-
-export default function POSPaymentModal({ grandTotal, netPayable, roundOff, onConfirm, onClose, loading }: Props) {
+export default function POSPaymentModal({ grandTotal, netPayable, roundOff, customer, onConfirm, onClose, loading }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('cash');
   const [cashTendered, setCashTendered] = useState(netPayable.toFixed(0));
   const [upiRef, setUpiRef] = useState('');
@@ -51,17 +41,18 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, onCo
   const splitTotal = splitLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
   const splitRemaining = netPayable - splitTotal;
 
+  // Post payment only available for registered (non-walk-in) customers
+  const isRegisteredCustomer = !!customer && customer.name !== 'Walk-in Customer';
+
   function handleConfirm() {
     if (activeTab === 'cash') {
-      onConfirm(
-        [{ mode: 'cash', amount: netPayable, reference: '' }],
-        tendered,
-        change,
-      );
+      onConfirm([{ mode: 'cash', amount: netPayable, reference: '' }], tendered, change);
     } else if (activeTab === 'upi') {
       onConfirm([{ mode: 'upi', amount: netPayable, reference: upiRef }], netPayable, 0);
     } else if (activeTab === 'card') {
       onConfirm([{ mode: 'card', amount: netPayable, reference: cardRef }], netPayable, 0);
+    } else if (activeTab === 'post') {
+      onConfirm([], 0, 0, true);
     } else {
       // Split
       const payments = splitLines
@@ -83,34 +74,43 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, onCo
       ? tendered >= netPayable
       : activeTab === 'split'
       ? Math.abs(splitRemaining) < 0.01
-      : true;
+      : true; // upi, card, post — always confirmable
 
   // Quick cash amounts based on netPayable (already rounded)
-  const quickAmounts = [netPayable, Math.ceil(netPayable / 10) * 10, Math.ceil(netPayable / 50) * 50, Math.ceil(netPayable / 100) * 100].filter(
-    (v, i, a) => a.indexOf(v) === i
-  );
+  const quickAmounts = [
+    netPayable,
+    Math.ceil(netPayable / 10) * 10,
+    Math.ceil(netPayable / 50) * 50,
+    Math.ceil(netPayable / 100) * 100,
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; hidden?: boolean }[] = [
+    { id: 'cash',  label: 'Cash',  icon: <Banknote className="h-4 w-4" /> },
+    { id: 'upi',   label: 'UPI',   icon: <Smartphone className="h-4 w-4" /> },
+    { id: 'card',  label: 'Card',  icon: <CreditCard className="h-4 w-4" /> },
+    { id: 'split', label: 'Split', icon: <Scissors className="h-4 w-4" /> },
+    { id: 'post',  label: 'Post',  icon: <BookOpen className="h-4 w-4" />, hidden: !isRegisteredCustomer },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <div>
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Total</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 line-through">{formatCurrency(grandTotal)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Round Off</p>
-                <p className={`text-sm font-medium ${roundOff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                  {roundOff >= 0 ? '+' : ''}{formatCurrency(roundOff)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Net Payable</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">₹{netPayable}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Total</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 line-through">{formatCurrency(grandTotal)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Round Off</p>
+              <p className={`text-sm font-medium ${roundOff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                {roundOff >= 0 ? '+' : ''}{formatCurrency(roundOff)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Net Payable</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">₹{netPayable}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -120,21 +120,20 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, onCo
 
         {/* Mode tabs */}
         <div className="flex border-b border-gray-100 dark:border-gray-800">
-          {(['cash', 'upi', 'card', 'split'] as Tab[]).map((tab) => (
+          {tabs.filter((t) => !t.hidden).map((tab) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-semibold transition-colors ${
-                activeTab === tab
-                  ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+                activeTab === tab.id
+                  ? tab.id === 'post'
+                    ? 'border-b-2 border-orange-500 text-orange-600 dark:text-orange-400 dark:border-orange-400'
+                    : 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
-              {tab === 'cash' && <Banknote className="h-4 w-4" />}
-              {tab === 'upi' && <Smartphone className="h-4 w-4" />}
-              {tab === 'card' && <CreditCard className="h-4 w-4" />}
-              {tab === 'split' && <Scissors className="h-4 w-4" />}
-              {tab === 'cash' ? 'Cash' : tab === 'split' ? 'Split' : tab.toUpperCase()}
+              {tab.icon}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -252,6 +251,37 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, onCo
               </div>
             </div>
           )}
+
+          {activeTab === 'post' && (
+            <div className="space-y-4">
+              {/* Info card */}
+              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0" />
+                  <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">Post Payment (Credit Sale)</p>
+                </div>
+                <p className="text-xs text-orange-700 dark:text-orange-400 leading-relaxed">
+                  No payment will be collected now. The full amount will be added to the customer's outstanding ledger balance and can be collected later.
+                </p>
+              </div>
+
+              {/* Amount summary */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Customer</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{customer?.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Amount to Ledger</p>
+                  <p className="text-lg font-bold text-orange-600 dark:text-orange-400">₹{netPayable}</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                Invoice will be confirmed. Balance due will appear in party ledger.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Confirm button */}
@@ -259,10 +289,19 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, onCo
           <button
             onClick={handleConfirm}
             disabled={!canConfirm || loading}
-            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl text-base transition-colors"
+            className={`w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl text-base transition-colors ${
+              activeTab === 'post'
+                ? 'bg-orange-500 hover:bg-orange-600'
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : activeTab === 'post' ? (
+              <>
+                <BookOpen className="h-5 w-5" />
+                Post to Ledger
+              </>
             ) : (
               <>
                 <CheckCircle className="h-5 w-5" />

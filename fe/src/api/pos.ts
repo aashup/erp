@@ -29,9 +29,10 @@ export interface POSCheckoutPayload {
   invoice_date: string;
   notes?: string;
   lines: POSCheckoutLine[];
-  payments: POSCheckoutPayment[];
+  payments?: POSCheckoutPayment[];
   amount_tendered?: number;
   change_amount?: number;
+  post_payment?: boolean;   // credit sale — no receipt, full amount to ledger balance
 }
 
 export const posApi = {

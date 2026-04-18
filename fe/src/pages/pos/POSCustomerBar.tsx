@@ -5,6 +5,12 @@ import { partiesApi } from '@/api/parties';
 import { formatCurrency } from '@/lib/utils';
 import type { Party } from '@/types';
 
+interface PartyBalance {
+  balance: number;
+  balance_abs: number;
+  type: 'dr' | 'cr';
+}
+
 interface Props {
   customer: Party | null;
   onCustomerChange: (party: Party | null) => void;
@@ -19,12 +25,28 @@ export default function POSCustomerBar({ customer, onCustomerChange }: Props) {
   const [quickName, setQuickName] = useState('');
   const [quickPhone, setQuickPhone] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Real ledger balance for the selected customer
+  const [balance, setBalance] = useState<PartyBalance | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
+
+  // Fetch real ledger balance whenever the selected customer changes
+  useEffect(() => {
+    setBalance(null);
+    if (!customer || customer.name === 'Walk-in Customer') return;
+    setBalanceLoading(true);
+    partiesApi.balance(customer.id)
+      .then((res) => setBalance(res.data.data))
+      .catch(() => setBalance(null))
+      .finally(() => setBalanceLoading(false));
+  }, [customer?.id]);
 
   function handleSearch(q: string) {
     setSearch(q);
@@ -65,6 +87,17 @@ export default function POSCustomerBar({ customer, onCustomerChange }: Props) {
     setResults([]);
   }
 
+  // Balance display helpers
+  const balanceColor = balance
+    ? balance.type === 'dr'
+      ? 'text-red-500 dark:text-red-400'      // owes us — show as red (outstanding)
+      : 'text-green-600 dark:text-green-400'  // credit — show as green (advance)
+    : 'text-indigo-500 dark:text-indigo-400';
+
+  const balanceLabel = balance
+    ? `${formatCurrency(balance.balance_abs)} ${balance.type.toUpperCase()}`
+    : null;
+
   return (
     <div className="relative flex items-center gap-2">
       {customer ? (
@@ -73,11 +106,13 @@ export default function POSCustomerBar({ customer, onCustomerChange }: Props) {
           <div className="leading-tight">
             <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">{customer.name}</p>
             {customer.phone && <p className="text-xs text-indigo-500 dark:text-indigo-400">{customer.phone}</p>}
-            {customer.opening_balance != null && (
-              <p className="text-xs text-indigo-500 dark:text-indigo-400">
-                Bal: {customer.balance_type === 'cr' ? '-' : ''}{formatCurrency(customer.opening_balance)}
-              </p>
-            )}
+            <p className={`text-xs font-medium ${balanceColor}`}>
+              {balanceLoading
+                ? 'Loading…'
+                : balanceLabel
+                ? `Bal: ${balanceLabel}`
+                : 'Bal: ₹0'}
+            </p>
           </div>
           <button
             onClick={() => onCustomerChange(null)}

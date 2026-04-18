@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Party;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PartyController extends Controller
 {
@@ -107,5 +108,55 @@ class PartyController extends Controller
         $party->delete();
 
         return response()->json(['message' => 'Party deleted']);
+    }
+
+    /**
+     * Return the real-time ledger balance for a party.
+     * Balance = opening_balance (sign-adjusted) + sum of all posted voucher debit/credit lines.
+     * Positive = Dr (customer owes us); Negative = Cr (we owe customer).
+     */
+    public function balance(Party $party): JsonResponse
+    {
+        $this->authorize('view', $party);
+
+        $companyId = auth()->user()->company_id;
+
+        // Collect the party's linked ledger IDs (debtor and/or creditor)
+        $ledgerIds = array_filter([
+            $party->debtor_ledger_id,
+            $party->creditor_ledger_id,
+        ]);
+
+        // Opening balance — sign convention: Dr positive, Cr negative
+        $openingBalance = (float) ($party->opening_balance ?? 0);
+        if ($party->balance_type === 'cr') {
+            $openingBalance = -$openingBalance;
+        }
+
+        $runningBalance = $openingBalance;
+
+        if (! empty($ledgerIds)) {
+            $totals = DB::table('voucher_lines')
+                ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
+                ->where('vouchers.company_id', $companyId)
+                ->where('vouchers.is_posted', true)
+                ->whereIn('voucher_lines.ledger_id', $ledgerIds)
+                ->selectRaw('SUM(voucher_lines.debit) as total_debit, SUM(voucher_lines.credit) as total_credit')
+                ->first();
+
+            $runningBalance += ((float) ($totals->total_debit ?? 0)) - ((float) ($totals->total_credit ?? 0));
+        }
+
+        $balance    = round($runningBalance, 2);
+        $balanceAbs = abs($balance);
+        $type       = $balance >= 0 ? 'dr' : 'cr';
+
+        return response()->json([
+            'data' => [
+                'balance'     => $balance,
+                'balance_abs' => $balanceAbs,
+                'type'        => $type,         // 'dr' = owes us, 'cr' = we owe them
+            ],
+        ]);
     }
 }

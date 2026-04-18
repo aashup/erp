@@ -321,6 +321,11 @@ export interface SalesInvoice extends SyncColumns {
   amount_paid: number;
   balance_due: number;
   notes: string | null;
+  pos_held?: boolean;
+  pos_payment_mode?: string | null;
+  amount_tendered?: number;
+  change_amount?: number;
+  share_token?: string | null;
   party?: Party;
   lines?: SalesInvoiceLine[];
 }

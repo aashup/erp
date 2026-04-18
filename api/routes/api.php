@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\ThermalTemplateController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VoucherController;
+use App\Http\Controllers\Api\V1\PublicInvoiceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,6 +39,9 @@ use Illuminate\Support\Facades\Route;
 */
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Public invoice share (no auth — WhatsApp/social preview)
+Route::get('/public/invoices/{token}', [PublicInvoiceController::class, 'show']);
 
 /*
 |--------------------------------------------------------------------------
@@ -86,6 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('batches/{batch}', [BatchController::class, 'destroy']);
 
     // Parties
+    Route::get('parties/{party}/balance', [PartyController::class, 'balance']);
     Route::apiResource('parties', PartyController::class);
 
     // Branches

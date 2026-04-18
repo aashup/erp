@@ -14,4 +14,7 @@ export const partiesApi = {
     api.put<ApiResponse<Party>>(`/parties/${id}`, data),
 
   delete: (id: string) => api.delete(`/parties/${id}`),
+
+  balance: (id: string) =>
+    api.get<ApiResponse<{ balance: number; balance_abs: number; type: 'dr' | 'cr' }>>(`/parties/${id}/balance`),
 };

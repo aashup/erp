@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\CompanySetting;
 use App\Models\DocumentCounter;
 use App\Models\FinancialYear;
 use App\Models\Godown;
@@ -420,7 +421,8 @@ class SalesInvoiceController extends Controller
         $this->authorize('view', $salesInvoice);
 
         $templateSlug = $request->query('template');
-        $paperSize = $request->query('paper_size') ?? '2inch';
+        $paperSize = $request->query('paper_size')
+            ?? CompanySetting::getValue($salesInvoice->company_id, 'thermal_printer_paper_size', '2inch');
 
         // Check if using custom thermal template
         if ($templateSlug === 'thermal-custom') {

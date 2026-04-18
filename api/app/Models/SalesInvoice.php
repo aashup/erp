@@ -39,6 +39,7 @@ class SalesInvoice extends Model
         'notes',
         'pos_held',
         'pos_payment_mode',
+        'share_token',
         'amount_tendered',
         'change_amount',
         'created_by',
@@ -65,6 +66,15 @@ class SalesInvoice extends Model
             'amount_tendered' => 'decimal:2',
             'change_amount' => 'decimal:2',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (SalesInvoice $invoice) {
+            if (empty($invoice->share_token)) {
+                $invoice->share_token = bin2hex(random_bytes(24)); // 48-char hex token
+            }
+        });
     }
 
     public function getActivitylogOptions(): LogOptions

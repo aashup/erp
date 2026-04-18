@@ -236,7 +236,7 @@
                 </tr>
                 <tr>
                     <td style="text-align: right; font-size: 7px;">
-                        {{ $line->quantity }}x@{{ number_format($line->rate, 2) }}
+                        {{ $line->quantity }}x{{ number_format($line->rate, 2) }}
                     </td>
                     <td class="item-qty">{{ round($line->quantity, 2) }}</td>
                     <td class="item-rate">{{ number_format($line->rate, 0) }}</td>
