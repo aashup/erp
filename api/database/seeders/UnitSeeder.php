@@ -22,6 +22,11 @@ class UnitSeeder extends Seeder
             ['value' => 'LTR', 'label' => 'Liter'],
             ['value' => 'GM', 'label' => 'Gram'],
             ['value' => 'PAK', 'label' => 'Pack'],
+            ['value' => 'BAG', 'label' => 'Bag'],
+            ['value' => 'SqFeet', 'label' => 'Square Feet'],
+            ['value' => 'Trolly60', 'label' => 'Trolly 6000'],
+            ['value' => 'Trolly10', 'label' => 'Trolly 1000'],
+            ['value' => 'Trolly15', 'label' => 'Trolly 1500'],
         ];
 
         $companies = Company::all();
