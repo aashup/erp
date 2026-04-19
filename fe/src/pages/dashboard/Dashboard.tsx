@@ -13,6 +13,7 @@ import { NetRevenueWidget } from "./widgets/NetRevenueWidget";
 import { TotalPurchaseWidget } from "./widgets/TotalPurchaseWidget";
 import { ProfitLossWidget } from "./widgets/ProfitLossWidget";
 import { PayableTaxWidget } from "./widgets/PayableTaxWidget";
+import { CollectionWidget } from "./widgets/CollectionWidget";
 import { SalesPurchaseChart } from "./widgets/SalesPurchaseChart";
 import { QuickActions } from "./widgets/QuickActions";
 import { AlertsSync } from "./widgets/AlertsSync";
@@ -70,12 +71,13 @@ export default function Dashboard() {
       />
 
       {/* Financial Widgets */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <TotalSalesWidget />
         <NetRevenueWidget />
         <TotalPurchaseWidget />
         <ProfitLossWidget />
         <PayableTaxWidget />
+        <CollectionWidget />
       </div>
 
       {/* Sales / Purchase / Revenue Chart */}

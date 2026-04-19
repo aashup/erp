@@ -38,9 +38,21 @@ export interface DashboardChartData {
   revenue: number[];
 }
 
+export interface CollectionStats {
+  period: string;
+  from: string;
+  to: string;
+  total: number;
+  cash: number;
+  account: number;
+  need_to_collect: number;
+}
+
 export const dashboardApi = {
   stats: (period: string) =>
     api.get<{ data: DashboardStats }>('/dashboard/stats', { params: { period } }),
   chart: (months?: number) =>
     api.get<{ data: DashboardChartData }>('/dashboard/chart', { params: { months } }),
+  collection: (period: string) =>
+    api.get<{ data: CollectionStats }>('/dashboard/collection', { params: { period } }),
 };

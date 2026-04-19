@@ -281,6 +281,45 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function collection(Request $request): JsonResponse
+    {
+        $period    = $request->query('period', 'today');
+        $companyId = $request->user()->company_id;
+        $range     = $this->getDateRange($period);
+
+        $base = \App\Models\PaymentReceipt::where('company_id', $companyId)
+            ->where('type', 'receipt')
+            ->whereNull('deleted_at')
+            ->whereBetween('receipt_date', [
+                $range['from']->toDateString(),
+                $range['to']->toDateString(),
+            ]);
+
+        $total   = (float) (clone $base)->sum('amount');
+        $cash    = (float) (clone $base)->where('payment_mode', 'cash')->sum('amount');
+        $account = (float) (clone $base)->whereIn('payment_mode', ['bank', 'cheque', 'upi', 'other'])->sum('amount');
+
+        $needToCollect = (float) \App\Models\SalesInvoice::where('company_id', $companyId)
+            ->where('status', '!=', 'cancelled')
+            ->whereBetween('invoice_date', [
+                $range['from']->toDateString(),
+                $range['to']->toDateString(),
+            ])
+            ->sum('balance_due');
+
+        return response()->json([
+            'data' => [
+                'period'          => $period,
+                'from'            => $range['from']->toDateString(),
+                'to'              => $range['to']->toDateString(),
+                'total'           => round($total, 2),
+                'cash'            => round($cash, 2),
+                'account'         => round($account, 2),
+                'need_to_collect' => round($needToCollect, 2),
+            ],
+        ]);
+    }
+
     private function getDateRange(string $period): array
     {
         $now = Carbon::today();
