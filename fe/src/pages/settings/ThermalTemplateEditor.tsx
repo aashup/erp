@@ -8,6 +8,8 @@ import { thermalTemplatesApi } from '@/api/thermalTemplates';
 import { salesInvoicesApi } from '@/api/sales';
 import type { ThermalTemplate } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
+import { render } from '@/lib/thermalTemplateRenderer';
 import { Trash2, Save, Plus, ArrowLeft, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDateStore } from '@/store/dateStore';
@@ -245,6 +247,8 @@ export default function ThermalTemplateEditor() {
     });
   };
 
+  const user = useAuthStore((s) => s.user);
+
   const getPaperWidth = () => editorState.formData.paperSize === '3inch' ? '80mm' : '58mm';
 
   const getDefaultSampleInvoice = () => ({
@@ -398,42 +402,20 @@ export default function ThermalTemplateEditor() {
     const invoice = sampleInvoice || getDefaultSampleInvoice();
     if (!invoice) return '<p>Unable to load sample invoice...</p>';
 
-    let html = editorState.formData.htmlContent
-      .replace(/{{company_name}}/g, 'Hayes Ltd')
-      .replace(/{{company_gstin}}/g, '27AABCT1234H1Z0')
-      .replace(/{{invoice_number}}/g, invoice.invoice_number || 'INV-0001')
-      .replace(/{{invoice_date_formatted}}/g, formatDate(invoice.invoice_date))
-      .replace(/{{customer_name}}/g, invoice.party?.name || 'Sample Customer')
-      .replace(/{{customer_gstin}}/g, invoice.party?.gstin || 'GSTIN')
-      .replace(/{{subtotal}}/g, Number(invoice.total_amount || 0).toFixed(2))
-      .replace(/{{cgst_total}}/g, Number(invoice.cgst_total || 0).toFixed(2))
-      .replace(/{{sgst_total}}/g, Number(invoice.sgst_total || 0).toFixed(2))
-      .replace(/{{igst_total}}/g, Number(invoice.igst_total || 0).toFixed(2))
-      .replace(/{{grand_total}}/g, Number(invoice.grand_total || 0).toFixed(0))
-      .replace(/{{balance_due}}/g, Number(invoice.balance_due || 0).toFixed(2))
-      .replace(/{{paper_width}}/g, getPaperWidth());
+    const company = user?.company ?? {
+      id: 'sample', name: 'Your Company', gstin: '27AABCT1234H1Z0',
+      address: '123 Sample Street', phone: '9876543210', email: 'info@company.com',
+      pan: null, city: null, state: null, state_code: null, pincode: null,
+      logo_path: null, sync_status: 'synced' as const, device_id: null,
+      synced_at: null, updated_at_local: '', created_at: '', updated_at: '',
+    };
 
-    // Build simple items table
-    let itemsTable = `<table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-      <thead><tr style="border-bottom: 1px dashed #000;">
-        <th style="text-align: left; padding: 2px; font-size: 9px;">Item</th>
-        <th style="text-align: center; padding: 2px; font-size: 9px;">Qty</th>
-        <th style="text-align: right; padding: 2px; font-size: 9px;">Total</th>
-      </tr></thead>
-      <tbody>`;
-
-    invoice.lines?.forEach((line) => {
-      itemsTable += `<tr style="border-bottom: 1px dotted #ccc;">
-        <td style="padding: 2px; font-size: 9px;">${line.item?.name || 'Item'}</td>
-        <td style="text-align: center; padding: 2px; font-size: 9px;">${Number(line.quantity || 0).toFixed(2)}</td>
-        <td style="text-align: right; padding: 2px; font-size: 9px;">${Number(line.line_total || 0).toFixed(0)}</td>
-      </tr>`;
-    });
-
-    itemsTable += `</tbody></table>`;
-    html = html.replace(/{{items_table}}/g, itemsTable);
-
-    return html;
+    return render(
+      editorState.formData.htmlContent,
+      invoice,
+      company,
+      { paperSize: editorState.formData.paperSize },
+    );
   };
 
   if (editorState.mode === 'list') {

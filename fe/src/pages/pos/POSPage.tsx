@@ -9,6 +9,9 @@ import api from '@/lib/axios';
 import { posApi } from '@/api/pos';
 import { godownsApi } from '@/api/inventory';
 import { companySettingsApi } from '@/api/settings';
+import { thermalTemplatesApi } from '@/api/thermalTemplates';
+import { salesInvoicesApi } from '@/api/sales';
+import { render, openThermalPrintWindow } from '@/lib/thermalTemplateRenderer';
 import type { CompanySettings } from '@/types';
 import { calcGST, calcRoundOff, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -313,23 +316,33 @@ export default function POSPage() {
 
   async function handlePrint(invoiceId: string) {
     try {
-      // Fetch HTML with auth token (Bearer token not sent via window.open)
-      // POS always uses thermal printing — never A4
-      const paperSize = companySettings?.thermal_printer_paper_size ?? '2inch';
-      const res = await api.get(`/sales-invoices/${invoiceId}/html`, {
-        params: { template: 'thermal-custom', paper_size: paperSize },
-        responseType: 'text',
-      });
-      const blob = new Blob([res.data], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      // Window width matches paper: 3inch (80mm) → 380px, 2inch (58mm) → 300px
-      const winWidth = paperSize === '3inch' ? 380 : 300;
-      const win = window.open(url, '_blank', `width=${winWidth},height=650`);
-      if (win) {
-        win.onload = () => { win.focus(); win.print(); };
-        // Revoke blob URL after print dialog closes
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      const paperSize = (companySettings?.thermal_printer_paper_size ?? '2inch') as '2inch' | '3inch';
+
+      const [invoiceRes, templatesRes] = await Promise.all([
+        salesInvoicesApi.get(invoiceId),
+        thermalTemplatesApi.list({ per_page: 100 }),
+      ]);
+
+      const invoice = invoiceRes.data.data;
+      const templates = (templatesRes.data as any)?.data ?? [];
+      const customTemplate = templates.find(
+        (t: any) => t.paper_size === paperSize && t.is_default,
+      );
+
+      let html: string;
+      if (customTemplate && user?.company) {
+        html = render(customTemplate.html_content, invoice, user.company, { paperSize });
+      } else {
+        // Fallback: built-in Blade template rendered by backend
+        const res = await api.get(`/sales-invoices/${invoiceId}/html`, {
+          params: { template: 'thermal', paper_size: paperSize },
+          responseType: 'text',
+        });
+        html = res.data;
       }
+
+      const win = openThermalPrintWindow(html, paperSize);
+      if (!win) toast.error('Pop-up blocked. Please allow pop-ups for printing.');
     } catch {
       toast.error('Could not load receipt for printing');
     }

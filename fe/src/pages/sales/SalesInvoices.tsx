@@ -11,6 +11,8 @@ import { salesInvoicesApi } from '@/api/sales';
 import { partiesApi } from '@/api/parties';
 import { companySettingsApi } from '@/api/settings';
 import { thermalTemplatesApi } from '@/api/thermalTemplates';
+import { useAuthStore } from '@/store/authStore';
+import { render, openThermalPrintWindow } from '@/lib/thermalTemplateRenderer';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { SalesInvoice, Party, ThermalTemplate } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -342,6 +344,7 @@ export default function SalesInvoices() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const user = useAuthStore((s) => s.user);
   const canCreate = hasPermission('sales.create');
   const canEdit = hasPermission('sales.edit');
   const canDelete = hasPermission('sales.delete');
@@ -441,29 +444,26 @@ export default function SalesInvoices() {
     return customTemplate;
   };
 
+  async function fetchThermalHtml(id: string): Promise<string> {
+    const customTemplate = getThermalTemplate();
+    if (customTemplate && user?.company) {
+      const invoiceRes = await salesInvoicesApi.get(id);
+      const invoice = invoiceRes.data.data;
+      return render(customTemplate.html_content, invoice, user.company, { paperSize: thermalPaperSize });
+    }
+    // Fallback: built-in Blade template rendered by backend
+    const res = await salesInvoicesApi.getThermalHtml(id, thermalPaperSize);
+    return (res as any).data;
+  }
+
   const thermalPreviewMutation = useMutation({
-    mutationFn: (id: string) => {
-      const customTemplate = getThermalTemplate();
-      if (customTemplate) {
-        // Use custom template
-        return fetch(`/api/v1/sales-invoices/${id}/html?template=thermal-custom&paper_size=${thermalPaperSize}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }).then(res => res.text()).then(data => ({ data }));
-      } else {
-        // Use built-in thermal template
-        return salesInvoicesApi.getThermalHtml(id, thermalPaperSize);
-      }
-    },
-    onSuccess: (response) => {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
+    mutationFn: fetchThermalHtml,
+    onSuccess: (html) => {
+      const win = openThermalPrintWindow(html, thermalPaperSize, false);
+      if (!win) {
         toast.error('Pop-up blocked. Please allow pop-ups for printing.');
         return;
       }
-      printWindow.document.write(response.data);
-      printWindow.document.close();
       queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
     },
     onError: () => {
@@ -472,32 +472,13 @@ export default function SalesInvoices() {
   });
 
   const thermalPrintMutation = useMutation({
-    mutationFn: (id: string) => {
-      const customTemplate = getThermalTemplate();
-      if (customTemplate) {
-        // Use custom template
-        return fetch(`/api/v1/sales-invoices/${id}/html?template=thermal-custom&paper_size=${thermalPaperSize}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }).then(res => res.text()).then(data => ({ data }));
-      } else {
-        // Use built-in thermal template
-        return salesInvoicesApi.getThermalHtml(id, thermalPaperSize);
-      }
-    },
-    onSuccess: (response) => {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
+    mutationFn: fetchThermalHtml,
+    onSuccess: (html) => {
+      const win = openThermalPrintWindow(html, thermalPaperSize, true);
+      if (!win) {
         toast.error('Pop-up blocked. Please allow pop-ups for printing.');
         return;
       }
-      printWindow.document.write(response.data);
-      printWindow.document.close();
-      printWindow.onload = () => {
-        printWindow.focus();
-        printWindow.print();
-      };
       queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
     },
     onError: () => {
