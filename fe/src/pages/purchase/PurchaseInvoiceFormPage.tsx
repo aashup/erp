@@ -154,6 +154,7 @@ export default function PurchaseInvoiceFormPage() {
     }
 
     reset({
+      financial_year_id: invoiceData.financial_year_id,
       invoice_number: invoiceData.invoice_number ?? '',
       party_id: invoiceData.party_id,
       invoice_date: invoiceData.invoice_date,
@@ -307,7 +308,7 @@ export default function PurchaseInvoiceFormPage() {
 
     // Autofill rate from purchase_price (rate is always per base unit)
     if (selectedItem.purchase_price) {
-      setValue(`lines.${index}.rate`, selectedItem.purchase_price, { shouldDirty: true, shouldValidate: true });
+      setValue(`lines.${index}.rate`, parseFloat(Number(selectedItem.purchase_price).toFixed(2)), { shouldDirty: true, shouldValidate: true });
     }
 
     // Select appropriate GST rate based on vendor and item state

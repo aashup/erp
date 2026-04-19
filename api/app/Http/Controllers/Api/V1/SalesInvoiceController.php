@@ -11,6 +11,7 @@ use App\Models\Godown;
 use App\Models\SalesInvoice;
 use App\Models\StockLedger;
 use App\Models\ThermalTemplate;
+use App\Models\Voucher;
 use App\Services\AccountingService;
 use App\Services\InvoicePdfService;
 use App\Services\ThermalTemplateRenderer;
@@ -279,6 +280,17 @@ class SalesInvoiceController extends Controller
                 'grand_total' => $salesInvoice->lines->sum('line_total'),
                 'balance_due' => $salesInvoice->lines->sum('line_total'),
             ]);
+
+            // Delete old voucher(s) for this draft invoice and re-post with updated amounts
+            Voucher::where('reference_type', SalesInvoice::class)
+                ->where('reference_id', $salesInvoice->id)
+                ->each(function ($voucher) {
+                    $voucher->lines()->delete();
+                    $voucher->delete();
+                });
+
+            $salesInvoice->refresh();
+            app(AccountingService::class)->postSalesInvoice($salesInvoice, $request->user()->id);
 
             return $salesInvoice->load('lines.item', 'party', 'branch');
         });

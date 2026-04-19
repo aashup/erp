@@ -20,6 +20,8 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -42,6 +44,7 @@ export function Header({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showFYDropdown, setShowFYDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fyDropdownRef = useRef<HTMLDivElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -70,6 +73,22 @@ export function Header({
 
   const todayStr = localDateStr(new Date());
   const isToday = selectedDate === todayStr;
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -313,6 +332,19 @@ export function Header({
           <ShoppingCart className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">POS</span>
         </button> */}
+
+        {/* Fullscreen Toggle */}
+        <button
+          onClick={toggleFullscreen}
+          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+          title={isFullscreen ? "Exit fullscreen (Esc)" : "Enter fullscreen"}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-4 w-4" />
+          ) : (
+            <Maximize2 className="h-4 w-4" />
+          )}
+        </button>
 
         {/* Theme Toggle */}
         <button

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import {
   ShoppingCart, X, PauseCircle, Trash2, FileText, Printer,
-  MessageSquare, WifiOff, Clock,
+  MessageSquare, WifiOff, Clock, Maximize2, Minimize2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
@@ -12,6 +12,7 @@ import { companySettingsApi } from '@/api/settings';
 import type { CompanySettings } from '@/types';
 import { calcGST, calcRoundOff, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import POSItemSearch from './POSItemSearch';
 import POSCart from './POSCart';
@@ -47,6 +48,11 @@ export default function POSPage() {
   const navigate = useNavigate();
   const isOnline = useOnlineStatus();
   const user = useAuthStore((s) => s.user);
+  const { hasPermission } = usePermissions();
+
+  if (!hasPermission('pos.view')) {
+    return <Navigate to="/" replace />;
+  }
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [customer, setCustomer] = useState<Party | null>(null);
@@ -64,8 +70,23 @@ export default function POSPage() {
   const [successModal, setSuccessModal] = useState(false);
   const [negativeAlert, setNegativeAlert] = useState<NegativeStockAlert | null>(null);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
 
   // Load company settings (paper size, invoice template) on mount
   useEffect(() => {
@@ -412,6 +433,15 @@ export default function POSPage() {
               {cart.reduce((s, l) => s + l.quantity, 0)}
             </span>
           )}
+
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 bg-gray-100 dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2.5 py-1.5 rounded-lg transition-colors"
+            title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          </button>
 
           {/* Exit */}
           <button

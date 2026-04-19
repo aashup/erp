@@ -11,7 +11,7 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $modules = [
-            'inventory', 'purchase', 'sales', 'accounting', 'party', 'branch', 'user', 'role',
+            'inventory', 'purchase', 'sales', 'pos', 'accounting', 'party', 'branch', 'user', 'role',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete'];
@@ -44,10 +44,11 @@ class RolePermissionSeeder extends Seeder
                 ->get()
         );
 
-        // Salesman — sales + inventory view + party view
+        // Salesman — sales + pos + inventory view + party view
         $salesman = Role::firstOrCreate(['name' => 'salesman', 'guard_name' => 'web']);
         $salesman->syncPermissions(
             Permission::where('name', 'like', 'sales.%')
+                ->orWhere('name', 'like', 'pos.%')
                 ->orWhere('name', 'inventory.view')
                 ->orWhere('name', 'party.view')
                 ->get()

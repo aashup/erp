@@ -7,6 +7,7 @@ use App\Models\DocumentCounter;
 use App\Models\FinancialYear;
 use App\Models\PurchaseInvoice;
 use App\Models\StockLedger;
+use App\Models\Voucher;
 use App\Services\AccountingService;
 use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
@@ -190,14 +191,107 @@ class PurchaseInvoiceController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'sometimes|in:draft,confirmed,cancelled',
+            'party_id' => 'required|uuid|exists:parties,id',
+            'branch_id' => 'nullable|uuid|exists:branches,id',
+            'purchase_order_id' => 'nullable|uuid|exists:purchase_orders,id',
+            'invoice_number' => ['nullable', 'string', \Illuminate\Validation\Rule::unique('purchase_invoices', 'invoice_number')->ignore($purchaseInvoice->id)],
+            'vendor_invoice_number' => 'nullable|string',
+            'invoice_date' => 'required|date',
+            'due_date' => 'nullable|date',
+            'is_inter_state' => 'boolean',
             'notes' => 'nullable|string',
+            'lines' => 'required|array|min:1',
+            'lines.*.item_id' => 'required|uuid|exists:items,id',
+            'lines.*.batch_id' => 'nullable|uuid|exists:batches,id',
+            'lines.*.quantity' => 'required|numeric|min:0.001',
+            'lines.*.unit' => 'nullable|string|max:20',
+            'lines.*.conversion_factor' => 'nullable|numeric|min:0.0001',
+            'lines.*.rate' => 'required|numeric|min:0',
+            'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'lines.*.gst_rate' => 'required|numeric|min:0',
+            'lines.*.godown_id' => 'nullable|uuid|exists:godowns,id',
         ]);
 
-        $purchaseInvoice->update([
-            ...$validated,
-            'updated_by' => $request->user()->id,
-        ]);
+        $purchaseInvoice = DB::transaction(function () use ($validated, $purchaseInvoice, $request) {
+            $isInterState = $validated['is_inter_state'] ?? false;
+
+            $purchaseInvoice->update([
+                'party_id' => $validated['party_id'],
+                'branch_id' => $validated['branch_id'] ?? null,
+                'purchase_order_id' => $validated['purchase_order_id'] ?? null,
+                'invoice_number' => $validated['invoice_number'] ?? $purchaseInvoice->invoice_number,
+                'vendor_invoice_number' => $validated['vendor_invoice_number'] ?? null,
+                'invoice_date' => $validated['invoice_date'],
+                'due_date' => $validated['due_date'] ?? null,
+                'is_inter_state' => $isInterState,
+                'notes' => $validated['notes'] ?? null,
+                'updated_by' => $request->user()->id,
+            ]);
+
+            $purchaseInvoice->lines()->delete();
+            StockLedger::where('reference_type', PurchaseInvoice::class)
+                ->where('reference_id', $purchaseInvoice->id)
+                ->delete();
+
+            foreach ($validated['lines'] as $line) {
+                $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
+                $baseQuantity = $line['quantity'] * $conversionFactor;
+                $taxable = ($baseQuantity * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $gstAmt = $taxable * $line['gst_rate'] / 100;
+
+                $purchaseInvoice->lines()->create([
+                    ...$line,
+                    'unit' => $line['unit'] ?? null,
+                    'conversion_factor' => $conversionFactor,
+                    'taxable_amount' => $taxable,
+                    'cgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'sgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'igst' => $isInterState ? $gstAmt : 0,
+                    'line_total' => $taxable + $gstAmt,
+                    'created_by' => $request->user()->id,
+                    'updated_by' => null,
+                ]);
+
+                StockLedger::create([
+                    'company_id' => $request->user()->company_id,
+                    'item_id' => $line['item_id'],
+                    'batch_id' => $line['batch_id'] ?? null,
+                    'godown_id' => $line['godown_id'] ?? null,
+                    'type' => 'purchase',
+                    'reference_type' => PurchaseInvoice::class,
+                    'reference_id' => $purchaseInvoice->id,
+                    'quantity' => $baseQuantity,
+                    'rate' => $line['rate'],
+                    'value' => $baseQuantity * $line['rate'],
+                    'created_by' => $request->user()->id,
+                ]);
+            }
+
+            $purchaseInvoice->load('lines');
+
+            $purchaseInvoice->update([
+                'total_amount' => $purchaseInvoice->lines->sum('taxable_amount'),
+                'taxable_amount' => $purchaseInvoice->lines->sum('taxable_amount'),
+                'cgst_total' => $purchaseInvoice->lines->sum('cgst'),
+                'sgst_total' => $purchaseInvoice->lines->sum('sgst'),
+                'igst_total' => $purchaseInvoice->lines->sum('igst'),
+                'grand_total' => $purchaseInvoice->lines->sum('line_total'),
+                'balance_due' => $purchaseInvoice->lines->sum('line_total'),
+            ]);
+
+            // Delete old voucher(s) and re-post with updated amounts
+            Voucher::where('reference_type', PurchaseInvoice::class)
+                ->where('reference_id', $purchaseInvoice->id)
+                ->each(function ($voucher) {
+                    $voucher->lines()->delete();
+                    $voucher->delete();
+                });
+
+            $purchaseInvoice->refresh();
+            app(AccountingService::class)->postPurchaseInvoice($purchaseInvoice, $request->user()->id);
+
+            return $purchaseInvoice->load('lines.item', 'party', 'branch');
+        });
 
         return response()->json(['data' => $purchaseInvoice]);
     }
