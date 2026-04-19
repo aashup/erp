@@ -118,6 +118,7 @@ class SalesInvoiceController extends Controller
 
             $invoice = SalesInvoice::create([
                 ...$validated,
+                'status' => 'confirmed',
                 'created_by' => $request->user()->id,
                 'updated_by' => null,
             ]);

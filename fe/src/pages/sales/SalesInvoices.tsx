@@ -634,28 +634,29 @@ export default function SalesInvoices() {
         </button>
       ),
       cell: ({ row }) => {
-        const currentStatus = row.original.status ?? 'draft';
-        const transitions = allowedTransitions[currentStatus] ?? [];
+        const currentStatus = row.original.status ?? 'confirmed';
+        return <Badge variant={statusVariant[currentStatus] ?? 'default'}>{statusLabels[currentStatus] ?? currentStatus}</Badge>;
 
-        if (transitions.length === 0) {
-          return <Badge variant={statusVariant[currentStatus] ?? 'default'}>{statusLabels[currentStatus] ?? currentStatus}</Badge>;
-        }
-
-        return (
-          <select
-            value={currentStatus}
-            onChange={(event) => handleStatusChange(row.original, event.target.value)}
-            className="rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
-            disabled={statusMutation.isPending}
-          >
-            <option value={currentStatus}>{statusLabels[currentStatus] ?? currentStatus}</option>
-            {transitions.map((status) => (
-              <option key={status} value={status}>
-                {statusLabels[status] ?? status}
-              </option>
-            ))}
-          </select>
-        );
+        // Status change dropdown — commented out (invoices default to confirmed)
+        // const transitions = allowedTransitions[currentStatus] ?? [];
+        // if (transitions.length === 0) {
+        //   return <Badge variant={statusVariant[currentStatus] ?? 'default'}>{statusLabels[currentStatus] ?? currentStatus}</Badge>;
+        // }
+        // return (
+        //   <select
+        //     value={currentStatus}
+        //     onChange={(event) => handleStatusChange(row.original, event.target.value)}
+        //     className="rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
+        //     disabled={statusMutation.isPending}
+        //   >
+        //     <option value={currentStatus}>{statusLabels[currentStatus] ?? currentStatus}</option>
+        //     {transitions.map((status) => (
+        //       <option key={status} value={status}>
+        //         {statusLabels[status] ?? status}
+        //       </option>
+        //     ))}
+        //   </select>
+        // );
       },
     },
     {
