@@ -106,6 +106,7 @@ class PurchaseInvoiceController extends Controller
 
             $invoice = PurchaseInvoice::create([
                 ...$validated,
+                'status' => 'confirmed',
                 'created_by' => $request->user()->id,
                 'updated_by' => null,
             ]);
@@ -307,5 +308,70 @@ class PurchaseInvoiceController extends Controller
         $purchaseInvoice->delete();
 
         return response()->json(['message' => 'Purchase invoice deleted']);
+    }
+
+    public function bulkCancel(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'uuid|exists:purchase_invoices,id',
+        ]);
+
+        $invoices = PurchaseInvoice::whereIn('id', $validated['ids'])
+            ->where('company_id', $request->user()->company_id)
+            ->with('lines')
+            ->get();
+
+        $cancelled = 0;
+        $skipped   = 0;
+
+        DB::transaction(function () use ($invoices, $request, &$cancelled, &$skipped) {
+            $defaultGodown = \App\Models\Godown::where('company_id', $request->user()->company_id)
+                ->where('is_default', true)->first();
+
+            foreach ($invoices as $invoice) {
+                if ($invoice->status !== 'confirmed') {
+                    $skipped++;
+                    continue;
+                }
+
+                $invoice->update(['status' => 'cancelled', 'updated_by' => $request->user()->id]);
+
+                // Reverse stock (purchase reversal = deduct what was added)
+                foreach ($invoice->lines as $line) {
+                    $baseQty = (float) $line->quantity * (float) ($line->conversion_factor ?? 1.0);
+                    StockLedger::create([
+                        'company_id'     => $invoice->company_id,
+                        'item_id'        => $line->item_id,
+                        'batch_id'       => $line->batch_id ?? null,
+                        'godown_id'      => $line->godown_id ?? $defaultGodown?->id,
+                        'type'           => 'purchase_reversal',
+                        'reference_type' => PurchaseInvoice::class,
+                        'reference_id'   => $invoice->id,
+                        'quantity'       => -$baseQty,
+                        'rate'           => $line->rate,
+                        'value'          => $baseQty * $line->rate,
+                        'narration'      => "Reversal: Invoice #{$invoice->invoice_number} cancelled",
+                        'created_by'     => $request->user()->id,
+                    ]);
+                }
+
+                // Delete voucher entries
+                Voucher::where('reference_type', PurchaseInvoice::class)
+                    ->where('reference_id', $invoice->id)
+                    ->each(function ($voucher) {
+                        $voucher->lines()->delete();
+                        $voucher->delete();
+                    });
+
+                $cancelled++;
+            }
+        });
+
+        return response()->json([
+            'message'   => "{$cancelled} invoice(s) cancelled." . ($skipped ? " {$skipped} skipped (not confirmed)." : ''),
+            'cancelled' => $cancelled,
+            'skipped'   => $skipped,
+        ]);
     }
 }

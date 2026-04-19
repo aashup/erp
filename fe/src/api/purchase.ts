@@ -40,4 +40,7 @@ export const purchaseInvoicesApi = {
     api.put<ApiResponse<PurchaseInvoice>>(`/purchase-invoices/${id}`, data),
 
   delete: (id: string) => api.delete(`/purchase-invoices/${id}`),
+
+  bulkCancel: (ids: string[]) =>
+    api.post<ApiResponse<{ cancelled: number; skipped: number; message: string }>>('/purchase-invoices/bulk-cancel', { ids }),
 };

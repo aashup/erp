@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignUuid('batch_id')->nullable()->constrained('batches')->nullOnDelete();
             $table->foreignUuid('godown_id')->constrained('godowns');
             $table->enum('type', [
-                'purchase', 'purchase_return',
+                'purchase', 'purchase_return', 'purchase_reversal',
                 'sale', 'sale_return', 'sale_reversal',
                 'transfer_in', 'transfer_out',
                 'adjustment', 'opening',
