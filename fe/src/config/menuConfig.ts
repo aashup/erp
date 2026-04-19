@@ -67,12 +67,6 @@ export const MENU_CONFIG: MenuItem[] = [
         requiredPermission: "inventory.view",
       },
       {
-        id: "godowns",
-        label: "Godowns",
-        href: "/inventory/godowns",
-        requiredPermission: "inventory.view",
-      },
-      {
         id: "adjustment",
         label: "Stock Adjustment",
         href: "/inventory/stock-adjustment",
@@ -147,14 +141,8 @@ export const MENU_CONFIG: MenuItem[] = [
       },
       {
         id: "journal-entry",
-        label: "Journal Entry",
+        label: "Vouchers",
         href: "/accounting/vouchers",
-        requiredPermission: "accounting.view",
-      },
-      {
-        id: "journal-entries",
-        label: "Journal Entries",
-        href: "/accounting/journals",
         requiredPermission: "accounting.view",
       },
       {
@@ -250,6 +238,12 @@ export const MENU_CONFIG: MenuItem[] = [
         label: "Branches",
         href: "/branches",
         requiredPermission: "branch.view",
+      },
+      {
+        id: "godowns",
+        label: "Godowns",
+        href: "/inventory/godowns",
+        requiredPermission: "inventory.view",
       },
       {
         id: "inventory-settings",
