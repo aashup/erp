@@ -158,6 +158,7 @@ class ReportController extends Controller
             'vouchers.id as voucher_id',
             'vouchers.voucher_number',
             'vouchers.voucher_date',
+            'vouchers.created_at',
             'vouchers.voucher_type',
             'vouchers.narration as entry_narration',
             'voucher_lines.debit',
@@ -182,6 +183,7 @@ class ReportController extends Controller
                 'voucher_id'     => $entry->voucher_id,
                 'voucher_number' => $entry->voucher_number,
                 'voucher_date'   => $entry->voucher_date,
+                'created_at'     => $entry->created_at,
                 'voucher_type'   => $entry->voucher_type,
                 'narration'      => $entry->line_narration ?? $entry->entry_narration,
                 'debit'          => round($debit, 2),
@@ -198,7 +200,7 @@ class ReportController extends Controller
                 'opening_debit'  => round($openingDebit, 2),
                 'opening_credit' => round($openingCredit, 2),
             ],
-            'data'            => $rows,
+            'data'            => array_reverse($rows),
             'closing_balance' => round($runningBalance, 2),
         ]);
     }

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi } from '@/api/accounting';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { Filter, Printer } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
@@ -171,7 +171,14 @@ export default function BankBook() {
                   key={`${row.voucher_id}-${row.voucher_date}`}
                   className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700/40 dark:hover:bg-gray-700/20"
                 >
-                  <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{formatDate(row.voucher_date)}</td>
+                  <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                    <div>{formatDate(row.voucher_date)}</div>
+                    {row.created_at && (
+                      <div className="text-xs text-gray-400 dark:text-gray-500">
+                        {formatTime(row.created_at)}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">{row.voucher_number}</td>
                   <td className="px-4 py-2">
                     <span className={`rounded px-1.5 py-0.5 text-xs font-medium capitalize ${voucherTypeBadge(row.voucher_type)}`}>

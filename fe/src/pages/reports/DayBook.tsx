@@ -2,7 +2,7 @@ import { Fragment, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi } from '@/api/accounting';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { Filter, Printer, ChevronRight, ChevronDown } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
@@ -161,7 +161,14 @@ export default function DayBook() {
                       <td className="px-4 py-2 text-gray-400">
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </td>
-                      <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{formatDate(entry.voucher_date)}</td>
+                      <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                        <div>{formatDate(entry.voucher_date)}</div>
+                        {entry.created_at && (
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            {formatTime(entry.created_at)}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">{entry.voucher_number}</td>
                       <td className="px-4 py-2">
                         <span className={`rounded px-1.5 py-0.5 text-xs font-medium capitalize ${voucherTypeBadge(entry.voucher_type)}`}>

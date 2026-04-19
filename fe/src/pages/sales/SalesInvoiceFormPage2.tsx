@@ -390,7 +390,7 @@ export default function SalesInvoiceFormPage2() {
     if (newLineTotal > totalAmt) {
       newRate = parseFloat(newRate.toFixed(2)) - 0.01;
     }
-    setValue(`lines.${index}.rate`, newRate, {
+    setValue(`lines.${index}.rate`, parseFloat(newRate.toFixed(2)), {
       shouldDirty: true,
     });
   };

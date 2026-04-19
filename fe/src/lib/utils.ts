@@ -21,6 +21,16 @@ export function formatDate(date: string): string {
   });
 }
 
+export function formatTime(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+  return new Date(isoString).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+}
+
 export function calcGST(amount: number, rate: number, isInterState: boolean) {
   const gstAmount = (amount * rate) / 100;
   if (isInterState) {
