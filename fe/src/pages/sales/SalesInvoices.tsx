@@ -360,6 +360,7 @@ export default function SalesInvoices() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [receiptInvoice, setReceiptInvoice] = useState<SalesInvoice | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: companySettings } = useQuery({
     queryKey: ['company-settings'],
@@ -517,6 +518,16 @@ export default function SalesInvoices() {
     },
   });
 
+  const bulkCancelMutation = useMutation({
+    mutationFn: (ids: string[]) => salesInvoicesApi.bulkCancel(ids),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
+      setSelectedIds(new Set());
+      toast.success(res.data.data?.message ?? 'Invoices cancelled');
+    },
+    onError: () => toast.error('Failed to cancel invoices'),
+  });
+
   const handleStatusChange = (invoice: SalesInvoice, newStatus: string) => {
     const messages: Record<string, string> = {
       confirmed: 'Confirming will deduct stock from inventory. Continue?',
@@ -543,7 +554,56 @@ export default function SalesInvoices() {
     return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
 
+  const invoiceRows = data?.data ?? [];
+  const confirmIds = invoiceRows.filter((inv) => inv.status === 'confirmed').map((inv) => inv.id);
+  const isAllSelected = confirmIds.length > 0 && confirmIds.every((id) => selectedIds.has(id));
+  const isIndeterminate = !isAllSelected && confirmIds.some((id) => selectedIds.has(id));
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(confirmIds) : new Set());
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      checked ? next.add(id) : next.delete(id);
+      return next;
+    });
+  };
+
+  const handleBulkCancel = () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (confirm(`Cancel ${ids.length} selected invoice(s)? This will reverse stock and delete journal entries.`)) {
+      bulkCancelMutation.mutate(ids);
+    }
+  };
+
   const columns: ColumnDef<SalesInvoice, unknown>[] = [
+    {
+      id: 'select',
+      header: () => (
+        <input
+          type="checkbox"
+          checked={isAllSelected}
+          ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+          className="rounded border-gray-300 dark:border-gray-600"
+        />
+      ),
+      cell: ({ row }) => {
+        const isConfirmed = row.original.status === 'confirmed';
+        return (
+          <input
+            type="checkbox"
+            disabled={!isConfirmed}
+            checked={selectedIds.has(row.original.id)}
+            onChange={(e) => handleSelectRow(row.original.id, e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 disabled:opacity-30"
+          />
+        );
+      },
+    },
     {
       id: 'invoice_number',
       header: () => (
@@ -778,6 +838,21 @@ export default function SalesInvoices() {
           )}
         </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800 px-4 py-2">
+          <span className="text-sm font-medium text-orange-800 dark:text-orange-300">
+            {selectedIds.size} invoice(s) selected
+          </span>
+          <button
+            onClick={handleBulkCancel}
+            disabled={bulkCancelMutation.isPending}
+            className="ml-auto rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {bulkCancelMutation.isPending ? 'Cancelling…' : 'Cancel Selected'}
+          </button>
+        </div>
+      )}
 
       <Card>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />

@@ -114,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('sales-invoices/{sales_invoice}/pdf', [SalesInvoiceController::class, 'pdf']);
     Route::get('sales-invoices/{sales_invoice}/html', [SalesInvoiceController::class, 'html']);
     Route::patch('sales-invoices/{sales_invoice}/status', [SalesInvoiceController::class, 'updateStatus']);
+    Route::post('sales-invoices/bulk-cancel', [SalesInvoiceController::class, 'bulkCancel']);
     Route::apiResource('sales-invoices', SalesInvoiceController::class);
 
     // Company

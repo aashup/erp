@@ -38,6 +38,9 @@ export const salesInvoicesApi = {
   updateStatus: (id: string, status: string) =>
     api.patch<ApiResponse<SalesInvoice>>(`/sales-invoices/${id}/status`, { status }),
 
+  bulkCancel: (ids: string[]) =>
+    api.post<ApiResponse<{ cancelled: number; skipped: number; message: string }>>('/sales-invoices/bulk-cancel', { ids }),
+
   downloadPdf: (id: string, template?: string) =>
     api.get(`/sales-invoices/${id}/pdf`, {
       params: template ? { template } : {},

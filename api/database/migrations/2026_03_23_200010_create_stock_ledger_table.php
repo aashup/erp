@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignUuid('godown_id')->constrained('godowns');
             $table->enum('type', [
                 'purchase', 'purchase_return',
-                'sale', 'sale_return',
+                'sale', 'sale_return', 'sale_reversal',
                 'transfer_in', 'transfer_out',
                 'adjustment', 'opening',
             ]);
