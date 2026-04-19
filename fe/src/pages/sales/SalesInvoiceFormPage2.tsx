@@ -10,7 +10,7 @@ import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
 import { itemsApi, godownsApi, stockLedgerApi } from "@/api/inventory";
 import { salesInvoicesApi } from "@/api/sales";
-import { formatCurrency, calcGST } from "@/lib/utils";
+import { formatCurrency, calcGST, calcRoundOff } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -383,8 +383,16 @@ export default function SalesInvoiceFormPage2() {
     const gstFactor = 1 + (line.gst_rate ?? 0) / 100;
     const divisor = qty * discFactor * gstFactor;
     if (divisor === 0) return;
-    const newRate = totalAmt / divisor;
-    setValue(`lines.${index}.rate`, parseFloat(newRate.toFixed(2)), { shouldDirty: true });
+    let newRate = totalAmt / divisor;
+    const newLineTotal =
+      parseFloat(newRate.toFixed(2)) * qty * discFactor * gstFactor;
+
+    if (newLineTotal > totalAmt) {
+      newRate = parseFloat(newRate.toFixed(2)) - 0.01;
+    }
+    setValue(`lines.${index}.rate`, newRate, {
+      shouldDirty: true,
+    });
   };
 
   const totals = (watchedLines ?? []).reduce(
@@ -610,8 +618,8 @@ export default function SalesInvoiceFormPage2() {
                           <div className="col-span-1">
                             <input
                               type="number"
-                              min="0.001"
-                              step="0.001"
+                              min="1"
+                              step="1"
                               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                               {...register(`lines.${index}.quantity`)}
                             />
@@ -728,60 +736,78 @@ export default function SalesInvoiceFormPage2() {
                 </div>
 
                 <div className="mt-4 border-t dark:border-gray-700 pt-3 space-y-1 text-sm text-right">
-                  <div>
-                    <span className="text-gray-500">Taxable: </span>
-                    <span className="font-medium">
-                      {formatCurrency(totals.taxable)}
+                  <div className="flex items-center justify-between border-b dark:border-gray-700 pb-2">
+                    <div>
+                      <span
+                        className={
+                          isInterState ? "text-gray-500" : "text-gray-400"
+                        }
+                      >
+                        CGST:{" "}
+                      </span>
+                      <span
+                        className={`font-medium ${isInterState ? "text-gray-400" : ""}`}
+                      >
+                        {formatCurrency(totals.cgst)}
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        className={
+                          isInterState ? "text-gray-500" : "text-gray-400"
+                        }
+                      >
+                        SGST:{" "}
+                      </span>
+                      <span
+                        className={`font-medium ${isInterState ? "text-gray-400" : ""}`}
+                      >
+                        {formatCurrency(totals.sgst)}
+                      </span>
+                    </div>
+                    <div>
+                      <span
+                        className={
+                          isInterState ? "text-gray-500" : "text-gray-400"
+                        }
+                      >
+                        IGST:{" "}
+                      </span>
+                      <span
+                        className={`font-medium ${isInterState ? "" : "text-gray-400"}`}
+                      >
+                        {formatCurrency(totals.igst)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Taxable: </span>
+                      <span className="font-medium">
+                        {formatCurrency(totals.taxable)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Grand Total:{" "}
+                    </span>
+                    <span className="font-bold text-gray-900 dark:text-gray-100">
+                      {formatCurrency(totals.grand)}
                     </span>
                   </div>
-                  <div>
-                    <span
-                      className={
-                        isInterState ? "text-gray-500" : "text-gray-400"
-                      }
-                    >
-                      CGST:{" "}
+                  <div className="text-xs">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Round Off:{" "}
                     </span>
-                    <span
-                      className={`font-medium ${isInterState ? "text-gray-400" : ""}`}
-                    >
-                      {formatCurrency(totals.cgst)}
-                    </span>
-                  </div>
-                  <div>
-                    <span
-                      className={
-                        isInterState ? "text-gray-500" : "text-gray-400"
-                      }
-                    >
-                      SGST:{" "}
-                    </span>
-                    <span
-                      className={`font-medium ${isInterState ? "text-gray-400" : ""}`}
-                    >
-                      {formatCurrency(totals.sgst)}
-                    </span>
-                  </div>
-                  <div>
-                    <span
-                      className={
-                        isInterState ? "text-gray-500" : "text-gray-400"
-                      }
-                    >
-                      IGST:{" "}
-                    </span>
-                    <span
-                      className={`font-medium ${isInterState ? "" : "text-gray-400"}`}
-                    >
-                      {formatCurrency(totals.igst)}
+                    <span className="font-bold text-gray-900 dark:text-gray-100">
+                      {formatCurrency(calcRoundOff(totals.grand).roundOff)}
                     </span>
                   </div>
                   <div className="text-base">
                     <span className="text-gray-500 dark:text-gray-400">
-                      Grand Total:{" "}
+                      Net Payable:{" "}
                     </span>
                     <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {formatCurrency(totals.grand)}
+                      {formatCurrency(calcRoundOff(totals.grand).netPayable)}
                     </span>
                   </div>
                 </div>

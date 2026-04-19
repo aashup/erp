@@ -335,11 +335,6 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-const allowedTransitions: Record<string, string[]> = {
-  draft: ['confirmed', 'cancelled'],
-  confirmed: ['cancelled'],
-  cancelled: [],
-};
 
 
 export default function SalesInvoices() {
@@ -510,14 +505,6 @@ export default function SalesInvoices() {
     },
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => salesInvoicesApi.updateStatus(id, status),
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
-      toast.success(res.data.message ?? 'Status updated');
-    },
-  });
-
   const bulkCancelMutation = useMutation({
     mutationFn: (ids: string[]) => salesInvoicesApi.bulkCancel(ids),
     onSuccess: (res) => {
@@ -527,17 +514,6 @@ export default function SalesInvoices() {
     },
     onError: () => toast.error('Failed to cancel invoices'),
   });
-
-  const handleStatusChange = (invoice: SalesInvoice, newStatus: string) => {
-    const messages: Record<string, string> = {
-      confirmed: 'Confirming will deduct stock from inventory. Continue?',
-      cancelled: 'Are you sure you want to cancel this invoice? Stock will be reversed if previously confirmed.',
-    };
-
-    if (confirm(messages[newStatus] ?? `Change status to ${newStatus}?`)) {
-      statusMutation.mutate({ id: invoice.id, status: newStatus });
-    }
-  };
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -827,7 +803,7 @@ export default function SalesInvoices() {
             Filters
           </button>
           {canCreate && (
-            <Button variant="outline" onClick={() => navigate('/sales/invoices/new-2')}>
+            <Button variant="secondary" onClick={() => navigate('/sales/invoices/new-2')}>
               <Plus className="mr-2 h-4 w-4" /> SI-2
             </Button>
           )}

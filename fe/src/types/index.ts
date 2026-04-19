@@ -218,6 +218,7 @@ export interface PoLine extends SyncColumns {
 export interface PurchaseInvoice extends SyncColumns {
   id: string;
   company_id: string;
+  financial_year_id: string;
   party_id: string;
   branch_id: string | null;
   purchase_order_id: string | null;
