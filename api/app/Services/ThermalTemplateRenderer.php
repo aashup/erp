@@ -72,10 +72,57 @@ class ThermalTemplateRenderer
         $gstSummary = $this->buildGstSummary($invoice);
         $variables['{{gst_summary}}'] = $gstSummary;
 
-        // Replace all variables in template
-        $html = $template->html_content;
+        // Build truthy map for {{#if variable}} conditionals
+        $truthyMap = [
+            'company_name'    => !empty($company->name),
+            'company_gstin'   => !empty($company->gstin),
+            'company_address' => !empty($company->address),
+            'company_phone'   => !empty($company->phone),
+            'company_email'   => !empty($company->email),
+            'customer_name'   => !empty($invoice->party->name ?? null),
+            'customer_gstin'  => !empty($invoice->party->gstin ?? null),
+            'customer_address'=> !empty($invoice->party->address ?? null),
+            'customer_city'   => !empty($invoice->party->city ?? null),
+            'customer_phone'  => !empty($invoice->party->phone ?? null),
+            'cgst_total'      => (float) $invoice->cgst_total > 0,
+            'sgst_total'      => (float) $invoice->sgst_total > 0,
+            'igst_total'      => (float) $invoice->igst_total > 0,
+            'round_off'       => $roundOff !== 0.0,
+            'round_off_raw'   => $roundOff !== 0.0,
+            'balance_due'     => (float) $invoice->balance_due > 0,
+            'balance_due_raw' => (float) $invoice->balance_due > 0,
+        ];
+
+        // Step 1: strip {{-- comments --}} and resolve {{#if}}...{{/if}} blocks
+        $html = $this->processConditionals($template->html_content, $truthyMap);
+
+        // Step 2: replace all {{variable}} tokens
         foreach ($variables as $placeholder => $value) {
             $html = str_replace($placeholder, $value, $html);
+        }
+
+        return $html;
+    }
+
+    /**
+     * Strip {{-- comments --}} and evaluate {{#if variable}}...{{/if}} blocks.
+     * Loops until stable so nested ifs resolve inside-out.
+     */
+    private function processConditionals(string $html, array $truthyMap): string
+    {
+        // Strip {{-- Blade-style comments --}}
+        $html = preg_replace('/\{\{--.*?--\}\}/s', '', $html);
+
+        // Resolve {{#if var}}...{{/if}} blocks, innermost first, until none remain
+        $pattern = '/\{\{#if\s+(\w+)\}\}(.*?)\{\{\/if\}\}/s';
+        $prev = null;
+        while ($prev !== $html) {
+            $prev = $html;
+            $html = preg_replace_callback($pattern, function (array $matches) use ($truthyMap): string {
+                $variable = $matches[1];
+                $content  = $matches[2];
+                return ($truthyMap[$variable] ?? false) ? $content : '';
+            }, $html);
         }
 
         return $html;

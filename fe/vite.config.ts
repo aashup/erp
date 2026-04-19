@@ -37,6 +37,8 @@ export default defineConfig({
       workbox: {
         // Pre-cache all built assets so the app shell loads offline
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff,ttf}'],
+        // Never serve index.html for /api/* — let those reach the backend/proxy
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           // Google Fonts stylesheets — cache for 1 year
           {

@@ -57,7 +57,7 @@ export default function SalesOrders() {
   const [dateTo, setDateTo] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [sortBy, setSortBy] = useState('so_date');
+  const [sortBy, setSortBy] = useState('so_number');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 

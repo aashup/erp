@@ -683,8 +683,8 @@ class ReportController extends Controller
         $query = Voucher::with(['lines.ledger'])
             ->where('company_id', $companyId)
             ->where('is_posted', true)
-            ->orderBy('voucher_date')
-            ->orderBy('created_at');
+            ->orderByDesc('voucher_date')
+            ->orderByDesc('created_at');
 
         if ($dateFrom && $dateTo) {
             $query->whereDate('voucher_date', '>=', $dateFrom)
@@ -723,6 +723,7 @@ class ReportController extends Controller
                 'voucher_id'     => $voucher->id,
                 'voucher_number' => $voucher->voucher_number,
                 'voucher_date'   => $voucher->voucher_date,
+                'created_at'     => $voucher->created_at?->toIso8601String(),
                 'voucher_type'   => $voucher->voucher_type,
                 'narration'      => $voucher->narration,
                 'lines'          => $lines,

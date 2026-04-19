@@ -344,7 +344,7 @@ export default function PurchaseInvoices() {
   const [dateTo, setDateTo] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [sortBy, setSortBy] = useState('invoice_date');
+  const [sortBy, setSortBy] = useState('invoice_number');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [paymentInvoice, setPaymentInvoice] = useState<PurchaseInvoice | null>(null);

@@ -32,39 +32,6 @@
             margin: 0 auto;
         }
 
-        /* Top action bar */
-        .action-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .btn {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            text-decoration: none;
-            transition: opacity 0.15s;
-        }
-        .btn:hover { opacity: 0.88; }
-
-        .btn-print {
-            background: #4f46e5;
-            color: #fff;
-        }
-        .btn-download {
-            background: #059669;
-            color: #fff;
-        }
-
         /* Invoice card */
         .card {
             background: #fff;
@@ -125,17 +92,6 @@
 </head>
 <body>
 <div class="wrapper">
-
-    {{-- Action bar --}}
-    <div class="action-bar">
-        <button class="btn btn-print" onclick="window.print()">
-            🖨️ Print
-        </button>
-        <a class="btn btn-download"
-           href="{{ $shareUrl }}?format=pdf&paper_size={{ $paperSize }}">
-            ⬇️ Download PDF
-        </a>
-    </div>
 
     {{-- Invoice card --}}
     <div class="card">

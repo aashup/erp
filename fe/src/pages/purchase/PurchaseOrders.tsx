@@ -60,7 +60,7 @@ export default function PurchaseOrders() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [receivingPo, setReceivingPo] = useState<PurchaseOrder | null>(null);
-  const [sortBy, setSortBy] = useState('po_date');
+  const [sortBy, setSortBy] = useState('po_number');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { data, isLoading } = useQuery({
