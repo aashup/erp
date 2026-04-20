@@ -31,6 +31,13 @@ export const MENU_CONFIG: MenuItem[] = [
     requiredPermission: "pos.view",
   },
   {
+    id: "pos2",
+    label: "POS-2",
+    href: "/pos2",
+    icon: "shopping-cart",
+    requiredPermission: "pos.view",
+  },
+  {
     id: "inventory",
     label: "Inventory",
     icon: "box",

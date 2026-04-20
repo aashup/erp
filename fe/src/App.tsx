@@ -57,6 +57,7 @@ import InvoiceSettings from "@/pages/settings/InvoiceSettings";
 import ThermalTemplateEditor from "@/pages/settings/ThermalTemplateEditor";
 import Theme from "@/pages/settings/Theme";
 import POSPage from "@/pages/pos/POSPage";
+import POSPage2 from "@/pages/pos2/POSPage2";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -285,6 +286,16 @@ export default function App() {
             element={
               <RequireAuth>
                 <POSPage />
+              </RequireAuth>
+            }
+          />
+
+          {/* POS-2 — full screen, no ERP shell */}
+          <Route
+            path="/pos2"
+            element={
+              <RequireAuth>
+                <POSPage2 />
               </RequireAuth>
             }
           />
