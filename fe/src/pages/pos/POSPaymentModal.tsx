@@ -3,7 +3,7 @@ import { X, Banknote, Smartphone, CreditCard, Scissors, CheckCircle, BookOpen, C
 import { formatCurrency } from '@/lib/utils';
 import type { Party } from '@/types';
 
-export type PaymentMode = 'cash' | 'upi' | 'card';
+export type PaymentMode = 'cash' | 'upi' | 'card' | 'lend';
 
 export interface PaymentEntry {
   mode: PaymentMode;
@@ -225,6 +225,7 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
                     <option value="cash">Cash</option>
                     <option value="upi">UPI</option>
                     <option value="card">Card</option>
+                    {isRegisteredCustomer && <option value="lend">Lend</option>}
                   </select>
                   <input
                     type="number"
@@ -249,6 +250,11 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
                   ? `Still ₹${formatCurrency(splitRemaining)} remaining`
                   : `₹${formatCurrency(-splitRemaining)} over total`}
               </div>
+              {splitLines.some((l) => l.mode === 'lend' && parseFloat(l.amount) > 0) && (
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2 text-xs text-orange-700 dark:text-orange-400">
+                  Lent amount will be added to <span className="font-semibold">{customer?.name}</span>'s outstanding balance.
+                </div>
+              )}
             </div>
           )}
 

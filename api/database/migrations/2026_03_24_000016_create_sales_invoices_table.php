@@ -29,6 +29,7 @@ return new class extends Migration
             $table->decimal('sgst_total', 15, 2)->default(0);
             $table->decimal('igst_total', 15, 2)->default(0);
             $table->decimal('grand_total', 15, 2)->default(0);
+            $table->decimal('round_off', 15, 2)->default(0);
             $table->decimal('amount_paid', 15, 2)->default(0);
             $table->decimal('balance_due', 15, 2)->default(0);
             $table->text('notes')->nullable();

@@ -28,7 +28,11 @@ class DefaultGroupsService
             ],
         ],
         ['code' => '4100', 'name' => 'Direct Income', 'type' => 'income', 'parent_code' => null, 'system_key' => null],
-        ['code' => '4200', 'name' => 'Indirect Income', 'type' => 'income', 'parent_code' => null, 'system_key' => null],
+        ['code' => '4200', 'name' => 'Indirect Income', 'type' => 'income', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Round Off', 'system_key' => 'round_off'],
+            ],
+        ],
         ['code' => '5000', 'name' => 'Purchase Accounts', 'type' => 'expense', 'parent_code' => null, 'system_key' => null,
             'ledgers' => [
                 ['name' => 'Purchase', 'system_key' => 'purchase_account'],

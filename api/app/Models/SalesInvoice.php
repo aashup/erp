@@ -34,6 +34,7 @@ class SalesInvoice extends Model
         'sgst_total',
         'igst_total',
         'grand_total',
+        'round_off',
         'amount_paid',
         'balance_due',
         'notes',

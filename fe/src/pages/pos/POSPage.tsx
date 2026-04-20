@@ -291,6 +291,7 @@ export default function POSPage() {
         is_inter_state: isInterState,
         invoice_date: new Date().toISOString().slice(0, 10),
         notes,
+        round_off: roundOff,
         lines: cart.map((l) => ({
           item_id: l.itemId,
           batch_id: l.batchId,

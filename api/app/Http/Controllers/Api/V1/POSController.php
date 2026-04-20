@@ -82,8 +82,9 @@ class POSController extends Controller
             'lines.*.rate'         => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate'     => 'required|numeric|min:0',
+            'round_off'            => 'nullable|numeric',
             'payments'             => 'nullable|array',
-            'payments.*.mode'      => 'required_with:payments|in:cash,upi,card',
+            'payments.*.mode'      => 'required_with:payments|in:cash,upi,card,lend',
             'payments.*.amount'    => 'required_with:payments|numeric|min:0.01',
             'payments.*.reference' => 'nullable|string',
         ]);
@@ -101,6 +102,14 @@ class POSController extends Controller
         if (! $isPostPayment && empty($validated['payments'])) {
             throw ValidationException::withMessages([
                 'payments' => 'At least one payment is required.',
+            ]);
+        }
+
+        // Lend mode requires a registered customer
+        $hasLend = ! empty($validated['payments']) && collect($validated['payments'])->contains('mode', 'lend');
+        if ($hasLend && empty($validated['party_id'])) {
+            throw ValidationException::withMessages([
+                'party_id' => 'Lend requires a registered customer to be selected.',
             ]);
         }
 
@@ -204,6 +213,8 @@ class POSController extends Controller
 
             $invoice->load('lines');
             $grandTotal = $invoice->lines->sum('line_total');
+            $roundOff   = (float) ($validated['round_off'] ?? 0);
+            $netPayable = round($grandTotal + $roundOff, 2);
 
             if ($isPostPayment) {
                 // Credit sale — no payment collected now; full amount goes to party ledger
@@ -213,9 +224,10 @@ class POSController extends Controller
                     'cgst_total'     => $invoice->lines->sum('cgst'),
                     'sgst_total'     => $invoice->lines->sum('sgst'),
                     'igst_total'     => $invoice->lines->sum('igst'),
-                    'grand_total'    => $grandTotal,
+                    'grand_total'    => $netPayable,
+                    'round_off'      => $roundOff,
                     'amount_paid'    => 0,
-                    'balance_due'    => $grandTotal,
+                    'balance_due'    => $netPayable,
                 ]);
 
                 // Post sales journal only (Dr: Party A/c, Cr: Sales + GST)
@@ -223,8 +235,12 @@ class POSController extends Controller
                 $invoice->refresh();
                 app(AccountingService::class)->postSalesInvoice($invoice, $userId);
             } else {
-                $totalPaid  = collect($validated['payments'])->sum('amount');
-                $balanceDue = max(0, $grandTotal - $totalPaid);
+                $allPayments  = collect($validated['payments']);
+                $lendPayments = $allPayments->where('mode', 'lend');
+                $cashPayments = $allPayments->where('mode', '!=', 'lend');
+                $totalPaid    = $cashPayments->sum('amount');
+                $lendAmount   = $lendPayments->sum('amount');
+                $balanceDue   = max(0, $netPayable - $totalPaid);
 
                 $invoice->update([
                     'total_amount'   => $invoice->lines->sum('taxable_amount'),
@@ -232,8 +248,9 @@ class POSController extends Controller
                     'cgst_total'     => $invoice->lines->sum('cgst'),
                     'sgst_total'     => $invoice->lines->sum('sgst'),
                     'igst_total'     => $invoice->lines->sum('igst'),
-                    'grand_total'    => $grandTotal,
-                    'amount_paid'    => min($totalPaid, $grandTotal),
+                    'grand_total'    => $netPayable,
+                    'round_off'      => $roundOff,
+                    'amount_paid'    => min($totalPaid, $netPayable),
                     'balance_due'    => $balanceDue,
                 ]);
 
@@ -250,13 +267,22 @@ class POSController extends Controller
                 // Create receipt-number counter prefix
                 $receiptPrefix = 'RCP';
                 $receiptBase   = now()->format('ymdHis');
+                $receiptIdx    = 0;
 
-                foreach ($validated['payments'] as $idx => $payment) {
+                $party = Party::find($partyId);
+
+                foreach ($validated['payments'] as $payment) {
+                    // Lend — amount stays in party ledger as balance_due; no receipt voucher
+                    if ($payment['mode'] === 'lend') {
+                        continue;
+                    }
+
                     // Map mode to ledger: cash/upi → cash; card → bank
                     $modeLedger  = in_array($payment['mode'], ['cash', 'upi']) ? $cashLedger : $bankLedger;
                     $paymentMode = $payment['mode'] === 'card' ? 'bank' : $payment['mode'];
 
-                    $receiptNumber = $receiptPrefix . '-' . $receiptBase . ($idx > 0 ? "-{$idx}" : '');
+                    $receiptNumber = $receiptPrefix . '-' . $receiptBase . ($receiptIdx > 0 ? "-{$receiptIdx}" : '');
+                    $receiptIdx++;
 
                     $receipt = PaymentReceipt::create([
                         'company_id'       => $companyId,
@@ -273,7 +299,6 @@ class POSController extends Controller
                     ]);
 
                     // Post receipt journal (Dr Cash/Bank, Cr Party)
-                    $party = Party::find($partyId);
                     if ($party) {
                         app(AccountingService::class)->postReceipt(
                             $companyId,

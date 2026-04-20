@@ -18,7 +18,7 @@ class DashboardController extends Controller
     {
         $period = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
-        $range = $this->getDateRange($period);
+        $range = $this->getDateRange($period, $request->query('local_date'));
 
         // If financial_year_id is provided, clamp the range to the FY boundaries
         if ($request->financial_year_id) {
@@ -217,9 +217,12 @@ class DashboardController extends Controller
         $months = (int) $request->query('months', 12);
         $months = min(max($months, 3), 24);
 
-        // Build the last N months range
-        $end = Carbon::today()->endOfMonth();
-        $start = Carbon::today()->subMonths($months - 1)->startOfMonth();
+        // Use client local date (ISO-8601 YYYY-MM-DD) so month boundaries
+        // align with the user's calendar day, not the UTC server date.
+        $localDate = $request->query('local_date');
+        $today = $localDate ? Carbon::parse($localDate) : Carbon::today();
+        $end = $today->copy()->endOfMonth();
+        $start = $today->copy()->subMonths($months - 1)->startOfMonth();
 
         // Clamp to financial year if provided
         if ($request->financial_year_id) {
@@ -285,7 +288,7 @@ class DashboardController extends Controller
     {
         $period    = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
-        $range     = $this->getDateRange($period);
+        $range     = $this->getDateRange($period, $request->query('local_date'));
 
         $base = \App\Models\PaymentReceipt::where('company_id', $companyId)
             ->where('type', 'receipt')
@@ -320,9 +323,11 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function getDateRange(string $period): array
+    private function getDateRange(string $period, ?string $localDate = null): array
     {
-        $now = Carbon::today();
+        // localDate is ISO-8601 YYYY-MM-DD sent by the client so that "today"
+        // reflects the user's calendar day rather than the UTC server date.
+        $now = $localDate ? Carbon::parse($localDate) : Carbon::today();
 
         return match ($period) {
             'today' => [

@@ -6,7 +6,7 @@ export interface POSItem extends Item {
 }
 
 export interface POSCheckoutPayment {
-  mode: 'cash' | 'upi' | 'card';
+  mode: 'cash' | 'upi' | 'card' | 'lend';
   amount: number;
   reference?: string;
 }
@@ -33,6 +33,7 @@ export interface POSCheckoutPayload {
   amount_tendered?: number;
   change_amount?: number;
   post_payment?: boolean;   // credit sale — no receipt, full amount to ledger balance
+  round_off?: number;       // signed difference: netPayable - rawTotal
 }
 
 export const posApi = {

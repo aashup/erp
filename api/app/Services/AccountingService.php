@@ -76,6 +76,31 @@ class AccountingService
             // Cr: GST output ledgers
             $this->addGstCreditLines($entry, $companyId, $invoice->cgst_total, $invoice->sgst_total, $invoice->igst_total, 'output');
 
+            // Round-off balancing line
+            $roundOff = (float) ($invoice->round_off ?? 0);
+            if (abs($roundOff) > 0.001) {
+                $roundOffLedger = Ledger::findBySystemKey($companyId, 'round_off');
+                if (! $roundOffLedger) {
+                    $indirectIncomeGroup = AccountingGroup::where('company_id', $companyId)
+                        ->where('name', 'Indirect Income')->first();
+                    if ($indirectIncomeGroup) {
+                        $roundOffLedger = Ledger::firstOrCreate(
+                            ['company_id' => $companyId, 'system_key' => 'round_off'],
+                            ['name' => 'Round Off', 'group_id' => $indirectIncomeGroup->id, 'is_system' => true, 'created_by' => $userId]
+                        );
+                    }
+                }
+                if ($roundOffLedger) {
+                    if ($roundOff > 0) {
+                        // Rounded up → customer paid more → Cr round_off (income)
+                        $entry->lines()->create(['ledger_id' => $roundOffLedger->id, 'debit' => 0, 'credit' => $roundOff, 'narration' => 'Round Off']);
+                    } else {
+                        // Rounded down → customer paid less → Dr round_off (expense)
+                        $entry->lines()->create(['ledger_id' => $roundOffLedger->id, 'debit' => abs($roundOff), 'credit' => 0, 'narration' => 'Round Off']);
+                    }
+                }
+            }
+
             return $entry;
         });
     }
