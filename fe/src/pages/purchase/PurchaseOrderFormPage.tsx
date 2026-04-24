@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { SlideSelect } from "@/components/ui/SlideSelect";
+import { PartyFormModal } from "@/components/ui/PartyFormModal";
 import { Plus, ArrowLeft, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -52,6 +53,7 @@ export default function PurchaseOrderFormPage() {
   const isEditMode = Boolean(orderId);
   const queryClient = useQueryClient();
   const { selectedDate } = useDateStore();
+  const [showAddVendor, setShowAddVendor] = useState(false);
 
   const { data: vendorsData } = useQuery({
     queryKey: ["parties-vendors"],
@@ -256,6 +258,8 @@ export default function PurchaseOrderFormPage() {
                   setValue("party_id", val, { shouldValidate: true })
                 }
                 error={errors.party_id?.message}
+                onAddNew={() => setShowAddVendor(true)}
+                addNewLabel="Add New Vendor"
               />
               <Input
                 id="po_date"
@@ -509,6 +513,16 @@ export default function PurchaseOrderFormPage() {
           </Button>
         </div>
       </form>
+
+      <PartyFormModal
+        open={showAddVendor}
+        onClose={() => setShowAddVendor(false)}
+        defaultType="vendor"
+        onCreated={(party) => {
+          queryClient.invalidateQueries({ queryKey: ["parties-vendors"] });
+          setValue("party_id", party.id, { shouldValidate: true });
+        }}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, Plus, Search, X } from 'lucide-react';
 import type { PaginatedResponse } from '@/types';
 
 export interface SlideSelectOption {
@@ -32,6 +32,10 @@ interface SlideSelectProps {
   value?: string;
   displayValue?: string;
   onChange?: (value: string, option: SlideSelectOption | null) => void;
+
+  // Add New callback
+  onAddNew?: () => void;
+  addNewLabel?: string;
 }
 
 export function SlideSelect({
@@ -48,6 +52,8 @@ export function SlideSelect({
   value,
   displayValue,
   onChange,
+  onAddNew,
+  addNewLabel = 'Add New',
 }: SlideSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -321,6 +327,20 @@ export function SlideSelect({
                   <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
+
+              {/* Search */}
+              {onAddNew && (
+                <div className="border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => { close(); setTimeout(() => onAddNew(), 320); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                  >
+                    <Plus className="h-4 w-4 shrink-0" />
+                    {addNewLabel}
+                  </button>
+                </div>
+              )}
 
               {/* List */}
               <div ref={listRef} className="flex-1 overflow-y-auto">

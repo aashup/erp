@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
+import { PartyFormModal } from '@/components/ui/PartyFormModal';
 import { Plus, ArrowLeft, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -59,6 +60,7 @@ export default function SalesInvoiceFormPage() {
   const isEditMode = Boolean(invoiceId);
   const queryClient = useQueryClient();
   const { selectedDate } = useDateStore();
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   const { data: customersData } = useQuery({
     queryKey: ['parties-customers'],
@@ -375,6 +377,8 @@ export default function SalesInvoiceFormPage() {
                   value={watch('party_id')}
                   onChange={(val) => setValue('party_id', val, { shouldValidate: true })}
                   error={errors.party_id?.message}
+                  onAddNew={() => setShowAddCustomer(true)}
+                  addNewLabel="Add New Customer"
                 />
                 <Input
                   id="invoice_date"
@@ -556,6 +560,16 @@ export default function SalesInvoiceFormPage() {
           )}
         </CardContent>
       </Card>
+
+      <PartyFormModal
+        open={showAddCustomer}
+        onClose={() => setShowAddCustomer(false)}
+        defaultType="customer"
+        onCreated={(party) => {
+          queryClient.invalidateQueries({ queryKey: ['parties-customers'] });
+          setValue('party_id', party.id, { shouldValidate: true });
+        }}
+      />
     </div>
   );
 }

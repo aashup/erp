@@ -244,7 +244,7 @@ export const MENU_CONFIG: MenuItem[] = [
     children: [
       {
         id: "base-settings",
-        label: "Base",
+        label: "Comapny",
         href: "/settings/base",
         requiredPermission: "branch.view",
       },

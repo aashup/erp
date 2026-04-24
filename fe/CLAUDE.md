@@ -224,6 +224,42 @@ Reusable searchable select that opens a right-side sliding panel. Use for entity
 - **Keep existing `Select.tsx`** for small static enum lists (status, payment mode, voucher type)
 - See `fe/SLIDE_SELECT_PLAN.md` for full usage examples
 
+### "Add New" Inline Creation Pattern
+
+`SlideSelect` supports an optional `onAddNew` callback that renders a **"+ Add New …"** button at the top of the panel. When clicked, the panel closes and control transfers to the caller to open an appropriate creation dialog.
+
+**Props:**
+```tsx
+onAddNew?: () => void      // caller opens creation dialog
+addNewLabel?: string       // button label, defaults to "Add New"
+```
+
+**Reusable creation modals** (in `fe/src/components/ui/`):
+- `PartyFormModal` — create a new party (customer or vendor). Props: `open`, `onClose`, `defaultType`, `onCreated(party)`
+
+**Wiring pattern:**
+```tsx
+const [showAdd, setShowAdd] = useState(false);
+
+<SlideSelect
+  ...
+  onAddNew={() => setShowAdd(true)}
+  addNewLabel="Add New Customer"
+/>
+
+<PartyFormModal
+  open={showAdd}
+  onClose={() => setShowAdd(false)}
+  defaultType="customer"
+  onCreated={(party) => {
+    queryClient.invalidateQueries({ queryKey: ['parties-customers'] });
+    setValue('party_id', party.id, { shouldValidate: true });
+  }}
+/>
+```
+
+**Already wired in:** SalesInvoiceFormPage, SalesOrderFormPage (customer), PurchaseOrderFormPage, PurchaseInvoiceFormPage (vendor). Use `defaultType="vendor"` and invalidate `['parties-vendors']` for vendor forms.
+
 ## Routing (App.tsx)
 - AuthLayout wraps /login, /register
 - AppLayout wraps all protected routes

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
+import { PartyFormModal } from '@/components/ui/PartyFormModal';
 import { Plus, ArrowLeft, X, PackageOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -64,6 +65,7 @@ export default function PurchaseInvoiceFormPage() {
   const { invoiceId } = useParams<{ invoiceId: string }>();
   const isEditMode = Boolean(invoiceId);
   const queryClient = useQueryClient();
+  const [showAddVendor, setShowAddVendor] = useState(false);
 
   const selectedFYId = useFYStore((state) => state.selectedFY?.id ?? '');
   const { selectedDate } = useDateStore();
@@ -414,6 +416,8 @@ export default function PurchaseInvoiceFormPage() {
                   value={watch('party_id')}
                   onChange={(val) => setValue('party_id', val, { shouldValidate: true })}
                   error={errors.party_id?.message}
+                  onAddNew={() => setShowAddVendor(true)}
+                  addNewLabel="Add New Vendor"
                 />
                 <Input
                   id="invoice_date"
@@ -633,6 +637,16 @@ export default function PurchaseInvoiceFormPage() {
           )}
         </CardContent>
       </Card>
+
+      <PartyFormModal
+        open={showAddVendor}
+        onClose={() => setShowAddVendor(false)}
+        defaultType="vendor"
+        onCreated={(party) => {
+          queryClient.invalidateQueries({ queryKey: ['parties-vendors'] });
+          setValue('party_id', party.id, { shouldValidate: true });
+        }}
+      />
     </div>
   );
 }
