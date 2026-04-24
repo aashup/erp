@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountingGroupController;
+use App\Http\Controllers\Api\V1\DepartmentController;
+use App\Http\Controllers\Api\V1\DesignationController;
+use App\Http\Controllers\Api\V1\EmployeeController;
+use App\Http\Controllers\Api\V1\PayrollController;
+use App\Http\Controllers\Api\V1\SalaryStructureController;
 use App\Http\Controllers\Api\V1\POSController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatchController;
@@ -152,6 +157,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('pos/held', [POSController::class, 'heldList']);
     Route::delete('pos/held/{salesInvoice}', [POSController::class, 'deleteHeld']);
     Route::post('pos/quick-party', [POSController::class, 'quickParty']);
+
+    // Payroll
+    Route::apiResource('departments', DepartmentController::class);
+    Route::apiResource('designations', DesignationController::class);
+    Route::get('employees/{employee}/salary-structure', [EmployeeController::class, 'salaryStructure']);
+    Route::post('employees/{employee}/salary-structure', [SalaryStructureController::class, 'storeForEmployee']);
+    Route::apiResource('salary-structures', SalaryStructureController::class)->only(['show', 'update', 'destroy']);
+    Route::apiResource('employees', EmployeeController::class);
+    Route::post('payroll-runs/generate', [PayrollController::class, 'generate']);
+    Route::patch('payroll-runs/{payrollRun}/approve', [PayrollController::class, 'approve']);
+    Route::patch('payroll-runs/{payrollRun}/mark-paid', [PayrollController::class, 'markPaid']);
+    Route::patch('payroll-runs/{payrollRun}/entries/{entry}', [PayrollController::class, 'updateEntry']);
+    Route::get('payroll-runs/{payrollRun}/payslip/{employee}', [PayrollController::class, 'payslip']);
+    Route::get('payroll-runs', [PayrollController::class, 'index']);
+    Route::get('payroll-runs/{payrollRun}', [PayrollController::class, 'show']);
+    Route::delete('payroll-runs/{payrollRun}', [PayrollController::class, 'destroy']);
 
     // Reports
     Route::get('reports/trial-balance', [ReportController::class, 'trialBalance']);

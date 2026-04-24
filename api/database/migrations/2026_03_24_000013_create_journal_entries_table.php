@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignUuid('financial_year_id')->constrained('financial_years');
             $table->string('voucher_number')->unique();
             $table->date('voucher_date');
-            $table->enum('voucher_type', ['purchase', 'sales', 'payment', 'receipt', 'journal', 'contra']);
+            $table->enum('voucher_type', ['purchase', 'sales', 'payment', 'receipt', 'journal', 'contra', 'payroll']);
             $table->text('narration')->nullable();
             $table->string('source')->nullable()->comment('auto or manual');
             $table->string('reference_type')->nullable();

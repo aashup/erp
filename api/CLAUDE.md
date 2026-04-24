@@ -47,7 +47,14 @@ Ledgers: cash, input_cgst, input_sgst, input_igst, output_cgst, output_sgst, out
 - `postPurchaseInvoice()` — Dr: purchase + GST input ledgers, Cr: party creditor_ledger
 - `postPayment()` — Dr: party creditor_ledger, Cr: cash/bank ledger
 - `postReceipt()` — Dr: cash/bank ledger, Cr: party debtor_ledger
+- `postPayroll(PayrollRun $run, string $userId)` — Dr: Salary Expense (gross + employer PF + ESI), Cr: Salary Payable (net + TDS), PF Payable (employee + employer), ESI Payable (employee + employer), PT Payable
 - Uses `Ledger::findBySystemKey()` for system accounts
+
+### Payroll System Keys (added to DefaultGroupsService)
+Ledgers: `salary_expense` (Direct Expenses, code 5100), `salary_payable` (Current Liabilities), `pf_payable` (Duties & Taxes), `esi_payable` (Duties & Taxes), `pt_payable` (Duties & Taxes)
+
+### Voucher Types
+Types: purchase, sales, payment, receipt, journal, contra, **payroll** (prefix: `PRL`)
 
 ## API Routes (all under /api/v1, auth:sanctum)
 
@@ -68,6 +75,11 @@ Ledgers: cash, input_cgst, input_sgst, input_igst, output_cgst, output_sgst, out
 | apiResource payment-receipts | PaymentReceiptController | Create/Read/Delete |
 | apiResource financial-years | FinancialYearController | + PATCH set-current |
 | GET reports/* | ReportController | trial-balance, profit-and-loss, party-ledger |
+| apiResource departments | DepartmentController | Full CRUD |
+| apiResource designations | DesignationController | Full CRUD |
+| apiResource employees | EmployeeController | CRUD + GET salary-structure, POST salary-structure |
+| apiResource salary-structures | SalaryStructureController | show/update/destroy only |
+| GET/POST/DELETE/PATCH payroll-runs | PayrollController | generate, show, destroy, approve, mark-paid, payslip |
 
 ## Controller Pattern
 - Extends base Controller (AuthorizesRequests, ValidatesRequests)
@@ -76,7 +88,7 @@ Ledgers: cash, input_cgst, input_sgst, input_igst, output_cgst, output_sgst, out
 - Returns JSON: `response()->json(['data' => $resource])` or paginated collection
 
 ## Migration Order (key tables)
-1. companies → 2. users → 3. branches → 4. financial_years → 5. accounting_groups → 6. ledgers → 7. parties → 8. items → 9. batches → 10. godowns → 11. stock_ledger → 12-16. purchase_* → 17-21. sales_* → 22. payment_receipts → 23. vouchers + voucher_lines
+1. companies → 2. users → 3. branches → 4. financial_years → 5. accounting_groups → 6. ledgers → 7. parties → 8. items → 9. batches → 10. godowns → 11. stock_ledger → 12-16. purchase_* → 17-21. sales_* → 22. payment_receipts → 23. vouchers + voucher_lines → 24. payroll tables (in `2026_04_11_create_document_counters_table.php`)
 
 ## Important Design Rules
 - UUID primary keys everywhere

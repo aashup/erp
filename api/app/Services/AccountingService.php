@@ -7,6 +7,7 @@ use App\Models\CompanySetting;
 use App\Models\FinancialYear;
 use App\Models\Ledger;
 use App\Models\Party;
+use App\Models\PayrollRun;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use App\Models\Voucher;
@@ -284,6 +285,139 @@ class AccountingService
                 'credit' => $amount,
                 'narration' => "Receipt from {$party->name}",
             ]);
+
+            return $entry;
+        });
+    }
+
+    /**
+     * Create a journal entry for an approved Payroll Run.
+     *
+     * Dr: Salary Expense (gross + employer PF + employer ESI)
+     *   Cr: Salary Payable (net salary)
+     *   Cr: PF Payable (employee PF + employer PF)
+     *   Cr: ESI Payable (employee ESI + employer ESI)
+     *   Cr: PT Payable (professional tax)
+     */
+    public function postPayroll(PayrollRun $run, string $userId): ?Voucher
+    {
+        $companyId = $run->company_id;
+        $run->loadMissing('entries');
+
+        $totalGross      = (float) $run->total_gross;
+        $totalNet        = (float) $run->total_net;
+        $totalPfEmployer = (float) $run->total_pf_employer;
+        $totalEsiEmployer = (float) $run->total_esi_employer;
+
+        $totalPfEmployee  = $run->entries->sum('pf_employee');
+        $totalEsiEmployee = $run->entries->sum('esi_employee');
+        $totalPt          = $run->entries->sum('professional_tax');
+        $totalTds         = $run->entries->sum('tds');
+
+        $salaryExpenseLedger = Ledger::findBySystemKey($companyId, 'salary_expense');
+        $salaryPayableLedger = Ledger::findBySystemKey($companyId, 'salary_payable');
+
+        if (! $salaryExpenseLedger || ! $salaryPayableLedger) {
+            return null;
+        }
+
+        $voucherDate = date('Y-m-d', mktime(0, 0, 0, $run->month, 1, $run->year));
+        $fy = $this->getCurrentFY($companyId, $voucherDate);
+        if (! $fy) {
+            return null;
+        }
+
+        return DB::transaction(function () use (
+            $run, $companyId, $userId, $fy, $voucherDate,
+            $totalGross, $totalNet, $totalPfEmployer, $totalEsiEmployer,
+            $totalPfEmployee, $totalEsiEmployee, $totalPt, $totalTds,
+            $salaryExpenseLedger, $salaryPayableLedger
+        ) {
+            $periodLabel = date('F Y', mktime(0, 0, 0, $run->month, 1, $run->year));
+            $voucherNumber = $this->generateVoucherNumber($companyId, 'payroll');
+
+            $entry = Voucher::create([
+                'company_id'       => $companyId,
+                'financial_year_id' => $fy->id,
+                'voucher_number'   => $voucherNumber,
+                'voucher_date'     => $voucherDate,
+                'voucher_type'     => 'payroll',
+                'narration'        => "Payroll for {$periodLabel}",
+                'source'           => 'auto',
+                'reference_type'   => PayrollRun::class,
+                'reference_id'     => $run->id,
+                'is_posted'        => true,
+                'created_by'       => $userId,
+            ]);
+
+            // Dr: Salary Expense = gross + employer PF + employer ESI
+            $totalExpense = $totalGross + $totalPfEmployer + $totalEsiEmployer;
+            $entry->lines()->create([
+                'ledger_id' => $salaryExpenseLedger->id,
+                'debit'     => $totalExpense,
+                'credit'    => 0,
+                'narration' => "Salary expense for {$periodLabel}",
+            ]);
+
+            // Cr: Salary Payable (net salary)
+            $entry->lines()->create([
+                'ledger_id' => $salaryPayableLedger->id,
+                'debit'     => 0,
+                'credit'    => $totalNet,
+                'narration' => 'Net salary payable',
+            ]);
+
+            // Cr: PF Payable
+            $totalPf = round((float) $totalPfEmployee + $totalPfEmployer, 2);
+            if ($totalPf > 0) {
+                $pfLedger = Ledger::findBySystemKey($companyId, 'pf_payable');
+                if ($pfLedger) {
+                    $entry->lines()->create([
+                        'ledger_id' => $pfLedger->id,
+                        'debit'     => 0,
+                        'credit'    => $totalPf,
+                        'narration' => 'PF payable (employee + employer)',
+                    ]);
+                }
+            }
+
+            // Cr: ESI Payable
+            $totalEsi = round((float) $totalEsiEmployee + $totalEsiEmployer, 2);
+            if ($totalEsi > 0) {
+                $esiLedger = Ledger::findBySystemKey($companyId, 'esi_payable');
+                if ($esiLedger) {
+                    $entry->lines()->create([
+                        'ledger_id' => $esiLedger->id,
+                        'debit'     => 0,
+                        'credit'    => $totalEsi,
+                        'narration' => 'ESI payable (employee + employer)',
+                    ]);
+                }
+            }
+
+            // Cr: PT Payable
+            if ($totalPt > 0) {
+                $ptLedger = Ledger::findBySystemKey($companyId, 'pt_payable');
+                if ($ptLedger) {
+                    $entry->lines()->create([
+                        'ledger_id' => $ptLedger->id,
+                        'debit'     => 0,
+                        'credit'    => round((float) $totalPt, 2),
+                        'narration' => 'Professional tax payable',
+                    ]);
+                }
+            }
+
+            // Cr: TDS (use salary_payable as fallback or skip when ledger absent)
+            if ($totalTds > 0) {
+                // Add TDS to salary payable credit if no dedicated ledger
+                $entry->lines()->create([
+                    'ledger_id' => $salaryPayableLedger->id,
+                    'debit'     => 0,
+                    'credit'    => round((float) $totalTds, 2),
+                    'narration' => 'TDS payable',
+                ]);
+            }
 
             return $entry;
         });

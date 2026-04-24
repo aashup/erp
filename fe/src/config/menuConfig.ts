@@ -179,6 +179,32 @@ export const MENU_CONFIG: MenuItem[] = [
     ],
   },
   {
+    id: "payroll",
+    label: "Payroll",
+    icon: "users",
+    requiredPermission: "payroll.view",
+    children: [
+      {
+        id: "payroll-employees",
+        label: "Employees",
+        href: "/payroll/employees",
+        requiredPermission: "payroll.view",
+      },
+      {
+        id: "payroll-departments",
+        label: "Departments",
+        href: "/payroll/departments",
+        requiredPermission: "payroll.view",
+      },
+      {
+        id: "payroll-runs",
+        label: "Payroll Runs",
+        href: "/payroll/runs",
+        requiredPermission: "payroll.view",
+      },
+    ],
+  },
+  {
     id: "reports",
     label: "Reports",
     icon: "file-text",

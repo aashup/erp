@@ -38,7 +38,11 @@ class DefaultGroupsService
                 ['name' => 'Purchase', 'system_key' => 'purchase_account'],
             ],
         ],
-        ['code' => '5100', 'name' => 'Direct Expenses', 'type' => 'expense', 'parent_code' => null, 'system_key' => null],
+        ['code' => '5100', 'name' => 'Direct Expenses', 'type' => 'expense', 'parent_code' => null, 'system_key' => null,
+            'ledgers' => [
+                ['name' => 'Salary Expense', 'system_key' => 'salary_expense'],
+            ],
+        ],
         ['code' => '5200', 'name' => 'Indirect Expenses', 'type' => 'expense', 'parent_code' => null, 'system_key' => null],
 
         // Current Assets sub-groups
@@ -70,6 +74,9 @@ class DefaultGroupsService
                 ['name' => 'Input CGST', 'system_key' => 'input_cgst'],
                 ['name' => 'Input SGST', 'system_key' => 'input_sgst'],
                 ['name' => 'Input IGST', 'system_key' => 'input_igst'],
+                ['name' => 'PF Payable', 'system_key' => 'pf_payable'],
+                ['name' => 'ESI Payable', 'system_key' => 'esi_payable'],
+                ['name' => 'Professional Tax Payable', 'system_key' => 'pt_payable'],
             ],
         ],
         ['code' => '2020', 'name' => 'Provisions', 'type' => 'liability', 'parent_code' => '2000', 'system_key' => null],
@@ -81,9 +88,9 @@ class DefaultGroupsService
         ['code' => '2130', 'name' => 'Unsecured Loans', 'type' => 'liability', 'parent_code' => '2100', 'system_key' => null],
         ['code' => '3010', 'name' => 'Reserves & Surplus', 'type' => 'equity', 'parent_code' => '3000', 'system_key' => null],
 
-        ['code' => '2022', 'name' => 'Salary', 'type' => 'liability', 'parent_code' => '2020', 'system_key' => 'salary_expense',
+        ['code' => '2022', 'name' => 'Salary', 'type' => 'liability', 'parent_code' => '2020', 'system_key' => null,
             'ledgers' => [
-                ['name' => 'Salary Payable', 'system_key' => 'salary_expense'],
+                ['name' => 'Salary Payable', 'system_key' => 'salary_payable'],
             ],
         ],
     ];

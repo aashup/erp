@@ -77,6 +77,7 @@ class Voucher extends Model
             'receipt' => 'REC',
             'journal' => 'JOU',
             'contra' => 'CON',
+            'payroll' => 'PRL',
             default => 'VOC',
         };
     }

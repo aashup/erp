@@ -671,6 +671,113 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// ── Payroll ──────────────────────────────────────────────────────────────────
+
+export interface Department extends SyncColumns {
+  id: string;
+  company_id: string;
+  name: string;
+  is_active: boolean;
+}
+
+export interface Designation extends SyncColumns {
+  id: string;
+  company_id: string;
+  department_id: string | null;
+  name: string;
+  is_active: boolean;
+  department?: Department;
+}
+
+export interface Employee extends SyncColumns {
+  id: string;
+  company_id: string;
+  employee_code: string | null;
+  name: string;
+  gender: 'male' | 'female' | 'other' | null;
+  date_of_birth: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  department_id: string | null;
+  designation_id: string | null;
+  joining_date: string;
+  employment_type: 'permanent' | 'contract' | 'part_time';
+  bank_account_name: string | null;
+  bank_account_no: string | null;
+  bank_ifsc: string | null;
+  bank_name: string | null;
+  pan: string | null;
+  pf_number: string | null;
+  esi_number: string | null;
+  is_pf_applicable: boolean;
+  is_esi_applicable: boolean;
+  is_active: boolean;
+  department?: Department;
+  designation?: Designation;
+  salary_structure?: SalaryStructure | null;
+}
+
+export interface SalaryStructure extends SyncColumns {
+  id: string;
+  company_id: string;
+  employee_id: string;
+  effective_from: string;
+  basic: number;
+  hra: number;
+  da: number;
+  conveyance: number;
+  medical: number;
+  special_allowance: number;
+  professional_tax: number;
+  tds_amount: number;
+  is_active: boolean;
+}
+
+export interface PayrollEntry extends SyncColumns {
+  id: string;
+  payroll_run_id: string;
+  employee_id: string;
+  present_days: number;
+  basic: number;
+  hra: number;
+  da: number;
+  conveyance: number;
+  medical: number;
+  special_allowance: number;
+  gross_salary: number;
+  pf_employee: number;
+  esi_employee: number;
+  professional_tax: number;
+  tds: number;
+  total_deductions: number;
+  net_salary: number;
+  pf_employer: number;
+  esi_employer: number;
+  employee?: Employee;
+}
+
+export interface PayrollRun extends SyncColumns {
+  id: string;
+  company_id: string;
+  month: number;
+  year: number;
+  working_days: number;
+  status: 'draft' | 'approved' | 'paid';
+  total_gross: number;
+  total_deductions: number;
+  total_net: number;
+  total_pf_employer: number;
+  total_esi_employer: number;
+  notes: string | null;
+  voucher_id: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  entries?: PayrollEntry[];
+}
+
 export interface LoginResponse {
   message: string;
   data: {

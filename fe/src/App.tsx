@@ -58,6 +58,10 @@ import ThermalTemplateEditor from "@/pages/settings/ThermalTemplateEditor";
 import Theme from "@/pages/settings/Theme";
 import POSPage from "@/pages/pos/POSPage";
 import POSPage2 from "@/pages/pos2/POSPage2";
+import Departments from "@/pages/payroll/Departments";
+import Employees from "@/pages/payroll/Employees";
+import PayrollRuns from "@/pages/payroll/PayrollRuns";
+import PayrollRunDetail from "@/pages/payroll/PayrollRunDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -278,6 +282,12 @@ export default function App() {
             />
             <Route path="/settings/units" element={<Units />} />
             <Route path="/settings/inventory" element={<InventorySettings />} />
+
+            {/* Payroll */}
+            <Route path="/payroll/departments" element={<Departments />} />
+            <Route path="/payroll/employees" element={<Employees />} />
+            <Route path="/payroll/runs" element={<PayrollRuns />} />
+            <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
           </Route>
 
           {/* POS — full screen, no ERP shell */}

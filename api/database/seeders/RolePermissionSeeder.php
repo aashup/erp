@@ -11,7 +11,7 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $modules = [
-            'inventory', 'purchase', 'sales', 'pos', 'accounting', 'party', 'branch', 'user', 'role',
+            'inventory', 'purchase', 'sales', 'pos', 'accounting', 'party', 'branch', 'user', 'role', 'payroll',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete'];
@@ -25,6 +25,9 @@ class RolePermissionSeeder extends Seeder
                 ]);
             }
         }
+
+        // Flush Spatie cache so newly created permissions are visible to syncPermissions
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Admin — all permissions
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
