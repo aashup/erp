@@ -5,8 +5,6 @@ import {
   CreditCard,
   HandCoins,
   BookOpen,
-  ShoppingCart,
-  Receipt,
   ChevronRight,
 } from "lucide-react";
 

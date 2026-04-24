@@ -321,7 +321,7 @@ export default function POSPage() {
 
       const [invoiceRes, templatesRes] = await Promise.all([
         salesInvoicesApi.get(invoiceId),
-        thermalTemplatesApi.list({ per_page: 100 }),
+        thermalTemplatesApi.list({ per_page: '100' }),
       ]);
 
       const invoice = invoiceRes.data.data;

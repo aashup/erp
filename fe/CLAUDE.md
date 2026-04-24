@@ -44,6 +44,7 @@ fe/src/
 ├── api/                    # API service modules (axios-based)
 │   ├── auth.ts, parties.ts, inventory.ts, purchase.ts, sales.ts
 │   ├── accounting.ts       # accountingGroupsApi, ledgersApi, vouchersApi, reportsApi, paymentReceiptsApi
+│   ├── payroll.ts          # departmentsApi, designationsApi, employeesApi, payrollApi
 │   ├── settings.ts, financialYears.ts, dashboard.ts
 ├── components/
 │   ├── layout/             # AppLayout, AuthLayout, Sidebar, Header
@@ -59,6 +60,7 @@ fe/src/
 │   ├── sales/              # SalesOrders, SalesInvoices, SalesInvoiceFormPage
 │   ├── auth/               # Login, Register
 │   ├── reports/            # CashBook, BankBook, LedgerBook, DayBook (Account Books)
+│   ├── payroll/            # Departments, Employees, SalaryStructureModal, PayrollRuns, PayrollRunDetail
 │   ├── Parties.tsx, Branches.tsx, Settings.tsx
 │   └── dashboard/
 ├── store/                  # Zustand: authStore, fyStore, themeStore
@@ -109,9 +111,43 @@ export const fooApi = {
 | ProfitAndLoss.tsx | /accounting/profit-loss | P&L statement |
 | Payments.tsx | /accounting/payments | Payment/Receipt list and creation |
 
+## Payroll Pages (`fe/src/pages/payroll/`)
+
+| Page | Route | Purpose |
+|------|-------|---------|
+| Departments.tsx | /payroll/departments | List + inline modal CRUD; requires `payroll.view` |
+| Employees.tsx | /payroll/employees | List with salary structure ₹ button (opens SalaryStructureModal); dept/designation via SlideSelect |
+| SalaryStructureModal.tsx | (modal) | Create/view salary structure per employee; shows gross preview; deactivates previous on save |
+| PayrollRuns.tsx | /payroll/runs | List with Generate modal (month/year/working_days); navigates to detail on generate |
+| PayrollRunDetail.tsx | /payroll/runs/:id | Inline present_days editing; Approve & Post; Mark as Paid; per-employee payslip download |
+
+### API Service (`fe/src/api/payroll.ts`)
+Exports: `departmentsApi`, `designationsApi`, `employeesApi`, `payrollApi`
+- `payrollApi.payslipUrl(runId, employeeId)` — returns raw URL string for fetch-based PDF download (uses Bearer token, not direct `<a href>`)
+
+### Payslip Download Pattern
+```typescript
+const token = localStorage.getItem('token');
+const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+const blob = await res.blob();
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = `Payslip-${name}.pdf`;
+a.click();
+```
+
+### Menu Config (`fe/src/config/menuConfig.ts`)
+Payroll section added after Accounting, before Reports:
+```
+Payroll (requiredPermission: payroll.view)
+  ├── Employees     /payroll/employees
+  ├── Departments   /payroll/departments
+  └── Payroll Runs  /payroll/runs
+```
+
 ## Type Definitions (fe/src/types/index.ts)
 
-Key interfaces: Company, User, Branch, FinancialYear, Item, Batch, Godown, Party, AccountingGroup, Ledger, Voucher, VoucherLine, PaymentReceipt, StockLedgerEntry, PurchaseOrder/Invoice, SalesOrder/Invoice
+Key interfaces: Company, User, Branch, FinancialYear, Item, Batch, Godown, Party, AccountingGroup, Ledger, Voucher, VoucherLine, PaymentReceipt, StockLedgerEntry, PurchaseOrder/Invoice, SalesOrder/Invoice, Department, Designation, Employee, SalaryStructure, PayrollRun, PayrollEntry
 
 All entities include SyncColumns: sync_status, device_id, synced_at, updated_at_local, created_at, updated_at
 
@@ -242,7 +278,9 @@ The API (`AuthController`) must use `$user->getAllPermissions()->pluck('name')->
 **Role permissions from seeder** (`RolePermissionSeeder.php`):
 | Role | Permissions |
 |------|------------|
-| admin | all (32) |
-| manager | all except \*.delete (24) |
-| accountant | accounting.\* + \*.view (11) |
-| salesman | sales.\* + inventory.view + party.view (6) |
+| admin | all (40 — 10 modules × 4 actions) |
+| manager | all except \*.delete (30) |
+| accountant | accounting.\* + \*.view (13 — includes payroll.view) |
+| salesman | sales.\* + pos.\* + inventory.view + party.view (10) |
+
+Modules: inventory, purchase, sales, pos, accounting, party, branch, user, role, **payroll**

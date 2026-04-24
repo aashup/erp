@@ -590,6 +590,7 @@ export interface LedgerTransactionRow {
   debit: number;
   credit: number;
   balance: number;
+  created_at?: string;
 }
 
 export interface LedgerTransactionsResponse {
@@ -647,6 +648,7 @@ export interface DayBookEntry {
   lines: DayBookLine[];
   total_debit: number;
   total_credit: number;
+  created_at?: string;
 }
 
 export interface DayBookResponse {

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,13 +12,13 @@ import { Button } from '@/components/ui/Button';
 const schema = z.object({
   effective_from:    z.string().min(1, 'Effective date is required'),
   basic:             z.coerce.number().min(0),
-  hra:               z.coerce.number().min(0).optional().default(0),
-  da:                z.coerce.number().min(0).optional().default(0),
-  conveyance:        z.coerce.number().min(0).optional().default(0),
-  medical:           z.coerce.number().min(0).optional().default(0),
-  special_allowance: z.coerce.number().min(0).optional().default(0),
-  professional_tax:  z.coerce.number().min(0).optional().default(0),
-  tds_amount:        z.coerce.number().min(0).optional().default(0),
+  hra:               z.coerce.number().min(0).default(0),
+  da:                z.coerce.number().min(0).default(0),
+  conveyance:        z.coerce.number().min(0).default(0),
+  medical:           z.coerce.number().min(0).default(0),
+  special_allowance: z.coerce.number().min(0).default(0),
+  professional_tax:  z.coerce.number().min(0).default(0),
+  tds_amount:        z.coerce.number().min(0).default(0),
 });
 type SalaryForm = z.infer<typeof schema>;
 
@@ -39,7 +39,7 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
   });
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<SalaryForm>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<SalaryForm>,
   });
 
   useEffect(() => {

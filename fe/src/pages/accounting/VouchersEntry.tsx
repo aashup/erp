@@ -31,8 +31,6 @@ import {
   CreditCard,
   HandCoins,
   BookOpen,
-  ShoppingCart,
-  Receipt,
 } from "lucide-react";
 import { useDateStore } from "@/store/dateStore";
 

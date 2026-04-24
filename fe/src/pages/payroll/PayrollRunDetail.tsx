@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ArrowLeft, CheckCircle, CreditCard, Download } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import api from '@/lib/axios';
 
 const MONTHS = [
   'January','February','March','April','May','June',

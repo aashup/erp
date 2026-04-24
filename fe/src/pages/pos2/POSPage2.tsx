@@ -245,7 +245,7 @@ export default function POSPage2() {
     );
     if (existing) {
       const newQty = existing.quantity + 1;
-      const baseQtyNeeded = newQty * factorToUse;
+      void (newQty * factorToUse);
       const finalQty = await checkAndSetQty(
         existing.id,
         newQty,
@@ -428,7 +428,7 @@ export default function POSPage2() {
 
       const [invoiceRes, templatesRes] = await Promise.all([
         salesInvoicesApi.get(invoiceId),
-        thermalTemplatesApi.list({ per_page: 100 }),
+        thermalTemplatesApi.list({ per_page: '100' }),
       ]);
 
       const invoice = invoiceRes.data.data;

@@ -7,7 +7,6 @@ import type {
   Employee,
   SalaryStructure,
   PayrollRun,
-  PayrollEntry,
 } from '@/types';
 
 export const departmentsApi = {

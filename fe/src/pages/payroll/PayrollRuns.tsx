@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
 import { Plus, Eye, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 

@@ -97,6 +97,51 @@ Types: purchase, sales, payment, receipt, journal, contra, **payroll** (prefix: 
 - All tables have sync columns for offline-first mobile support
 - `loadDefaults()` is one-time operation tracked in CompanySetting
 
+## Payroll Module
+
+### Database Tables
+- `departments` — company_id, name, is_active; soft-deletes
+- `designations` — company_id, department_id (nullable FK), name, is_active; soft-deletes
+- `employees` — full employee master: personal info, bank details, PF/ESI flags, department/designation FKs; soft-deletes
+- `salary_structures` — employee_id, effective_from, Basic/HRA/DA/Conveyance/Medical/Special Allowance, PT (fixed), TDS (fixed), is_active; no soft-deletes
+- `payroll_runs` — company_id, month, year, working_days, status (draft/approved/paid), totals, voucher_id FK; UNIQUE(company_id, month, year); soft-deletes
+- `payroll_entries` — payroll_run_id, employee_id, present_days, all earning components, deductions, net_salary, employer PF/ESI; no BelongsToCompany, no soft-deletes
+
+### Models
+- `Department`, `Designation`, `Employee`, `SalaryStructure` — use BelongsToCompany, HasUuid, HasSyncColumns
+- `Employee` — `salaryStructure()` = `hasOne(SalaryStructure)->where('is_active',true)->latestOfMany('effective_from')`
+- `PayrollRun` — has SoftDeletes; relationships to entries, voucher, approvedBy
+- `PayrollEntry` — HasUuid + HasSyncColumns only (no BelongsToCompany)
+
+### PayrollService
+- `generate(companyId, month, year, workingDays)` — creates draft run; present_days defaults to working_days; pro-rata = component × (present_days / working_days)
+- `recomputeEntry(entry, presentDays, workingDays)` — recalculates all fields after attendance edit
+- `recalculateTotals(run)` — sums all entries back to run totals
+- **Indian statutory rules**: PF employee = 12% basic, PF employer = 13% basic; ESI employee = 0.75% gross (only if gross ≤ ₹21,000), ESI employer = 3.25% gross
+
+### Policies
+- `EmployeePolicy`, `PayrollPolicy` — both use `payroll.view/create/edit/delete` permissions
+
+### Payslip PDF
+- Route: `GET /payroll-runs/{id}/payslip/{employeeId}` → DomPDF download
+- Blade template: `resources/views/payroll/payslip.blade.php`
+- Sections: company header, employee info, earnings table, deductions table, net salary, employer contributions
+
+### ⚠️ RolePermissionSeeder — Cache Flush Required
+When adding new modules to `$modules` array in `RolePermissionSeeder.php`, always call:
+```php
+app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+```
+**before** the `syncPermissions()` calls. Without this, newly created permissions are invisible to `Permission::all()` due to Spatie's internal cache, and roles get no permissions for the new module.
+
+### Role Permission Matrix
+| Role | Payroll Permissions |
+|------|-------------------|
+| admin | view, create, edit, delete |
+| manager | view, create, edit |
+| accountant | view |
+| salesman | none |
+
 ## Roles & Permissions — UUID Primary Keys
 
 The `permissions` and `roles` tables use **`uuid` as PRIMARY KEY** — no integer `id` column.
