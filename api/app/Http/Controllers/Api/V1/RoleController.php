@@ -31,13 +31,13 @@ class RoleController extends Controller
         $this->authorize('create', Role::class);
 
         $validated = $request->validate([
-            'name'          => 'required|string|max:255|unique:roles,name',
-            'permissions'   => 'required|array',
+            'name' => 'required|string|max:255|unique:roles,name',
+            'permissions' => 'required|array',
             'permissions.*' => 'exists:permissions,uuid',
         ]);
 
         $role = Role::create([
-            'name'       => $validated['name'],
+            'name' => $validated['name'],
             'guard_name' => 'web',
         ]);
 
@@ -61,8 +61,8 @@ class RoleController extends Controller
         $roleKey = $role->getKey();
 
         $validated = $request->validate([
-            'name'          => "sometimes|string|max:255|unique:roles,name,{$roleKey},uuid",
-            'permissions'   => 'sometimes|array',
+            'name' => "sometimes|string|max:255|unique:roles,name,{$roleKey},uuid",
+            'permissions' => 'sometimes|array',
             'permissions.*' => 'exists:permissions,uuid',
         ]);
 

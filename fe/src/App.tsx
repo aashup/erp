@@ -79,6 +79,12 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequirePermission({ permission, children }: { permission: string; children: React.ReactNode }) {
+  const permissions = useAuthStore((s) => s.user?.permissions ?? []);
+  if (!permissions.includes(permission)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function DocumentTitleManager() {
   const pageTitle = usePageTitleStore((s) => s.pageTitle);
   const companyName = useAuthStore(
@@ -284,10 +290,10 @@ export default function App() {
             <Route path="/settings/inventory" element={<InventorySettings />} />
 
             {/* Payroll */}
-            <Route path="/payroll/departments" element={<Departments />} />
-            <Route path="/payroll/employees" element={<Employees />} />
-            <Route path="/payroll/runs" element={<PayrollRuns />} />
-            <Route path="/payroll/runs/:id" element={<PayrollRunDetail />} />
+            <Route path="/payroll/departments" element={<RequirePermission permission="payroll.view"><Departments /></RequirePermission>} />
+            <Route path="/payroll/employees" element={<RequirePermission permission="payroll.view"><Employees /></RequirePermission>} />
+            <Route path="/payroll/runs" element={<RequirePermission permission="payroll.view"><PayrollRuns /></RequirePermission>} />
+            <Route path="/payroll/runs/:id" element={<RequirePermission permission="payroll.view"><PayrollRunDetail /></RequirePermission>} />
           </Route>
 
           {/* POS — full screen, no ERP shell */}

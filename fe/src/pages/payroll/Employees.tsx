@@ -15,12 +15,13 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { SlideSelect } from '@/components/ui/SlideSelect';
+import { DepartmentFormModal } from '@/components/ui/DepartmentFormModal';
+import { DesignationFormModal } from '@/components/ui/DesignationFormModal';
 import { SalaryStructureModal } from './SalaryStructureModal';
 import { Plus, Pencil, Trash2, IndianRupee } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 const schema = z.object({
-  employee_code:     z.string().optional(),
   name:              z.string().min(1, 'Name is required'),
   gender:            z.enum(['male', 'female', 'other']).optional(),
   date_of_birth:     z.string().optional(),
@@ -68,6 +69,8 @@ export default function Employees() {
   const [showModal, setShowModal]       = useState(false);
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
   const [salaryEmployee, setSalaryEmployee] = useState<Employee | null>(null);
+  const [showAddDept, setShowAddDept]   = useState(false);
+  const [showAddDesg, setShowAddDesg]   = useState(false);
   const [search, setSearch]             = useState('');
   const [page, setPage]                 = useState(1);
 
@@ -106,13 +109,12 @@ export default function Employees() {
 
   const openCreate = () => {
     setEditEmployee(null);
-    reset({ name: '', joining_date: new Date().toISOString().slice(0, 10), employment_type: 'permanent', is_pf_applicable: true, is_esi_applicable: true, is_active: true });
+    reset({ name: '', joining_date: new Date().toISOString().slice(0, 10), employment_type: 'permanent', is_pf_applicable: true, is_esi_applicable: true });
     setShowModal(true);
   };
   const openEdit = (e: Employee) => {
     setEditEmployee(e);
     reset({
-      employee_code: e.employee_code ?? '',
       name: e.name,
       gender: e.gender ?? undefined,
       date_of_birth: e.date_of_birth ?? '',
@@ -241,8 +243,13 @@ export default function Employees() {
       {/* Employee Form Modal */}
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editEmployee ? 'Edit Employee' : 'New Employee'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input id="employee_code" label="Employee Code" {...register('employee_code')} />
+          {editEmployee && (
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Employee Code</span>
+              <span className="ml-auto font-mono text-sm font-semibold text-gray-800 dark:text-gray-100">{editEmployee.employee_code}</span>
+            </div>
+          )}
+          <div className={editEmployee ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-1 gap-4'}>
             <Input id="name" label="Name *" error={errors.name?.message} {...register('name')} />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -256,9 +263,11 @@ export default function Employees() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <SlideSelect name="department_id" label="Department" options={deptOptions}
-              value={watch('department_id') ?? ''} onChange={(v) => setValue('department_id', v)} />
+              value={watch('department_id') ?? ''} onChange={(v) => setValue('department_id', v)}
+              onAddNew={() => setShowAddDept(true)} addNewLabel="Add New Department" />
             <SlideSelect name="designation_id" label="Designation" options={desgOptions}
-              value={watch('designation_id') ?? ''} onChange={(v) => setValue('designation_id', v)} />
+              value={watch('designation_id') ?? ''} onChange={(v) => setValue('designation_id', v)}
+              onAddNew={() => setShowAddDesg(true)} addNewLabel="Add New Designation" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input id="joining_date" label="Joining Date *" type="date" error={errors.joining_date?.message} {...register('joining_date')} />
@@ -297,6 +306,23 @@ export default function Employees() {
           </div>
         </form>
       </Modal>
+      <DepartmentFormModal
+        open={showAddDept}
+        onClose={() => setShowAddDept(false)}
+        onCreated={(dept) => {
+          queryClient.invalidateQueries({ queryKey: ['departments', 'all'] });
+          setValue('department_id', dept.id);
+        }}
+      />
+
+      <DesignationFormModal
+        open={showAddDesg}
+        onClose={() => setShowAddDesg(false)}
+        onCreated={(desg) => {
+          queryClient.invalidateQueries({ queryKey: ['designations', 'all'] });
+          setValue('designation_id', desg.id);
+        }}
+      />
     </div>
   );
 }

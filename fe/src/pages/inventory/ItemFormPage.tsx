@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SlideSelect } from "@/components/ui/SlideSelect";
+import { ItemGroupFormModal } from "@/components/ui/ItemGroupFormModal";
 import { ArrowLeft, Plus, X, Info } from "lucide-react";
 
 const alternateUnitSchema = z.object({
@@ -50,6 +51,7 @@ export default function ItemFormPage() {
   usePageTitle(isEdit ? "Edit Item" : "New Item");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showAddGroup, setShowAddGroup] = useState(false);
 
   const { data: unitsData, isLoading: isUnitsLoading } = useQuery({
     queryKey: ["units"],
@@ -246,6 +248,8 @@ export default function ItemFormPage() {
               }))}
               value={watch("item_group_id")}
               onChange={(val) => setValue("item_group_id", val)}
+              onAddNew={() => setShowAddGroup(true)}
+              addNewLabel="Add New Group"
             />
             <Input
               id="igst"
@@ -482,6 +486,15 @@ export default function ItemFormPage() {
           </div>
         </form>
       </Card>
+
+      <ItemGroupFormModal
+        open={showAddGroup}
+        onClose={() => setShowAddGroup(false)}
+        onCreated={(group) => {
+          queryClient.invalidateQueries({ queryKey: ["item-groups"] });
+          setValue("item_group_id", group.id);
+        }}
+      />
     </div>
   );
 }

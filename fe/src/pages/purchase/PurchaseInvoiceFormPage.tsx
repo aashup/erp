@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { PartyFormModal } from '@/components/ui/PartyFormModal';
+import { BatchFormModal } from '@/components/ui/BatchFormModal';
 import { Plus, ArrowLeft, X, PackageOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -123,9 +124,16 @@ export default function PurchaseInvoiceFormPage() {
 
   // Cache of batches per item_id: { [itemId]: Batch[] }
   const [batchesCache, setBatchesCache] = useState<Record<string, Batch[]>>({});
+  const [addBatchForItem, setAddBatchForItem] = useState<{ itemId: string; itemName: string } | null>(null);
 
   const loadBatches = (itemId: string) => {
     if (!itemId || batchesCache[itemId] !== undefined) return;
+    batchesApi.list(itemId).then((res) => {
+      setBatchesCache((prev) => ({ ...prev, [itemId]: res.data.data as Batch[] }));
+    });
+  };
+
+  const refreshBatches = (itemId: string) => {
     batchesApi.list(itemId).then((res) => {
       setBatchesCache((prev) => ({ ...prev, [itemId]: res.data.data as Batch[] }));
     });
@@ -574,12 +582,13 @@ export default function PurchaseInvoiceFormPage() {
                             <div className="w-56">
                               <SlideSelect
                                 name={`lines.${index}.batch_id`}
-                                placeholder={lineBatches.length ? 'Select batch' : 'No batches — create one first'}
+                                placeholder={lineBatches.length ? 'Select batch' : 'No batches yet'}
                                 panelTitle="Select Batch"
                                 options={batchOptions}
                                 value={selectedBatchId}
                                 onChange={(val) => setValue(`lines.${index}.batch_id`, val, { shouldDirty: true })}
-                                disabled={lineBatches.length === 0}
+                                onAddNew={() => setAddBatchForItem({ itemId: lineItemId, itemName: lineItem?.name ?? '' })}
+                                addNewLabel="Add New Batch"
                               />
                             </div>
                             {selectedBatch && (
@@ -591,11 +600,6 @@ export default function PurchaseInvoiceFormPage() {
                                   <span>Stock: <strong>{selectedBatch.current_stock} {lineItem?.unit ?? ''}</strong></span>
                                 )}
                               </div>
-                            )}
-                            {lineBatches.length === 0 && (
-                              <span className="text-xs text-blue-600 dark:text-blue-400">
-                                Go to Items → Batches to add batches for this item first.
-                              </span>
                             )}
                           </div>
                         </div>
@@ -645,6 +649,20 @@ export default function PurchaseInvoiceFormPage() {
         onCreated={(party) => {
           queryClient.invalidateQueries({ queryKey: ['parties-vendors'] });
           setValue('party_id', party.id, { shouldValidate: true });
+        }}
+      />
+
+      <BatchFormModal
+        open={Boolean(addBatchForItem)}
+        onClose={() => setAddBatchForItem(null)}
+        itemId={addBatchForItem?.itemId ?? ''}
+        itemName={addBatchForItem?.itemName}
+        onCreated={(batch) => {
+          if (!addBatchForItem) return;
+          refreshBatches(addBatchForItem.itemId);
+          const lineIndex = (watchedLines ?? []).findIndex((l) => l.item_id === addBatchForItem.itemId);
+          if (lineIndex >= 0) setValue(`lines.${lineIndex}.batch_id`, batch.id, { shouldDirty: true });
+          setAddBatchForItem(null);
         }}
       />
     </div>

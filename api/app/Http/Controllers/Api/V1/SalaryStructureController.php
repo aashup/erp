@@ -15,24 +15,24 @@ class SalaryStructureController extends Controller
         $this->authorize('update', $employee);
 
         $validated = $request->validate([
-            'effective_from'    => 'required|date',
-            'basic'             => 'required|numeric|min:0',
-            'hra'               => 'nullable|numeric|min:0',
-            'da'                => 'nullable|numeric|min:0',
-            'conveyance'        => 'nullable|numeric|min:0',
-            'medical'           => 'nullable|numeric|min:0',
+            'effective_from' => 'required|date',
+            'basic' => 'required|numeric|min:0',
+            'hra' => 'nullable|numeric|min:0',
+            'da' => 'nullable|numeric|min:0',
+            'conveyance' => 'nullable|numeric|min:0',
+            'medical' => 'nullable|numeric|min:0',
             'special_allowance' => 'nullable|numeric|min:0',
-            'professional_tax'  => 'nullable|numeric|min:0',
-            'tds_amount'        => 'nullable|numeric|min:0',
+            'professional_tax' => 'nullable|numeric|min:0',
+            'tds_amount' => 'nullable|numeric|min:0',
         ]);
 
         // Deactivate previous structure
         SalaryStructure::where('employee_id', $employee->id)->update(['is_active' => false]);
 
         $structure = SalaryStructure::create(array_merge($validated, [
-            'company_id'  => $employee->company_id,
+            'company_id' => $employee->company_id,
             'employee_id' => $employee->id,
-            'is_active'   => true,
+            'is_active' => true,
         ]));
 
         return response()->json(['data' => $structure], 201);
@@ -46,15 +46,15 @@ class SalaryStructureController extends Controller
     public function update(Request $request, SalaryStructure $salaryStructure): JsonResponse
     {
         $validated = $request->validate([
-            'effective_from'    => 'sometimes|date',
-            'basic'             => 'sometimes|numeric|min:0',
-            'hra'               => 'nullable|numeric|min:0',
-            'da'                => 'nullable|numeric|min:0',
-            'conveyance'        => 'nullable|numeric|min:0',
-            'medical'           => 'nullable|numeric|min:0',
+            'effective_from' => 'sometimes|date',
+            'basic' => 'sometimes|numeric|min:0',
+            'hra' => 'nullable|numeric|min:0',
+            'da' => 'nullable|numeric|min:0',
+            'conveyance' => 'nullable|numeric|min:0',
+            'medical' => 'nullable|numeric|min:0',
             'special_allowance' => 'nullable|numeric|min:0',
-            'professional_tax'  => 'nullable|numeric|min:0',
-            'tds_amount'        => 'nullable|numeric|min:0',
+            'professional_tax' => 'nullable|numeric|min:0',
+            'tds_amount' => 'nullable|numeric|min:0',
         ]);
 
         $salaryStructure->update($validated);

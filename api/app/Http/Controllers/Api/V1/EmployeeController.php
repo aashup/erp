@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\CompanySetting;
 use App\Models\Employee;
-use App\Models\SalaryStructure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeController extends Controller
 {
@@ -41,7 +42,6 @@ class EmployeeController extends Controller
         $this->authorize('create', Employee::class);
 
         $validated = $request->validate([
-            'employee_code'     => 'nullable|string|max:50',
             'name'              => 'required|string|max:255',
             'gender'            => 'nullable|in:male,female,other',
             'date_of_birth'     => 'nullable|date',
@@ -65,7 +65,25 @@ class EmployeeController extends Controller
             'is_esi_applicable' => 'boolean',
         ]);
 
-        $employee = Employee::create($validated);
+        $companyId = $request->user()->company_id;
+
+        $employee = DB::transaction(function () use ($validated, $companyId) {
+            $setting = CompanySetting::lockForUpdate()
+                ->where('company_id', $companyId)
+                ->where('key', 'employee_next_number')
+                ->first();
+
+            $nextNumber = $setting ? (int) $setting->value : 1;
+
+            CompanySetting::updateOrCreate(
+                ['company_id' => $companyId, 'key' => 'employee_next_number'],
+                ['value' => (string) ($nextNumber + 1)]
+            );
+
+            $validated['employee_code'] = 'EMP-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+            return Employee::create($validated);
+        });
 
         return response()->json(['data' => $employee->load(['department', 'designation'])], 201);
     }
