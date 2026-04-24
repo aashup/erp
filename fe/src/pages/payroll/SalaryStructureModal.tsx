@@ -31,7 +31,7 @@ interface Props {
 export function SalaryStructureModal({ employee, open, onClose }: Props) {
   const queryClient = useQueryClient();
 
-  const { data: structureRes } = useQuery({
+  const { data: structureRes, isLoading: structureLoading } = useQuery({
     queryKey: ['salary-structure', employee.id],
     queryFn: () => employeesApi.getSalaryStructure(employee.id),
     enabled: open,
@@ -75,6 +75,28 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
   const med     = watch('medical') || 0;
   const special = watch('special_allowance') || 0;
   const gross   = Number(basic) + Number(hra) + Number(da) + Number(conv) + Number(med) + Number(special);
+
+  if (structureLoading) {
+    return (
+      <Modal open={open} onClose={onClose} title={`Salary Structure — ${employee.name}`} size="lg">
+        <div className="space-y-4 animate-pulse">
+          <div className="h-10 rounded-lg bg-gray-200 dark:bg-gray-700" />
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
+            <div className="mb-2 h-4 w-20 rounded bg-blue-200 dark:bg-blue-700" />
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(6)].map((_, i) => <div key={i} className="h-10 rounded bg-blue-100 dark:bg-blue-800" />)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-900/20">
+            <div className="mb-2 h-4 w-28 rounded bg-orange-200 dark:bg-orange-700" />
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(2)].map((_, i) => <div key={i} className="h-10 rounded bg-orange-100 dark:bg-orange-800" />)}
+            </div>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal open={open} onClose={onClose} title={`Salary Structure — ${employee.name}`} size="lg">
