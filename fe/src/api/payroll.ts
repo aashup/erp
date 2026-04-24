@@ -5,6 +5,7 @@ import type {
   Department,
   Designation,
   Employee,
+  SalaryComponentDefinition,
   SalaryStructure,
   PayrollRun,
 } from '@/types';
@@ -38,6 +39,16 @@ export const employeesApi = {
     api.get<ApiResponse<SalaryStructure | null>>(`/employees/${employeeId}/salary-structure`),
   createSalaryStructure: (employeeId: string, data: Partial<SalaryStructure>) =>
     api.post<ApiResponse<SalaryStructure>>(`/employees/${employeeId}/salary-structure`, data),
+};
+
+export const salaryComponentDefinitionsApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<ApiResponse<SalaryComponentDefinition[]>>('/salary-component-definitions', { params }),
+  create: (data: { name: string; type: 'earning' | 'deduction' }) =>
+    api.post<ApiResponse<SalaryComponentDefinition>>('/salary-component-definitions', data),
+  update: (id: string, data: Partial<Pick<SalaryComponentDefinition, 'name' | 'type' | 'is_active'>>) =>
+    api.put<ApiResponse<SalaryComponentDefinition>>(`/salary-component-definitions/${id}`, data),
+  delete: (id: string) => api.delete(`/salary-component-definitions/${id}`),
 };
 
 export const payrollApi = {

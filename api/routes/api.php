@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\PurchaseInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\SalaryComponentDefinitionController;
 use App\Http\Controllers\Api\V1\SalaryStructureController;
 use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
@@ -164,6 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('employees/{employee}/salary-structure', [EmployeeController::class, 'salaryStructure']);
     Route::post('employees/{employee}/salary-structure', [SalaryStructureController::class, 'storeForEmployee']);
     Route::apiResource('salary-structures', SalaryStructureController::class)->only(['show', 'update', 'destroy']);
+    Route::apiResource('salary-component-definitions', SalaryComponentDefinitionController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('employees', EmployeeController::class);
     Route::post('payroll-runs/generate', [PayrollController::class, 'generate']);
     Route::patch('payroll-runs/{payrollRun}/approve', [PayrollController::class, 'approve']);

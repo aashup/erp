@@ -296,6 +296,12 @@ export const MENU_CONFIG: MenuItem[] = [
         href: "/settings/financial-years",
         requiredPermission: "branch.view",
       },
+      {
+        id: "payroll-settings",
+        label: "Payroll",
+        href: "/settings/payroll",
+        requiredPermission: "payroll.view",
+      },
     ],
   },
   {

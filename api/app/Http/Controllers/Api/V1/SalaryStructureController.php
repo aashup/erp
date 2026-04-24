@@ -22,8 +22,13 @@ class SalaryStructureController extends Controller
             'conveyance' => 'nullable|numeric|min:0',
             'medical' => 'nullable|numeric|min:0',
             'special_allowance' => 'nullable|numeric|min:0',
-            'professional_tax' => 'nullable|numeric|min:0',
-            'tds_amount' => 'nullable|numeric|min:0',
+            'professional_tax'  => 'nullable|numeric|min:0',
+            'tds_amount'        => 'nullable|numeric|min:0',
+            'custom_components' => 'nullable|array',
+            'custom_components.*.definition_id' => 'required|string',
+            'custom_components.*.name'          => 'required|string',
+            'custom_components.*.type'          => 'required|in:earning,deduction',
+            'custom_components.*.amount'        => 'required|numeric|min:0',
         ]);
 
         // Deactivate previous structure

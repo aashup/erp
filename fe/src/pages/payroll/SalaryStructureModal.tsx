@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { employeesApi } from '@/api/payroll';
+import { employeesApi, salaryComponentDefinitionsApi } from '@/api/payroll';
 import type { Employee } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -30,12 +30,20 @@ interface Props {
 
 export function SalaryStructureModal({ employee, open, onClose }: Props) {
   const queryClient = useQueryClient();
+  const [customAmounts, setCustomAmounts] = useState<Record<string, number>>({});
 
   const { data: structureRes, isLoading: structureLoading } = useQuery({
     queryKey: ['salary-structure', employee.id],
     queryFn: () => employeesApi.getSalaryStructure(employee.id),
     enabled: open,
     select: (res) => res.data.data,
+  });
+
+  const { data: definitions = [] } = useQuery({
+    queryKey: ['salary-component-definitions'],
+    queryFn: () => salaryComponentDefinitionsApi.list({ active_only: 'true' }),
+    enabled: open,
+    select: (res) => res.data.data ?? [],
   });
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<SalaryForm>({
@@ -56,11 +64,30 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
         professional_tax:  s ? Number(s.professional_tax) : 0,
         tds_amount:        s ? Number(s.tds_amount) : 0,
       });
+      // Populate custom component amounts from saved structure
+      const map: Record<string, number> = {};
+      (s?.custom_components ?? []).forEach((c) => {
+        map[c.definition_id] = Number(c.amount);
+      });
+      setCustomAmounts(map);
     }
   }, [open, structureRes, reset]);
 
   const saveMutation = useMutation({
-    mutationFn: (data: SalaryForm) => employeesApi.createSalaryStructure(employee.id, data),
+    mutationFn: (data: SalaryForm) => {
+      const custom_components = definitions
+        .filter((d) => (customAmounts[d.id] ?? 0) > 0)
+        .map((d) => ({
+          definition_id: d.id,
+          name: d.name,
+          type: d.type,
+          amount: customAmounts[d.id],
+        }));
+      return employeesApi.createSalaryStructure(employee.id, {
+        ...data,
+        custom_components: custom_components.length ? custom_components : null,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['salary-structure', employee.id] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -74,7 +101,15 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
   const conv    = watch('conveyance') || 0;
   const med     = watch('medical') || 0;
   const special = watch('special_allowance') || 0;
-  const gross   = Number(basic) + Number(hra) + Number(da) + Number(conv) + Number(med) + Number(special);
+
+  const customEarningSum = definitions
+    .filter((d) => d.type === 'earning')
+    .reduce((sum, d) => sum + (customAmounts[d.id] ?? 0), 0);
+
+  const gross = Number(basic) + Number(hra) + Number(da) + Number(conv) + Number(med) + Number(special) + customEarningSum;
+
+  const earningDefs   = definitions.filter((d) => d.type === 'earning');
+  const deductionDefs = definitions.filter((d) => d.type === 'deduction');
 
   if (structureLoading) {
     return (
@@ -103,6 +138,7 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
       <form onSubmit={handleSubmit((d) => saveMutation.mutate(d))} className="space-y-4">
         <Input id="effective_from" label="Effective From" type="date" error={errors.effective_from?.message} {...register('effective_from')} />
 
+        {/* Earnings */}
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
           <p className="mb-2 text-xs font-semibold uppercase text-blue-700 dark:text-blue-300">Earnings</p>
           <div className="grid grid-cols-2 gap-3">
@@ -112,6 +148,17 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
             <Input id="conveyance" label="Conveyance (₹)" type="number" step="0.01" {...register('conveyance')} />
             <Input id="medical" label="Medical (₹)" type="number" step="0.01" {...register('medical')} />
             <Input id="special_allowance" label="Special Allowance (₹)" type="number" step="0.01" {...register('special_allowance')} />
+            {earningDefs.map((def) => (
+              <Input
+                key={def.id}
+                id={`custom_earning_${def.id}`}
+                label={`${def.name} (₹)`}
+                type="number"
+                step="0.01"
+                value={customAmounts[def.id] ?? 0}
+                onChange={(e) => setCustomAmounts((prev) => ({ ...prev, [def.id]: Number(e.target.value) }))}
+              />
+            ))}
           </div>
           <div className="mt-2 flex justify-between border-t border-blue-200 pt-2 dark:border-blue-700">
             <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Gross Salary</span>
@@ -121,6 +168,7 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
           </div>
         </div>
 
+        {/* Deductions */}
         <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-900/20">
           <p className="mb-2 text-xs font-semibold uppercase text-orange-700 dark:text-orange-300">
             Fixed Deductions (monthly)
@@ -128,6 +176,17 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <Input id="professional_tax" label="Professional Tax (₹)" type="number" step="0.01" {...register('professional_tax')} />
             <Input id="tds_amount" label="TDS (₹)" type="number" step="0.01" {...register('tds_amount')} />
+            {deductionDefs.map((def) => (
+              <Input
+                key={def.id}
+                id={`custom_deduction_${def.id}`}
+                label={`${def.name} (₹)`}
+                type="number"
+                step="0.01"
+                value={customAmounts[def.id] ?? 0}
+                onChange={(e) => setCustomAmounts((prev) => ({ ...prev, [def.id]: Number(e.target.value) }))}
+              />
+            ))}
           </div>
           <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
             PF (12% basic) and ESI (0.75% gross if ≤₹21,000) are calculated automatically each payroll run.

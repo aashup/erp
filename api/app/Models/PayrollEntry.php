@@ -30,6 +30,7 @@ class PayrollEntry extends Model
         'net_salary',
         'pf_employer',
         'esi_employer',
+        'custom_components',
     ];
 
     protected function casts(): array
@@ -51,6 +52,7 @@ class PayrollEntry extends Model
             'net_salary' => 'decimal:2',
             'pf_employer' => 'decimal:2',
             'esi_employer' => 'decimal:2',
+            'custom_components' => 'array',
         ];
     }
 

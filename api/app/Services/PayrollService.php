@@ -113,7 +113,33 @@ class PayrollService
         $medical = round((float) $structure->medical * $ratio, 2);
         $specialAllowance = round((float) $structure->special_allowance * $ratio, 2);
 
-        $gross = round($basic + $hra + $da + $conveyance + $medical + $specialAllowance, 2);
+        // Snapshot custom components: pro-rate earnings, keep deductions fixed
+        $customEarnings = 0.0;
+        $customDeductions = 0.0;
+        $customSnapshot = [];
+        foreach (($structure->custom_components ?? []) as $comp) {
+            if (($comp['type'] ?? '') === 'earning') {
+                $proRated = round((float) $comp['amount'] * $ratio, 2);
+                $customEarnings += $proRated;
+                $customSnapshot[] = [
+                    'definition_id' => $comp['definition_id'],
+                    'name'          => $comp['name'],
+                    'type'          => 'earning',
+                    'amount'        => $proRated,
+                ];
+            } else {
+                $fixed = round((float) $comp['amount'], 2);
+                $customDeductions += $fixed;
+                $customSnapshot[] = [
+                    'definition_id' => $comp['definition_id'],
+                    'name'          => $comp['name'],
+                    'type'          => 'deduction',
+                    'amount'        => $fixed,
+                ];
+            }
+        }
+
+        $gross = round($basic + $hra + $da + $conveyance + $medical + $specialAllowance + $customEarnings, 2);
 
         $pfEmployee = 0;
         $pfEmployer = 0;
@@ -132,28 +158,29 @@ class PayrollService
         $pt = round((float) $structure->professional_tax, 2);
         $tds = round((float) $structure->tds_amount, 2);
 
-        $totalDeductions = round($pfEmployee + $esiEmployee + $pt + $tds, 2);
+        $totalDeductions = round($pfEmployee + $esiEmployee + $pt + $tds + $customDeductions, 2);
         $netSalary = round($gross - $totalDeductions, 2);
 
         $data = [
-            'payroll_run_id' => $run->id,
-            'employee_id' => $employee->id,
-            'present_days' => $presentDays,
-            'basic' => $basic,
-            'hra' => $hra,
-            'da' => $da,
-            'conveyance' => $conveyance,
-            'medical' => $medical,
+            'payroll_run_id'    => $run->id,
+            'employee_id'       => $employee->id,
+            'present_days'      => $presentDays,
+            'basic'             => $basic,
+            'hra'               => $hra,
+            'da'                => $da,
+            'conveyance'        => $conveyance,
+            'medical'           => $medical,
             'special_allowance' => $specialAllowance,
-            'gross_salary' => $gross,
-            'pf_employee' => $pfEmployee,
-            'esi_employee' => $esiEmployee,
-            'professional_tax' => $pt,
-            'tds' => $tds,
-            'total_deductions' => $totalDeductions,
-            'net_salary' => $netSalary,
-            'pf_employer' => $pfEmployer,
-            'esi_employer' => $esiEmployer,
+            'gross_salary'      => $gross,
+            'pf_employee'       => $pfEmployee,
+            'esi_employee'      => $esiEmployee,
+            'professional_tax'  => $pt,
+            'tds'               => $tds,
+            'total_deductions'  => $totalDeductions,
+            'net_salary'        => $netSalary,
+            'pf_employer'       => $pfEmployer,
+            'esi_employer'      => $esiEmployer,
+            'custom_components' => $customSnapshot ?: null,
         ];
 
         if ($existing) {

@@ -56,6 +56,7 @@ import InventorySettings from "@/pages/settings/InventorySettings";
 import InvoiceSettings from "@/pages/settings/InvoiceSettings";
 import ThermalTemplateEditor from "@/pages/settings/ThermalTemplateEditor";
 import Theme from "@/pages/settings/Theme";
+import PayrollSettings from "@/pages/settings/PayrollSettings";
 import POSPage from "@/pages/pos/POSPage";
 import POSPage2 from "@/pages/pos2/POSPage2";
 import Departments from "@/pages/payroll/Departments";
@@ -288,6 +289,7 @@ export default function App() {
             />
             <Route path="/settings/units" element={<Units />} />
             <Route path="/settings/inventory" element={<InventorySettings />} />
+            <Route path="/settings/payroll" element={<PayrollSettings />} />
 
             {/* Payroll */}
             <Route path="/payroll/departments" element={<RequirePermission permission="payroll.view"><Departments /></RequirePermission>} />

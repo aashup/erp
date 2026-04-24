@@ -24,6 +24,7 @@ class SalaryStructure extends Model
         'special_allowance',
         'professional_tax',
         'tds_amount',
+        'custom_components',
         'is_active',
     ];
 
@@ -39,6 +40,7 @@ class SalaryStructure extends Model
             'special_allowance' => 'decimal:2',
             'professional_tax' => 'decimal:2',
             'tds_amount' => 'decimal:2',
+            'custom_components' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -50,11 +52,16 @@ class SalaryStructure extends Model
 
     public function getGrossAttribute(): float
     {
+        $customEarnings = collect($this->custom_components ?? [])
+            ->where('type', 'earning')
+            ->sum('amount');
+
         return (float) $this->basic
             + (float) $this->hra
             + (float) $this->da
             + (float) $this->conveyance
             + (float) $this->medical
-            + (float) $this->special_allowance;
+            + (float) $this->special_allowance
+            + (float) $customEarnings;
     }
 }

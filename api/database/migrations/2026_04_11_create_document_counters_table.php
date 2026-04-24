@@ -98,6 +98,20 @@ return new class extends Migration
             $table->softDeletes();
         });
 
+        Schema::create('salary_component_definitions', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->string('name');
+            $table->enum('type', ['earning', 'deduction'])->default('earning');
+            $table->boolean('is_active')->default(true);
+            $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
+            $table->string('device_id', 255)->nullable();
+            $table->timestamp('synced_at')->nullable();
+            $table->timestamp('updated_at_local')->useCurrent();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
         Schema::create('salary_structures', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
@@ -111,6 +125,7 @@ return new class extends Migration
             $table->decimal('special_allowance', 12, 2)->default(0);
             $table->decimal('professional_tax', 8, 2)->default(0);
             $table->decimal('tds_amount', 10, 2)->default(0);
+            $table->json('custom_components')->nullable();
             $table->boolean('is_active')->default(true);
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
             $table->string('device_id', 255)->nullable();
@@ -164,6 +179,7 @@ return new class extends Migration
             $table->decimal('net_salary', 14, 2)->default(0);
             $table->decimal('pf_employer', 10, 2)->default(0);
             $table->decimal('esi_employer', 10, 2)->default(0);
+            $table->json('custom_components')->nullable();
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
             $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
@@ -177,6 +193,7 @@ return new class extends Migration
         Schema::dropIfExists('payroll_entries');
         Schema::dropIfExists('payroll_runs');
         Schema::dropIfExists('salary_structures');
+        Schema::dropIfExists('salary_component_definitions');
         Schema::dropIfExists('employees');
         Schema::dropIfExists('designations');
         Schema::dropIfExists('departments');

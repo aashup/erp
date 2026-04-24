@@ -137,6 +137,11 @@
           @if((float)$entry->special_allowance > 0)
           <tr><td>Special Allowance</td><td class="amount">₹{{ number_format($entry->special_allowance, 2) }}</td></tr>
           @endif
+          @foreach($entry->custom_components ?? [] as $comp)
+          @if(($comp['type'] ?? '') === 'earning' && (float)($comp['amount'] ?? 0) > 0)
+          <tr><td>{{ $comp['name'] }}</td><td class="amount">₹{{ number_format((float)$comp['amount'], 2) }}</td></tr>
+          @endif
+          @endforeach
         </tbody>
         <tfoot>
           <tr><td><strong>Gross Salary</strong></td><td class="amount"><strong>₹{{ number_format($entry->gross_salary, 2) }}</strong></td></tr>
@@ -160,6 +165,11 @@
           @if((float)$entry->tds > 0)
           <tr><td>TDS</td><td class="amount">₹{{ number_format($entry->tds, 2) }}</td></tr>
           @endif
+          @foreach($entry->custom_components ?? [] as $comp)
+          @if(($comp['type'] ?? '') === 'deduction' && (float)($comp['amount'] ?? 0) > 0)
+          <tr><td>{{ $comp['name'] }}</td><td class="amount">₹{{ number_format((float)$comp['amount'], 2) }}</td></tr>
+          @endif
+          @endforeach
           @if((float)$entry->total_deductions == 0)
           <tr><td colspan="2" style="color:#999; text-align:center; padding:8px;">No deductions</td></tr>
           @endif

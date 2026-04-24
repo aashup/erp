@@ -722,6 +722,21 @@ export interface Employee extends SyncColumns {
   salary_structure?: SalaryStructure | null;
 }
 
+export interface SalaryComponentDefinition extends SyncColumns {
+  id: string;
+  company_id: string;
+  name: string;
+  type: 'earning' | 'deduction';
+  is_active: boolean;
+}
+
+export interface CustomComponent {
+  definition_id: string;
+  name: string;
+  type: 'earning' | 'deduction';
+  amount: number;
+}
+
 export interface SalaryStructure extends SyncColumns {
   id: string;
   company_id: string;
@@ -735,6 +750,7 @@ export interface SalaryStructure extends SyncColumns {
   special_allowance: number;
   professional_tax: number;
   tds_amount: number;
+  custom_components?: CustomComponent[] | null;
   is_active: boolean;
 }
 
@@ -758,6 +774,7 @@ export interface PayrollEntry extends SyncColumns {
   net_salary: number;
   pf_employer: number;
   esi_employer: number;
+  custom_components?: CustomComponent[] | null;
   employee?: Employee;
 }
 
