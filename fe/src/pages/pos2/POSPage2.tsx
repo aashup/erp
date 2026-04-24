@@ -1,33 +1,42 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import {
-  ShoppingCart, X, PauseCircle, Trash2, FileText, Printer,
-  MessageSquare, WifiOff, Clock, Maximize2, Minimize2,
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import api from '@/lib/axios';
-import { posApi } from '@/api/pos';
-import { godownsApi } from '@/api/inventory';
-import { companySettingsApi } from '@/api/settings';
-import { thermalTemplatesApi } from '@/api/thermalTemplates';
-import { salesInvoicesApi } from '@/api/sales';
-import { render, openThermalPrintWindow } from '@/lib/thermalTemplateRenderer';
-import type { CompanySettings } from '@/types';
-import { calcGST, calcRoundOff, formatCurrency } from '@/lib/utils';
-import { useAuthStore } from '@/store/authStore';
-import { usePermissions } from '@/hooks/usePermissions';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import POSItemSearch2 from './POSItemSearch2';
-import POSCart2 from './POSCart2';
-import POSPaymentModal2, { type PaymentEntry } from './POSPaymentModal2';
-import POSCustomerBar2 from './POSCustomerBar2';
-import POSHeldBills2 from './POSHeldBills2';
-import POSReprintPanel2 from './POSReprintPanel2';
-import type { Party, Godown, SalesInvoice } from '@/types';
-import type { POSItem } from '@/api/pos';
+  ShoppingCart,
+  X,
+  PauseCircle,
+  Trash2,
+  FileText,
+  Printer,
+  MessageSquare,
+  WifiOff,
+  Clock,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import api from "@/lib/axios";
+import { posApi } from "@/api/pos";
+import { godownsApi } from "@/api/inventory";
+import { companySettingsApi } from "@/api/settings";
+import { thermalTemplatesApi } from "@/api/thermalTemplates";
+import { salesInvoicesApi } from "@/api/sales";
+import { render, openThermalPrintWindow } from "@/lib/thermalTemplateRenderer";
+import type { CompanySettings } from "@/types";
+import { calcGST, calcRoundOff, formatCurrency } from "@/lib/utils";
+import { useAuthStore } from "@/store/authStore";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import POSItemSearch2 from "./POSItemSearch2";
+import POSCart2 from "./POSCart2";
+import POSPaymentModal2, { type PaymentEntry } from "./POSPaymentModal2";
+import POSCustomerBar2 from "./POSCustomerBar2";
+import POSHeldBills2 from "./POSHeldBills2";
+import POSReprintPanel2 from "./POSReprintPanel2";
+import type { Party, Godown, SalesInvoice } from "@/types";
+import type { POSItem } from "@/api/pos";
 
 export interface CartLine {
-  id: string;          // unique cart line id
+  id: string; // unique cart line id
   itemId: string;
   name: string;
   rate: number;
@@ -37,6 +46,7 @@ export interface CartLine {
   discountPct: number;
   batchId?: string | null;
   currentStock: number;
+  conversionFactor: number; // Conversion to base unit (1.0 for primary, 1000 for g→kg, etc)
 }
 
 interface NegativeStockAlert {
@@ -53,7 +63,7 @@ export default function POSPage2() {
   const user = useAuthStore((s) => s.user);
   const { hasPermission } = usePermissions();
 
-  if (!hasPermission('pos.view')) {
+  if (!hasPermission("pos.view")) {
     return <Navigate to="/" replace />;
   }
 
@@ -61,7 +71,7 @@ export default function POSPage2() {
   const [customer, setCustomer] = useState<Party | null>(null);
   const [godown, setGodown] = useState<Godown | null>(null);
   const [isInterState, setIsInterState] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
   const [paymentModal, setPaymentModal] = useState(false);
   const [heldDrawer, setHeldDrawer] = useState(false);
@@ -71,8 +81,11 @@ export default function POSPage2() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [lastInvoice, setLastInvoice] = useState<SalesInvoice | null>(null);
   const [successModal, setSuccessModal] = useState(false);
-  const [negativeAlert, setNegativeAlert] = useState<NegativeStockAlert | null>(null);
-  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [negativeAlert, setNegativeAlert] = useState<NegativeStockAlert | null>(
+    null,
+  );
+  const [companySettings, setCompanySettings] =
+    useState<CompanySettings | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
@@ -86,75 +99,98 @@ export default function POSPage2() {
   };
 
   useEffect(() => {
-    const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+    const onFullscreenChange = () =>
+      setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
   // Load company settings (paper size, invoice template) on mount
   useEffect(() => {
-    companySettingsApi.get().then((res) => {
-      setCompanySettings(res.data.data ?? null);
-    }).catch(() => {});
+    companySettingsApi
+      .get()
+      .then((res) => {
+        setCompanySettings(res.data.data ?? null);
+      })
+      .catch(() => {});
   }, []);
 
   // Load default godown on mount
   useEffect(() => {
-    godownsApi.list().then((res) => {
-      const list: Godown[] = res.data.data ?? [];
-      const def = list.find((g) => g.is_default) ?? list[0] ?? null;
-      setGodown(def);
-    }).catch(() => {});
+    godownsApi
+      .list()
+      .then((res) => {
+        const list: Godown[] = res.data.data ?? [];
+        const def = list.find((g) => g.is_default) ?? list[0] ?? null;
+        setGodown(def);
+      })
+      .catch(() => {});
   }, []);
 
   // Load held count
   useEffect(() => {
-    posApi.getHeld().then((res) => setHeldCount((res.data.data ?? []).length)).catch(() => {});
+    posApi
+      .getHeld()
+      .then((res) => setHeldCount((res.data.data ?? []).length))
+      .catch(() => {});
   }, [heldRefresh]);
 
   // Keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       // Ctrl+X → exit
-      if (e.ctrlKey && e.key === 'x') {
+      if (e.ctrlKey && e.key === "x") {
         e.preventDefault();
-        navigate('/');
+        navigate("/");
         return;
       }
       // F2 → focus search
-      if (e.key === 'F2') {
+      if (e.key === "F2") {
         e.preventDefault();
         searchRef.current?.focus();
         return;
       }
       // Escape → close modals
-      if (e.key === 'Escape') {
-        if (paymentModal) { setPaymentModal(false); return; }
-        if (heldDrawer) { setHeldDrawer(false); return; }
-        if (reprintPanel) { setReprintPanel(false); return; }
-        if (successModal) { setSuccessModal(false); return; }
+      if (e.key === "Escape") {
+        if (paymentModal) {
+          setPaymentModal(false);
+          return;
+        }
+        if (heldDrawer) {
+          setHeldDrawer(false);
+          return;
+        }
+        if (reprintPanel) {
+          setReprintPanel(false);
+          return;
+        }
+        if (successModal) {
+          setSuccessModal(false);
+          return;
+        }
       }
       // Ctrl+H → hold bill
-      if (e.ctrlKey && e.key === 'h') {
+      if (e.ctrlKey && e.key === "h") {
         e.preventDefault();
         if (cart.length > 0) handleHold();
         return;
       }
       // Ctrl+P → open reprint panel
-      if (e.ctrlKey && e.key === 'p') {
+      if (e.ctrlKey && e.key === "p") {
         e.preventDefault();
         setReprintPanel(true);
         return;
       }
       // Ctrl+Enter → open payment
-      if (e.ctrlKey && e.key === 'Enter') {
+      if (e.ctrlKey && e.key === "Enter") {
         e.preventDefault();
         if (cart.length > 0) setPaymentModal(true);
         return;
       }
     }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [cart, paymentModal, heldDrawer, reprintPanel, successModal, navigate]);
 
   const grandTotal = cart.reduce((acc, line) => {
@@ -165,46 +201,84 @@ export default function POSPage2() {
   const { roundOff, netPayable } = calcRoundOff(grandTotal);
 
   // Check stock and prompt if negative
-  const checkAndSetQty = useCallback((lineId: string, newQty: number, stockAvailable: number, itemName: string): Promise<number> => {
-    return new Promise((resolve) => {
-      if (newQty > stockAvailable && stockAvailable >= 0) {
-        setNegativeAlert({
-          lineId,
-          itemName,
-          available: stockAvailable,
-          requested: newQty,
-          resolve: (proceed) => {
-            setNegativeAlert(null);
-            resolve(proceed ? newQty : stockAvailable > 0 ? stockAvailable : 1);
-          },
-        });
-      } else {
-        resolve(newQty);
-      }
-    });
-  }, []);
+  const checkAndSetQty = useCallback(
+    (
+      lineId: string,
+      newQty: number,
+      stockAvailable: number,
+      itemName: string,
+    ): Promise<number> => {
+      return new Promise((resolve) => {
+        if (newQty > stockAvailable && stockAvailable >= 0) {
+          setNegativeAlert({
+            lineId,
+            itemName,
+            available: stockAvailable,
+            requested: newQty,
+            resolve: (proceed) => {
+              setNegativeAlert(null);
+              resolve(
+                proceed ? newQty : stockAvailable > 0 ? stockAvailable : 1,
+              );
+            },
+          });
+        } else {
+          resolve(newQty);
+        }
+      });
+    },
+    [],
+  );
 
-  async function handleAddItem(item: POSItem) {
-    const existing = cart.find((l) => l.itemId === item.id);
+  async function handleAddItem(
+    item: POSItem,
+    variantUnit: string = "",
+    variantConversionFactor: number = 1,
+    variantSellingPrice: number = 0,
+  ) {
+    const unitToUse = variantUnit || item.unit;
+    const priceToUse = variantSellingPrice || (item.selling_price ?? 0);
+    const factorToUse = variantConversionFactor || 1;
+
+    const existing = cart.find(
+      (l) => l.itemId === item.id && l.unit === unitToUse,
+    );
     if (existing) {
       const newQty = existing.quantity + 1;
-      const finalQty = await checkAndSetQty(existing.id, newQty, item.current_stock, item.name);
-      setCart((prev) => prev.map((l) => l.id === existing.id ? { ...l, quantity: finalQty } : l));
+      const baseQtyNeeded = newQty * factorToUse;
+      const finalQty = await checkAndSetQty(
+        existing.id,
+        newQty,
+        item.current_stock / factorToUse,
+        item.name,
+      );
+      setCart((prev) =>
+        prev.map((l) =>
+          l.id === existing.id ? { ...l, quantity: finalQty } : l,
+        ),
+      );
     } else {
       const newLine: CartLine = {
         id: crypto.randomUUID(),
         itemId: item.id,
         name: item.name,
-        rate: item.selling_price ?? 0,
-        unit: item.unit,
+        rate: priceToUse,
+        unit: unitToUse,
         gstRate: item.igst ?? 0,
         quantity: 1,
         discountPct: 0,
         batchId: null,
         currentStock: item.current_stock,
+        conversionFactor: factorToUse,
       };
-      if (1 > item.current_stock && item.current_stock >= 0) {
-        const finalQty = await checkAndSetQty(newLine.id, 1, item.current_stock, item.name);
+      const baseStockAvailable = item.current_stock / factorToUse;
+      if (1 > baseStockAvailable && baseStockAvailable >= 0) {
+        const finalQty = await checkAndSetQty(
+          newLine.id,
+          1,
+          baseStockAvailable,
+          item.name,
+        );
         setCart((prev) => [...prev, { ...newLine, quantity: finalQty }]);
       } else {
         setCart((prev) => [...prev, newLine]);
@@ -215,12 +289,21 @@ export default function POSPage2() {
   async function handleQtyChange(id: string, qty: number) {
     const line = cart.find((l) => l.id === id);
     if (!line) return;
-    const finalQty = await checkAndSetQty(id, qty, line.currentStock, line.name);
-    setCart((prev) => prev.map((l) => l.id === id ? { ...l, quantity: finalQty } : l));
+    const finalQty = await checkAndSetQty(
+      id,
+      qty,
+      line.currentStock,
+      line.name,
+    );
+    setCart((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, quantity: finalQty } : l)),
+    );
   }
 
   function handleDiscChange(id: string, disc: number) {
-    setCart((prev) => prev.map((l) => l.id === id ? { ...l, discountPct: disc } : l));
+    setCart((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, discountPct: disc } : l)),
+    );
   }
 
   function handleRemove(id: string) {
@@ -230,11 +313,14 @@ export default function POSPage2() {
   function handleClear() {
     setCart([]);
     setCustomer(null);
-    setNotes('');
+    setNotes("");
   }
 
   async function handleHold() {
-    if (!godown) { toast.error('No godown configured'); return; }
+    if (!godown) {
+      toast.error("No godown configured");
+      return;
+    }
     if (cart.length === 0) return;
     try {
       await posApi.hold({
@@ -248,6 +334,7 @@ export default function POSPage2() {
           batch_id: l.batchId,
           quantity: l.quantity,
           unit: l.unit,
+          conversion_factor: l.conversionFactor,
           rate: l.rate,
           discount_percent: l.discountPct,
           gst_rate: l.gstRate,
@@ -255,9 +342,9 @@ export default function POSPage2() {
       });
       setHeldRefresh((n) => n + 1);
       handleClear();
-      toast.success('Bill held');
+      toast.success("Bill held");
     } catch {
-      toast.error('Failed to hold bill');
+      toast.error("Failed to hold bill");
     }
   }
 
@@ -265,24 +352,36 @@ export default function POSPage2() {
     const lines: CartLine[] = (invoice.lines ?? []).map((l) => ({
       id: crypto.randomUUID(),
       itemId: l.item_id,
-      name: l.item?.name ?? 'Item',
+      name: l.item?.name ?? "Item",
       rate: Number(l.rate),
-      unit: l.unit ?? (l.item?.unit ?? ''),
+      unit: l.unit ?? l.item?.unit ?? "",
       gstRate: Number(l.gst_rate),
       quantity: Number(l.quantity),
       discountPct: Number(l.discount_percent),
       batchId: l.batch_id ?? null,
       currentStock: 0,
+      conversionFactor: Number(l.conversion_factor ?? 1),
     }));
     setCart(lines);
     if (invoice.party) setCustomer(invoice.party as Party);
     // Delete the held bill
-    posApi.deleteHeld(invoice.id).then(() => setHeldRefresh((n) => n + 1)).catch(() => {});
-    toast.success('Bill resumed');
+    posApi
+      .deleteHeld(invoice.id)
+      .then(() => setHeldRefresh((n) => n + 1))
+      .catch(() => {});
+    toast.success("Bill resumed");
   }
 
-  async function handleCheckout(payments: PaymentEntry[], amountTendered: number, changeAmount: number, postPayment?: boolean) {
-    if (!godown) { toast.error('No godown configured'); return; }
+  async function handleCheckout(
+    payments: PaymentEntry[],
+    amountTendered: number,
+    changeAmount: number,
+    postPayment?: boolean,
+  ) {
+    if (!godown) {
+      toast.error("No godown configured");
+      return;
+    }
     setCheckoutLoading(true);
     try {
       const res = await posApi.checkout({
@@ -297,11 +396,18 @@ export default function POSPage2() {
           batch_id: l.batchId,
           quantity: l.quantity,
           unit: l.unit,
+          conversion_factor: l.conversionFactor,
           rate: l.rate,
           discount_percent: l.discountPct,
           gst_rate: l.gstRate,
         })),
-        ...(postPayment ? { post_payment: true } : { payments, amount_tendered: amountTendered, change_amount: changeAmount }),
+        ...(postPayment
+          ? { post_payment: true }
+          : {
+              payments,
+              amount_tendered: amountTendered,
+              change_amount: changeAmount,
+            }),
       });
       const inv = res.data.data;
       setLastInvoice(inv);
@@ -309,7 +415,7 @@ export default function POSPage2() {
       setSuccessModal(true);
       handleClear();
     } catch {
-      toast.error('Checkout failed. Please try again.');
+      toast.error("Checkout failed. Please try again.");
     } finally {
       setCheckoutLoading(false);
     }
@@ -317,7 +423,8 @@ export default function POSPage2() {
 
   async function handlePrint(invoiceId: string) {
     try {
-      const paperSize = (companySettings?.thermal_printer_paper_size ?? '2inch') as '2inch' | '3inch';
+      const paperSize = (companySettings?.thermal_printer_paper_size ??
+        "2inch") as "2inch" | "3inch";
 
       const [invoiceRes, templatesRes] = await Promise.all([
         salesInvoicesApi.get(invoiceId),
@@ -332,20 +439,23 @@ export default function POSPage2() {
 
       let html: string;
       if (customTemplate && user?.company) {
-        html = render(customTemplate.html_content, invoice, user.company, { paperSize });
+        html = render(customTemplate.html_content, invoice, user.company, {
+          paperSize,
+        });
       } else {
         // Fallback: built-in Blade template rendered by backend
         const res = await api.get(`/sales-invoices/${invoiceId}/html`, {
-          params: { template: 'thermal', paper_size: paperSize },
-          responseType: 'text',
+          params: { template: "thermal", paper_size: paperSize },
+          responseType: "text",
         });
         html = res.data;
       }
 
       const win = openThermalPrintWindow(html, paperSize);
-      if (!win) toast.error('Pop-up blocked. Please allow pop-ups for printing.');
+      if (!win)
+        toast.error("Pop-up blocked. Please allow pop-ups for printing.");
     } catch {
-      toast.error('Could not load receipt for printing');
+      toast.error("Could not load receipt for printing");
     }
   }
 
@@ -358,33 +468,36 @@ export default function POSPage2() {
     // Round off for display
     const { netPayable } = calcRoundOff(Number(invoice.grand_total));
 
-    const partyName = invoice.party?.name && invoice.party.name !== 'Walk-in Customer'
-      ? invoice.party.name
-      : null;
+    const partyName =
+      invoice.party?.name && invoice.party.name !== "Walk-in Customer"
+        ? invoice.party.name
+        : null;
 
     const lines = [
       `🧾 *Invoice ${invoice.invoice_number}*`,
       partyName ? `Customer: ${partyName}` : null,
       `Amount: ₹${netPayable}`,
-      `Date: ${new Date(invoice.invoice_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      `Date: ${new Date(invoice.invoice_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`,
       shareUrl ? `\n📄 View & Download Invoice:\n${shareUrl}` : null,
       `\nThank you for your business! 🙏`,
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const msg = encodeURIComponent(lines);
 
     // Pre-fill phone if customer has one (strip non-digits, add India country code)
-    const rawPhone = invoice.party?.phone?.replace(/\D/g, '') ?? '';
-    let waPhone = '';
+    const rawPhone = invoice.party?.phone?.replace(/\D/g, "") ?? "";
+    let waPhone = "";
     if (rawPhone.length === 10) {
       waPhone = `91${rawPhone}`;
-    } else if (rawPhone.length === 12 && rawPhone.startsWith('91')) {
+    } else if (rawPhone.length === 12 && rawPhone.startsWith("91")) {
       waPhone = rawPhone;
-    } else if (rawPhone.length === 11 && rawPhone.startsWith('0')) {
+    } else if (rawPhone.length === 11 && rawPhone.startsWith("0")) {
       waPhone = `91${rawPhone.slice(1)}`;
     }
 
-    window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
+    window.open(`https://wa.me/${waPhone}?text=${msg}`, "_blank");
   }
 
   return (
@@ -401,9 +514,13 @@ export default function POSPage2() {
       <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-2.5 flex items-center gap-3">
         <div className="flex items-center gap-2 shrink-0">
           <ShoppingCart className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          <span className="text-sm font-bold text-gray-800 dark:text-gray-200">POS-2</span>
+          <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+            POS-2
+          </span>
           {user?.company?.name && (
-            <span className="hidden sm:block text-xs text-gray-400">— {user.company.name}</span>
+            <span className="hidden sm:block text-xs text-gray-400">
+              — {user.company.name}
+            </span>
           )}
         </div>
 
@@ -419,11 +536,11 @@ export default function POSPage2() {
             onClick={() => setIsInterState((v) => !v)}
             className={`text-xs px-2 py-1 rounded-full font-medium transition-colors ${
               isInterState
-                ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
             }`}
           >
-            {isInterState ? 'Inter-state' : 'Intra-state'}
+            {isInterState ? "Inter-state" : "Intra-state"}
           </button>
 
           {/* Held bills button */}
@@ -452,14 +569,18 @@ export default function POSPage2() {
           <button
             onClick={toggleFullscreen}
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 bg-gray-100 dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2.5 py-1.5 rounded-lg transition-colors"
-            title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen'}
+            title={isFullscreen ? "Exit fullscreen (Esc)" : "Enter fullscreen"}
           >
-            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            {isFullscreen ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
           </button>
 
           {/* Exit */}
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 dark:hover:text-red-400 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 px-2.5 py-1.5 rounded-lg transition-colors font-medium"
             title="Exit POS-2 (Ctrl+X)"
           >
@@ -474,7 +595,7 @@ export default function POSPage2() {
         {/* LEFT — Item search */}
         <div className="flex-1 overflow-hidden bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
           <POSItemSearch2
-            godownId={godown?.id ?? ''}
+            godownId={godown?.id ?? ""}
             onAdd={handleAddItem}
             searchRef={searchRef}
           />
@@ -484,7 +605,9 @@ export default function POSPage2() {
         <div className="w-80 xl:w-96 flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
           {/* Cart header */}
           <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Cart</span>
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              Cart
+            </span>
             {cart.length > 0 && (
               <button
                 onClick={handleClear}
@@ -522,8 +645,8 @@ export default function POSPage2() {
                 onClick={() => setShowNotes((v) => !v)}
                 className={`flex items-center gap-1 text-xs border rounded-lg px-2 py-1.5 transition-colors ${
                   notes
-                    ? 'border-indigo-300 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? "border-indigo-300 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20"
+                    : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                 }`}
               >
                 <FileText className="h-3.5 w-3.5" />
@@ -600,12 +723,14 @@ export default function POSPage2() {
         </button>
 
         <button
-          onClick={() => { if (cart.length > 0) setPaymentModal(true); }}
+          onClick={() => {
+            if (cart.length > 0) setPaymentModal(true);
+          }}
           disabled={cart.length === 0}
           className="flex items-center gap-3 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-6 py-3 text-base transition-colors"
           title="Checkout (Ctrl+Enter)"
         >
-          <span>₹{netPayable}</span>
+          <span>{formatCurrency(netPayable)}</span>
           <span className="text-green-200">→</span>
           <span>Checkout</span>
         </button>
@@ -645,7 +770,9 @@ export default function POSPage2() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 text-center">
             <div className="text-5xl mb-3">✅</div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Sale Complete!</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              Sale Complete!
+            </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Invoice #{lastInvoice.invoice_number}
             </p>
@@ -654,14 +781,20 @@ export default function POSPage2() {
             </p>
             <div className="flex flex-col gap-2 mt-5">
               <button
-                onClick={() => { handlePrint(lastInvoice.id); setSuccessModal(false); }}
+                onClick={() => {
+                  handlePrint(lastInvoice.id);
+                  setSuccessModal(false);
+                }}
                 className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
               >
                 <Printer className="h-4 w-4" />
                 Print Receipt
               </button>
               <button
-                onClick={() => { handleWhatsApp(lastInvoice); setSuccessModal(false); }}
+                onClick={() => {
+                  handleWhatsApp(lastInvoice);
+                  setSuccessModal(false);
+                }}
                 className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
               >
                 <MessageSquare className="h-4 w-4" />
@@ -685,15 +818,22 @@ export default function POSPage2() {
             <div className="flex items-start gap-3 mb-4">
               <div className="text-2xl">⚠️</div>
               <div>
-                <h3 className="font-bold text-gray-900 dark:text-gray-100">Low Stock</h3>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100">
+                  Low Stock
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  <span className="font-medium">{negativeAlert.itemName}</span>: only{' '}
-                  <span className="font-bold text-amber-600 dark:text-amber-400">{negativeAlert.available}</span>{' '}
-                  unit{negativeAlert.available !== 1 ? 's' : ''} available.
-                  You're adding{' '}
+                  <span className="font-medium">{negativeAlert.itemName}</span>:
+                  only{" "}
+                  <span className="font-bold text-amber-600 dark:text-amber-400">
+                    {negativeAlert.available}
+                  </span>{" "}
+                  unit{negativeAlert.available !== 1 ? "s" : ""} available.
+                  You're adding{" "}
                   <span className="font-bold">{negativeAlert.requested}</span>.
                 </p>
-                <p className="text-xs text-gray-400 mt-1">Sell anyway to allow negative stock?</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Sell anyway to allow negative stock?
+                </p>
               </div>
             </div>
             <div className="flex gap-2">

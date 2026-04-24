@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Trash2, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
-import { formatCurrency, calcGST, calcRoundOff } from '@/lib/utils';
-import type { CartLine } from './POSPage2';
+import { useState } from "react";
+import { Trash2, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
+import { formatCurrency, calcGST, calcRoundOff } from "@/lib/utils";
+import type { CartLine } from "./POSPage2";
 
 interface Props {
   lines: CartLine[];
@@ -11,7 +11,13 @@ interface Props {
   onRemove: (id: string) => void;
 }
 
-export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChange, onRemove }: Props) {
+export default function POSCart2({
+  lines,
+  isInterState,
+  onQtyChange,
+  onDiscChange,
+  onRemove,
+}: Props) {
   const [editingDisc, setEditingDisc] = useState<string | null>(null);
 
   // Calculate totals
@@ -28,7 +34,15 @@ export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChang
       acc.total += taxable + gst.cgst + gst.sgst + gst.igst;
       return acc;
     },
-    { subtotal: 0, discountAmt: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0, total: 0 }
+    {
+      subtotal: 0,
+      discountAmt: 0,
+      taxable: 0,
+      cgst: 0,
+      sgst: 0,
+      igst: 0,
+      total: 0,
+    },
   );
   const { roundOff, netPayable } = calcRoundOff(totals.total);
 
@@ -50,21 +64,34 @@ export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChang
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {lines.map((line) => {
-              const taxable = line.quantity * line.rate * (1 - line.discountPct / 100);
+              const taxable =
+                line.quantity * line.rate * (1 - line.discountPct / 100);
               const gst = calcGST(taxable, line.gstRate, isInterState);
               const lineTotal = taxable + gst.cgst + gst.sgst + gst.igst;
               return (
                 <div key={line.id} className="px-3 py-2.5">
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{line.name}</p>
-                      <p className="text-xs text-gray-400">{formatCurrency(line.rate)} / {line.unit}</p>
-                      {line.currentStock !== undefined && line.quantity > line.currentStock && (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <AlertTriangle className="h-3 w-3 text-amber-500" />
-                          <span className="text-xs text-amber-500">Only {line.currentStock} in stock</span>
-                        </div>
-                      )}
+                      <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+                        {line.name} ({line.unit})
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {formatCurrency(line.rate)} / {line.unit}
+                      </p>
+                      {line.currentStock !== undefined &&
+                        line.quantity >
+                          line.currentStock / line.conversionFactor && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                            <span className="text-xs text-amber-500">
+                              Only{" "}
+                              {Math.floor(
+                                line.currentStock / line.conversionFactor,
+                              )}{" "}
+                              {line.unit} in stock
+                            </span>
+                          </div>
+                        )}
                     </div>
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                       {formatCurrency(lineTotal)}
@@ -81,7 +108,12 @@ export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChang
                     {/* Qty controls */}
                     <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
                       <button
-                        onClick={() => onQtyChange(line.id, Math.max(0.001, line.quantity - 1))}
+                        onClick={() =>
+                          onQtyChange(
+                            line.id,
+                            Math.max(0.001, line.quantity - 1),
+                          )
+                        }
                         className="px-2 py-1 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
                       >
                         <ChevronDown className="h-3.5 w-3.5" />
@@ -89,10 +121,13 @@ export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChang
                       <input
                         type="number"
                         value={line.quantity}
-                        onChange={(e) => handleQtyInput(line.id, e.target.value)}
+                        onChange={(e) =>
+                          handleQtyInput(line.id, e.target.value)
+                        }
                         className="w-12 text-center text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 outline-none py-1"
                         min="0.001"
                         step="1"
+                        max={line.currentStock / line.conversionFactor}
                       />
                       <button
                         onClick={() => onQtyChange(line.id, line.quantity + 1)}
@@ -108,7 +143,15 @@ export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChang
                         <input
                           type="number"
                           value={line.discountPct}
-                          onChange={(e) => onDiscChange(line.id, Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                          onChange={(e) =>
+                            onDiscChange(
+                              line.id,
+                              Math.min(
+                                100,
+                                Math.max(0, parseFloat(e.target.value) || 0),
+                              ),
+                            )
+                          }
                           onBlur={() => setEditingDisc(null)}
                           autoFocus
                           className="w-16 text-center text-xs border border-indigo-400 rounded-lg py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none"
@@ -120,7 +163,9 @@ export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChang
                           onClick={() => setEditingDisc(line.id)}
                           className="text-xs text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 rounded-lg px-2 py-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
                         >
-                          {line.discountPct > 0 ? `${line.discountPct}% off` : '+ Disc'}
+                          {line.discountPct > 0
+                            ? `${line.discountPct}% off`
+                            : "+ Disc"}
                         </button>
                       )}
                     </div>
@@ -175,13 +220,20 @@ export default function POSCart2({ lines, isInterState, onQtyChange, onDiscChang
           </div>
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>Round Off</span>
-            <span className={roundOff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}>
-              {roundOff >= 0 ? '+' : ''}{formatCurrency(roundOff)}
+            <span
+              className={
+                roundOff >= 0
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-500 dark:text-red-400"
+              }
+            >
+              {roundOff >= 0 ? "+" : ""}
+              {formatCurrency(roundOff)}
             </span>
           </div>
           <div className="flex justify-between text-base font-bold text-gray-900 dark:text-gray-100 pt-1 border-t border-gray-200 dark:border-gray-700">
             <span>Net Payable</span>
-            <span>₹{netPayable}</span>
+            <span>{formatCurrency(netPayable)}</span>
           </div>
         </div>
       )}
