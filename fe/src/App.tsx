@@ -63,6 +63,7 @@ import Departments from "@/pages/payroll/Departments";
 import Employees from "@/pages/payroll/Employees";
 import PayrollRuns from "@/pages/payroll/PayrollRuns";
 import PayrollRunDetail from "@/pages/payroll/PayrollRunDetail";
+import GeneratePayrollRun from "@/pages/payroll/GeneratePayrollRun";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -295,6 +296,7 @@ export default function App() {
             <Route path="/payroll/departments" element={<RequirePermission permission="payroll.view"><Departments /></RequirePermission>} />
             <Route path="/payroll/employees" element={<RequirePermission permission="payroll.view"><Employees /></RequirePermission>} />
             <Route path="/payroll/runs" element={<RequirePermission permission="payroll.view"><PayrollRuns /></RequirePermission>} />
+            <Route path="/payroll/runs/new" element={<RequirePermission permission="payroll.create"><GeneratePayrollRun /></RequirePermission>} />
             <Route path="/payroll/runs/:id" element={<RequirePermission permission="payroll.view"><PayrollRunDetail /></RequirePermission>} />
           </Route>
 

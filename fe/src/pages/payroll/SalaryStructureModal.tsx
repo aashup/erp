@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeesApi, salaryComponentDefinitionsApi } from '@/api/payroll';
+import { companySettingsApi } from '@/api/settings';
 import type { Employee } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -31,6 +32,7 @@ interface Props {
 export function SalaryStructureModal({ employee, open, onClose }: Props) {
   const queryClient = useQueryClient();
   const [customAmounts, setCustomAmounts] = useState<Record<string, number>>({});
+  const [totalSalary, setTotalSalary] = useState<number>(0);
 
   const { data: structureRes, isLoading: structureLoading } = useQuery({
     queryKey: ['salary-structure', employee.id],
@@ -46,12 +48,47 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
     select: (res) => res.data.data ?? [],
   });
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<SalaryForm>({
+  const { data: companySettings } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => companySettingsApi.get(),
+    select: (res) => res.data.data,
+    enabled: open,
+  });
+
+  const distribution = useMemo<Record<string, number>>(() => {
+    const raw = (companySettings as Record<string, unknown>)?.salary_distribution_percentages;
+    if (raw && typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch { return {}; }
+    }
+    return {};
+  }, [companySettings]);
+
+  const hasDistribution = Object.keys(distribution).length > 0;
+
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<SalaryForm>({
     resolver: zodResolver(schema) as Resolver<SalaryForm>,
   });
 
+  const FIXED_EARNING_KEYS = ['basic', 'hra', 'da', 'conveyance', 'medical', 'special_allowance'] as const;
+
+  const handleTotalChange = (val: number) => {
+    setTotalSalary(val);
+    if (!hasDistribution || val <= 0) return;
+    FIXED_EARNING_KEYS.forEach((key) => {
+      const pct = distribution[key] ?? 0;
+      setValue(key, Math.round(val * (pct / 100) * 100) / 100);
+    });
+    const newCustom: Record<string, number> = { ...customAmounts };
+    definitions.filter((d) => d.type === 'earning').forEach((d) => {
+      const pct = distribution[d.id] ?? 0;
+      newCustom[d.id] = Math.round(val * (pct / 100) * 100) / 100;
+    });
+    setCustomAmounts(newCustom);
+  };
+
   useEffect(() => {
     if (open) {
+      setTotalSalary(0);
       const s = structureRes;
       reset({
         effective_from:    s?.effective_from ?? new Date().toISOString().slice(0, 10),
@@ -137,6 +174,23 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
     <Modal open={open} onClose={onClose} title={`Salary Structure — ${employee.name}`} size="lg">
       <form onSubmit={handleSubmit((d) => saveMutation.mutate(d))} className="space-y-4">
         <Input id="effective_from" label="Effective From" type="date" error={errors.effective_from?.message} {...register('effective_from')} />
+
+        {/* Total Salary Auto-distribute */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+          <Input
+            id="total_salary"
+            label="Total Gross Salary (₹) — auto-distribute"
+            type="number"
+            step="0.01"
+            value={totalSalary || ''}
+            onChange={(e) => handleTotalChange(Number(e.target.value))}
+          />
+          {!hasDistribution && (
+            <p className="mt-1 text-xs text-orange-600 dark:text-orange-400">
+              No distribution configured. Go to <strong>Settings → Payroll</strong> to set percentages.
+            </p>
+          )}
+        </div>
 
         {/* Earnings */}
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
