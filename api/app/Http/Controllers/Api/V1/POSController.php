@@ -174,7 +174,7 @@ class POSController extends Controller
             foreach ($validated['lines'] as $line) {
                 $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
                 $baseQuantity     = $line['quantity'] * $conversionFactor;
-                $taxable          = ($baseQuantity * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $taxable          = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
                 $gstAmt           = $taxable * $line['gst_rate'] / 100;
 
                 $invoice->lines()->create([
@@ -372,8 +372,7 @@ class POSController extends Controller
 
             foreach ($validated['lines'] as $line) {
                 $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
-                $baseQuantity     = $line['quantity'] * $conversionFactor;
-                $taxable          = ($baseQuantity * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $taxable          = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
                 $gstAmt           = $taxable * $line['gst_rate'] / 100;
 
                 $invoice->lines()->create([
