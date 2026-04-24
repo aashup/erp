@@ -147,15 +147,15 @@ class PartyController extends Controller
             $runningBalance += ((float) ($totals->total_debit ?? 0)) - ((float) ($totals->total_credit ?? 0));
         }
 
-        $balance    = round($runningBalance, 2);
+        $balance = round($runningBalance, 2);
         $balanceAbs = abs($balance);
-        $type       = $balance >= 0 ? 'dr' : 'cr';
+        $type = $balance >= 0 ? 'dr' : 'cr';
 
         return response()->json([
             'data' => [
-                'balance'     => $balance,
+                'balance' => $balance,
                 'balance_abs' => $balanceAbs,
-                'type'        => $type,         // 'dr' = owes us, 'cr' = we owe them
+                'type' => $type,         // 'dr' = owes us, 'cr' = we owe them
             ],
         ]);
     }

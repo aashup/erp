@@ -38,10 +38,7 @@ class DocumentCounter extends Model
      * Get and increment counter for a document type.
      * Returns the current value (before increment).
      *
-     * @param string $companyId
-     * @param string $fyId
-     * @param string $documentType (purchase_order, sales_order, purchase_invoice, sales_invoice, contra, payment, receipt, journal, purchase, sales)
-     * @return int
+     * @param  string  $documentType  (purchase_order, sales_order, purchase_invoice, sales_invoice, contra, payment, receipt, journal, purchase, sales)
      */
     public static function getAndIncrementCounter(string $companyId, string $fyId, string $documentType): int
     {
@@ -50,7 +47,7 @@ class DocumentCounter extends Model
             ->where('document_type', $documentType)
             ->first();
 
-        if (!$counter) {
+        if (! $counter) {
             throw new \Exception("Document counter not found for {$documentType}");
         }
 

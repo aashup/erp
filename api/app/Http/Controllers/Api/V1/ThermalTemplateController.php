@@ -139,21 +139,21 @@ class ThermalTemplateController extends Controller
         $this->authorize('create', ThermalTemplate::class);
 
         $companyId = $request->user()->company_id;
-        $userId    = $request->user()->id;
-        $created   = [];
+        $userId = $request->user()->id;
+        $created = [];
 
         $defaults = [
             '2inch' => [
-                'name'        => 'Default 2-inch (58mm)',
+                'name' => 'Default 2-inch (58mm)',
                 'paper_width' => '58mm',
-                'font_size'   => '9px',
-                'company_fs'  => '11px',
+                'font_size' => '9px',
+                'company_fs' => '11px',
             ],
             '3inch' => [
-                'name'        => 'Default 3-inch (80mm)',
+                'name' => 'Default 3-inch (80mm)',
                 'paper_width' => '80mm',
-                'font_size'   => '10px',
-                'company_fs'  => '13px',
+                'font_size' => '10px',
+                'company_fs' => '13px',
             ],
         ];
 
@@ -163,17 +163,19 @@ class ThermalTemplateController extends Controller
                 ->where('is_default', true)
                 ->exists();
 
-            if ($alreadyExists) continue;
+            if ($alreadyExists) {
+                continue;
+            }
 
             $html = $this->buildDefaultHtml($cfg);
 
             ThermalTemplate::create([
-                'company_id'   => $companyId,
-                'name'         => $cfg['name'],
+                'company_id' => $companyId,
+                'name' => $cfg['name'],
                 'html_content' => $html,
-                'paper_size'   => $paperSize,
-                'is_default'   => true,
-                'created_by'   => $userId,
+                'paper_size' => $paperSize,
+                'is_default' => true,
+                'created_by' => $userId,
             ]);
 
             $created[] = $paperSize;
@@ -182,14 +184,14 @@ class ThermalTemplateController extends Controller
         return response()->json([
             'data' => ['created' => $created],
             'message' => count($created)
-                ? 'Default templates created: ' . implode(', ', $created)
+                ? 'Default templates created: '.implode(', ', $created)
                 : 'Default templates already exist for all paper sizes.',
         ]);
     }
 
     private function buildDefaultHtml(array $cfg): string
     {
-        $w  = $cfg['paper_width'];
+        $w = $cfg['paper_width'];
         $fs = $cfg['font_size'];
         $cs = $cfg['company_fs'];
 

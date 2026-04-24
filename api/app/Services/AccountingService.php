@@ -304,15 +304,15 @@ class AccountingService
         $companyId = $run->company_id;
         $run->loadMissing('entries');
 
-        $totalGross      = (float) $run->total_gross;
-        $totalNet        = (float) $run->total_net;
+        $totalGross = (float) $run->total_gross;
+        $totalNet = (float) $run->total_net;
         $totalPfEmployer = (float) $run->total_pf_employer;
         $totalEsiEmployer = (float) $run->total_esi_employer;
 
-        $totalPfEmployee  = $run->entries->sum('pf_employee');
+        $totalPfEmployee = $run->entries->sum('pf_employee');
         $totalEsiEmployee = $run->entries->sum('esi_employee');
-        $totalPt          = $run->entries->sum('professional_tax');
-        $totalTds         = $run->entries->sum('tds');
+        $totalPt = $run->entries->sum('professional_tax');
+        $totalTds = $run->entries->sum('tds');
 
         $salaryExpenseLedger = Ledger::findBySystemKey($companyId, 'salary_expense');
         $salaryPayableLedger = Ledger::findBySystemKey($companyId, 'salary_payable');
@@ -337,33 +337,33 @@ class AccountingService
             $voucherNumber = $this->generateVoucherNumber($companyId, 'payroll');
 
             $entry = Voucher::create([
-                'company_id'       => $companyId,
+                'company_id' => $companyId,
                 'financial_year_id' => $fy->id,
-                'voucher_number'   => $voucherNumber,
-                'voucher_date'     => $voucherDate,
-                'voucher_type'     => 'payroll',
-                'narration'        => "Payroll for {$periodLabel}",
-                'source'           => 'auto',
-                'reference_type'   => PayrollRun::class,
-                'reference_id'     => $run->id,
-                'is_posted'        => true,
-                'created_by'       => $userId,
+                'voucher_number' => $voucherNumber,
+                'voucher_date' => $voucherDate,
+                'voucher_type' => 'payroll',
+                'narration' => "Payroll for {$periodLabel}",
+                'source' => 'auto',
+                'reference_type' => PayrollRun::class,
+                'reference_id' => $run->id,
+                'is_posted' => true,
+                'created_by' => $userId,
             ]);
 
             // Dr: Salary Expense = gross + employer PF + employer ESI
             $totalExpense = $totalGross + $totalPfEmployer + $totalEsiEmployer;
             $entry->lines()->create([
                 'ledger_id' => $salaryExpenseLedger->id,
-                'debit'     => $totalExpense,
-                'credit'    => 0,
+                'debit' => $totalExpense,
+                'credit' => 0,
                 'narration' => "Salary expense for {$periodLabel}",
             ]);
 
             // Cr: Salary Payable (net salary)
             $entry->lines()->create([
                 'ledger_id' => $salaryPayableLedger->id,
-                'debit'     => 0,
-                'credit'    => $totalNet,
+                'debit' => 0,
+                'credit' => $totalNet,
                 'narration' => 'Net salary payable',
             ]);
 
@@ -374,8 +374,8 @@ class AccountingService
                 if ($pfLedger) {
                     $entry->lines()->create([
                         'ledger_id' => $pfLedger->id,
-                        'debit'     => 0,
-                        'credit'    => $totalPf,
+                        'debit' => 0,
+                        'credit' => $totalPf,
                         'narration' => 'PF payable (employee + employer)',
                     ]);
                 }
@@ -388,8 +388,8 @@ class AccountingService
                 if ($esiLedger) {
                     $entry->lines()->create([
                         'ledger_id' => $esiLedger->id,
-                        'debit'     => 0,
-                        'credit'    => $totalEsi,
+                        'debit' => 0,
+                        'credit' => $totalEsi,
                         'narration' => 'ESI payable (employee + employer)',
                     ]);
                 }
@@ -401,8 +401,8 @@ class AccountingService
                 if ($ptLedger) {
                     $entry->lines()->create([
                         'ledger_id' => $ptLedger->id,
-                        'debit'     => 0,
-                        'credit'    => round((float) $totalPt, 2),
+                        'debit' => 0,
+                        'credit' => round((float) $totalPt, 2),
                         'narration' => 'Professional tax payable',
                     ]);
                 }
@@ -413,8 +413,8 @@ class AccountingService
                 // Add TDS to salary payable credit if no dedicated ledger
                 $entry->lines()->create([
                     'ledger_id' => $salaryPayableLedger->id,
-                    'debit'     => 0,
-                    'credit'    => round((float) $totalTds, 2),
+                    'debit' => 0,
+                    'credit' => round((float) $totalTds, 2),
                     'narration' => 'TDS payable',
                 ]);
             }
@@ -548,8 +548,7 @@ class AccountingService
     /**
      * Generate a unique voucher number using company-specific sequential counter.
      *
-     * @param string $companyId
-     * @param string $type (sales, purchase, payment, receipt, journal, contra)
+     * @param  string  $type  (sales, purchase, payment, receipt, journal, contra)
      * @return string Formatted voucher number (e.g., "PUR-00001")
      */
     private function generateVoucherNumber(string $companyId, string $type): string

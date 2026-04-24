@@ -30,16 +30,16 @@ class SalaryStructure extends Model
     protected function casts(): array
     {
         return [
-            'effective_from'    => 'date',
-            'basic'             => 'decimal:2',
-            'hra'               => 'decimal:2',
-            'da'                => 'decimal:2',
-            'conveyance'        => 'decimal:2',
-            'medical'           => 'decimal:2',
+            'effective_from' => 'date',
+            'basic' => 'decimal:2',
+            'hra' => 'decimal:2',
+            'da' => 'decimal:2',
+            'conveyance' => 'decimal:2',
+            'medical' => 'decimal:2',
             'special_allowance' => 'decimal:2',
-            'professional_tax'  => 'decimal:2',
-            'tds_amount'        => 'decimal:2',
-            'is_active'         => 'boolean',
+            'professional_tax' => 'decimal:2',
+            'tds_amount' => 'decimal:2',
+            'is_active' => 'boolean',
         ];
     }
 

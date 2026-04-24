@@ -11,6 +11,7 @@ class CompanySetting extends Model
     use HasUuids;
 
     public const ITEM_UNITS_KEY = 'item_units';
+
     public const VOUCHERS_INDEX_KEY = 'vouchers_index';
 
     public const DEFAULT_ITEM_UNITS = [
@@ -107,9 +108,7 @@ class CompanySetting extends Model
      * Get the current voucher index for a company and voucher type.
      * Returns the next sequential number to be assigned.
      *
-     * @param string $companyId
-     * @param string $voucherType (contra, payment, receipt, journal, purchase, sales)
-     * @return int
+     * @param  string  $voucherType  (contra, payment, receipt, journal, purchase, sales)
      */
     public static function getVoucherIndex(string $companyId, string $voucherType): int
     {
@@ -123,9 +122,7 @@ class CompanySetting extends Model
      * Increment and return the next voucher number for a type.
      * Increments the counter in company settings and returns the new value.
      *
-     * @param string $companyId
-     * @param string $voucherType (contra, payment, receipt, journal, purchase, sales)
-     * @return int
+     * @param  string  $voucherType  (contra, payment, receipt, journal, purchase, sales)
      */
     public static function getAndIncrementVoucherIndex(string $companyId, string $voucherType): int
     {
@@ -158,12 +155,12 @@ class CompanySetting extends Model
             $value = json_last_error() === JSON_ERROR_NONE ? $decoded : null;
         }
 
-        if (!is_array($value)) {
+        if (! is_array($value)) {
             return static::DEFAULT_VOUCHERS_INDEX;
         }
 
         // Merge with defaults to ensure all keys exist
-        return array_merge(static::DEFAULT_VOUCHERS_INDEX, array_filter($value, fn($v) => is_int($v)));
+        return array_merge(static::DEFAULT_VOUCHERS_INDEX, array_filter($value, fn ($v) => is_int($v)));
     }
 
     /**

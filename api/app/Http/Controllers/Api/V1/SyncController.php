@@ -34,21 +34,21 @@ class SyncController extends Controller
      * Models that have a direct company_id column (BelongsToCompany trait).
      */
     private array $companyModels = [
-        'items'             => Item::class,
-        'parties'           => Party::class,
-        'godowns'           => Godown::class,
-        'branches'          => Branch::class,
-        'item_groups'       => ItemGroup::class,
-        'units'             => Unit::class,
-        'financial_years'   => FinancialYear::class,
+        'items' => Item::class,
+        'parties' => Party::class,
+        'godowns' => Godown::class,
+        'branches' => Branch::class,
+        'item_groups' => ItemGroup::class,
+        'units' => Unit::class,
+        'financial_years' => FinancialYear::class,
         'accounting_groups' => AccountingGroup::class,
-        'ledgers'           => Ledger::class,
-        'purchase_orders'   => PurchaseOrder::class,
+        'ledgers' => Ledger::class,
+        'purchase_orders' => PurchaseOrder::class,
         'purchase_invoices' => PurchaseInvoice::class,
-        'sales_orders'      => SalesOrder::class,
-        'sales_invoices'    => SalesInvoice::class,
-        'vouchers'          => Voucher::class,
-        'payment_receipts'  => PaymentReceipt::class,
+        'sales_orders' => SalesOrder::class,
+        'sales_invoices' => SalesInvoice::class,
+        'vouchers' => Voucher::class,
+        'payment_receipts' => PaymentReceipt::class,
     ];
 
     /**
@@ -56,26 +56,26 @@ class SyncController extends Controller
      * Format: 'api_table' => [ModelClass, 'parentRelationName']
      */
     private array $lineModels = [
-        'batches'                => [Batch::class,              'item'],
-        'po_lines'               => [PoLine::class,             'purchaseOrder'],
-        'so_lines'               => [SoLine::class,             'salesOrder'],
+        'batches' => [Batch::class,              'item'],
+        'po_lines' => [PoLine::class,             'purchaseOrder'],
+        'so_lines' => [SoLine::class,             'salesOrder'],
         'purchase_invoice_lines' => [PurchaseInvoiceLine::class, 'purchaseInvoice'],
-        'sales_invoice_lines'    => [SalesInvoiceLine::class,   'salesInvoice'],
-        'voucher_lines'          => [VoucherLine::class,        'voucher'],
+        'sales_invoice_lines' => [SalesInvoiceLine::class,   'salesInvoice'],
+        'voucher_lines' => [VoucherLine::class,        'voucher'],
     ];
 
     public function push(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'changes'           => 'required|array',
-            'changes.*.table'   => 'required|string',
+            'changes' => 'required|array',
+            'changes.*.table' => 'required|string',
             'changes.*.records' => 'required|array',
         ]);
 
         // Flat map of all accepted table names for push validation
         $allModels = array_merge(
             $this->companyModels,
-            array_map(fn($v) => $v[0], $this->lineModels)
+            array_map(fn ($v) => $v[0], $this->lineModels)
         );
 
         $synced = 0;
@@ -94,7 +94,7 @@ class SyncController extends Controller
                         ['id' => $record['id']],
                         array_merge($record, [
                             'sync_status' => 'synced',
-                            'synced_at'   => now(),
+                            'synced_at' => now(),
                         ])
                     );
                     $synced++;
@@ -103,16 +103,16 @@ class SyncController extends Controller
         });
 
         return response()->json([
-            'message'      => 'Sync complete',
+            'message' => 'Sync complete',
             'synced_count' => $synced,
         ]);
     }
 
     public function pull(Request $request): JsonResponse
     {
-        $companyId  = $request->user()->company_id;
+        $companyId = $request->user()->company_id;
         $lastSyncAt = $request->input('last_synced_at');
-        $changes    = [];
+        $changes = [];
 
         // Company-scoped models — filter directly by company_id
         foreach ($this->companyModels as $table => $modelClass) {
@@ -147,7 +147,7 @@ class SyncController extends Controller
         }
 
         return response()->json([
-            'data'      => $changes,
+            'data' => $changes,
             'synced_at' => now()->toISOString(),
         ]);
     }

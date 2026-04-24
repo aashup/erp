@@ -22,18 +22,18 @@ class PayrollService
 
         return DB::transaction(function () use ($companyId, $month, $year, $workingDays, $employees) {
             $run = PayrollRun::create([
-                'company_id'   => $companyId,
-                'month'        => $month,
-                'year'         => $year,
+                'company_id' => $companyId,
+                'month' => $month,
+                'year' => $year,
                 'working_days' => $workingDays,
-                'status'       => 'draft',
+                'status' => 'draft',
             ]);
 
-            $totalGross        = 0;
-            $totalDeductions   = 0;
-            $totalNet          = 0;
-            $totalPfEmployer   = 0;
-            $totalEsiEmployer  = 0;
+            $totalGross = 0;
+            $totalDeductions = 0;
+            $totalNet = 0;
+            $totalPfEmployer = 0;
+            $totalEsiEmployer = 0;
 
             foreach ($employees as $employee) {
                 $structure = $employee->salaryStructure;
@@ -43,18 +43,18 @@ class PayrollService
 
                 $entry = $this->computeEntry($run, $employee, $structure, $workingDays, $workingDays);
 
-                $totalGross       += (float) $entry->gross_salary;
-                $totalDeductions  += (float) $entry->total_deductions;
-                $totalNet         += (float) $entry->net_salary;
-                $totalPfEmployer  += (float) $entry->pf_employer;
+                $totalGross += (float) $entry->gross_salary;
+                $totalDeductions += (float) $entry->total_deductions;
+                $totalNet += (float) $entry->net_salary;
+                $totalPfEmployer += (float) $entry->pf_employer;
                 $totalEsiEmployer += (float) $entry->esi_employer;
             }
 
             $run->update([
-                'total_gross'        => round($totalGross, 2),
-                'total_deductions'   => round($totalDeductions, 2),
-                'total_net'          => round($totalNet, 2),
-                'total_pf_employer'  => round($totalPfEmployer, 2),
+                'total_gross' => round($totalGross, 2),
+                'total_deductions' => round($totalDeductions, 2),
+                'total_net' => round($totalNet, 2),
+                'total_pf_employer' => round($totalPfEmployer, 2),
                 'total_esi_employer' => round($totalEsiEmployer, 2),
             ]);
 
@@ -67,7 +67,7 @@ class PayrollService
      */
     public function recomputeEntry(PayrollEntry $entry): void
     {
-        $employee  = $entry->employee;
+        $employee = $entry->employee;
         $structure = $employee->salaryStructure;
         if (! $structure) {
             return;
@@ -86,10 +86,10 @@ class PayrollService
         $run->loadMissing('entries');
 
         $run->update([
-            'total_gross'        => round($run->entries->sum('gross_salary'), 2),
-            'total_deductions'   => round($run->entries->sum('total_deductions'), 2),
-            'total_net'          => round($run->entries->sum('net_salary'), 2),
-            'total_pf_employer'  => round($run->entries->sum('pf_employer'), 2),
+            'total_gross' => round($run->entries->sum('gross_salary'), 2),
+            'total_deductions' => round($run->entries->sum('total_deductions'), 2),
+            'total_net' => round($run->entries->sum('net_salary'), 2),
+            'total_pf_employer' => round($run->entries->sum('pf_employer'), 2),
             'total_esi_employer' => round($run->entries->sum('esi_employer'), 2),
         ]);
     }
@@ -106,11 +106,11 @@ class PayrollService
     ): PayrollEntry {
         $ratio = $workingDays > 0 ? $presentDays / $workingDays : 0;
 
-        $basic            = round((float) $structure->basic * $ratio, 2);
-        $hra              = round((float) $structure->hra * $ratio, 2);
-        $da               = round((float) $structure->da * $ratio, 2);
-        $conveyance       = round((float) $structure->conveyance * $ratio, 2);
-        $medical          = round((float) $structure->medical * $ratio, 2);
+        $basic = round((float) $structure->basic * $ratio, 2);
+        $hra = round((float) $structure->hra * $ratio, 2);
+        $da = round((float) $structure->da * $ratio, 2);
+        $conveyance = round((float) $structure->conveyance * $ratio, 2);
+        $medical = round((float) $structure->medical * $ratio, 2);
         $specialAllowance = round((float) $structure->special_allowance * $ratio, 2);
 
         $gross = round($basic + $hra + $da + $conveyance + $medical + $specialAllowance, 2);
@@ -129,35 +129,36 @@ class PayrollService
             $esiEmployer = round($gross * 0.0325, 2);
         }
 
-        $pt  = round((float) $structure->professional_tax, 2);
+        $pt = round((float) $structure->professional_tax, 2);
         $tds = round((float) $structure->tds_amount, 2);
 
         $totalDeductions = round($pfEmployee + $esiEmployee + $pt + $tds, 2);
-        $netSalary       = round($gross - $totalDeductions, 2);
+        $netSalary = round($gross - $totalDeductions, 2);
 
         $data = [
-            'payroll_run_id'    => $run->id,
-            'employee_id'       => $employee->id,
-            'present_days'      => $presentDays,
-            'basic'             => $basic,
-            'hra'               => $hra,
-            'da'                => $da,
-            'conveyance'        => $conveyance,
-            'medical'           => $medical,
+            'payroll_run_id' => $run->id,
+            'employee_id' => $employee->id,
+            'present_days' => $presentDays,
+            'basic' => $basic,
+            'hra' => $hra,
+            'da' => $da,
+            'conveyance' => $conveyance,
+            'medical' => $medical,
             'special_allowance' => $specialAllowance,
-            'gross_salary'      => $gross,
-            'pf_employee'       => $pfEmployee,
-            'esi_employee'      => $esiEmployee,
-            'professional_tax'  => $pt,
-            'tds'               => $tds,
-            'total_deductions'  => $totalDeductions,
-            'net_salary'        => $netSalary,
-            'pf_employer'       => $pfEmployer,
-            'esi_employer'      => $esiEmployer,
+            'gross_salary' => $gross,
+            'pf_employee' => $pfEmployee,
+            'esi_employee' => $esiEmployee,
+            'professional_tax' => $pt,
+            'tds' => $tds,
+            'total_deductions' => $totalDeductions,
+            'net_salary' => $netSalary,
+            'pf_employer' => $pfEmployer,
+            'esi_employer' => $esiEmployer,
         ];
 
         if ($existing) {
             $existing->update($data);
+
             return $existing->fresh();
         }
 

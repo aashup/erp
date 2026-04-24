@@ -26,7 +26,7 @@ class OcrInvoiceLog extends Model
     protected function casts(): array
     {
         return [
-            'raw_response'   => 'array',
+            'raw_response' => 'array',
             'extracted_data' => 'array',
         ];
     }

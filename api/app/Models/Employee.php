@@ -44,10 +44,10 @@ class Employee extends Model
     {
         return [
             'date_of_birth' => 'date',
-            'joining_date'  => 'date',
-            'is_pf_applicable'  => 'boolean',
+            'joining_date' => 'date',
+            'is_pf_applicable' => 'boolean',
             'is_esi_applicable' => 'boolean',
-            'is_active'         => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 

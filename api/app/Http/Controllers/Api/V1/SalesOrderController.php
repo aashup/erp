@@ -79,7 +79,7 @@ class SalesOrderController extends Controller
                     ->whereDate('end_date', '>=', $validated['so_date'])
                     ->first();
 
-                if (!$fy) {
+                if (! $fy) {
                     throw ValidationException::withMessages(['so_date' => 'No financial year found for the selected date']);
                 }
 
@@ -88,7 +88,7 @@ class SalesOrderController extends Controller
                     ->where('document_type', 'sales_order')
                     ->first();
 
-                if (!$counter) {
+                if (! $counter) {
                     throw ValidationException::withMessages(['so_date' => 'Document counter not initialized for this financial year']);
                 }
 
@@ -97,7 +97,7 @@ class SalesOrderController extends Controller
                     $fy->id,
                     'sales_order'
                 );
-                $validated['so_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['so_number'] = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                 $validated['financial_year_id'] = $fy->id;
             }
 
@@ -242,7 +242,7 @@ class SalesOrderController extends Controller
             ->whereDate('end_date', '>=', now())
             ->first()?->id;
 
-        if (!$fyId) {
+        if (! $fyId) {
             throw ValidationException::withMessages(['invoice_date' => 'No financial year found for invoice date']);
         }
 
@@ -251,12 +251,12 @@ class SalesOrderController extends Controller
             ->where('document_type', 'sales_invoice')
             ->first();
 
-        if (!$counter) {
+        if (! $counter) {
             throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized']);
         }
 
         $nextNumber = $counter->getAndIncrementCounter($so->company_id, $fyId, 'sales_invoice');
-        $invoiceNumber = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+        $invoiceNumber = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
         $invoice = SalesInvoice::create([
             'company_id' => $so->company_id,

@@ -68,8 +68,8 @@ class CompanyController extends Controller
 
         $file = $request->file('logo');
         $path = $file->storeAs(
-            'company-logos/' . $company->id,
-            Str::uuid() . '.' . ($file->getClientOriginalExtension() ?: 'jpg'),
+            'company-logos/'.$company->id,
+            Str::uuid().'.'.($file->getClientOriginalExtension() ?: 'jpg'),
             'public'
         );
 
@@ -77,7 +77,7 @@ class CompanyController extends Controller
 
         return response()->json([
             'message' => 'Logo updated successfully',
-            'data'    => $company->fresh(),
+            'data' => $company->fresh(),
         ]);
     }
 }

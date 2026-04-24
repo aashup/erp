@@ -107,8 +107,8 @@ class AuthController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $request->user()->id,
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$request->user()->id,
             'phone' => 'nullable|string|max:20',
         ]);
 
@@ -118,7 +118,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'data'    => $user,
+            'data' => $user,
         ]);
     }
 
@@ -136,8 +136,8 @@ class AuthController extends Controller
 
         $file = $request->file('avatar');
         $path = $file->storeAs(
-            'profile-images/' . $user->id,
-            Str::uuid() . '.' . ($file->getClientOriginalExtension() ?: 'jpg'),
+            'profile-images/'.$user->id,
+            Str::uuid().'.'.($file->getClientOriginalExtension() ?: 'jpg'),
             'public'
         );
 
@@ -146,15 +146,15 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Avatar updated successfully',
-            'data'    => $user,
+            'data' => $user,
         ]);
     }
 
     public function updatePassword(Request $request): JsonResponse
     {
         $request->validate([
-            'current_password'      => 'required|string',
-            'password'              => 'required|string|min:8|confirmed',
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string',
         ]);
 

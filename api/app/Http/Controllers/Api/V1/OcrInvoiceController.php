@@ -26,9 +26,9 @@ class OcrInvoiceController extends Controller
         ]);
 
         $companyId = $user->company_id;
-        $apiKey    = CompanySetting::getValue($companyId, 'ocr_api_key');
-        $model     = CompanySetting::getValue($companyId, 'ocr_model', 'gpt-4o');
-        $provider  = CompanySetting::getValue($companyId, 'ocr_provider', 'openai');
+        $apiKey = CompanySetting::getValue($companyId, 'ocr_api_key');
+        $model = CompanySetting::getValue($companyId, 'ocr_model', 'gpt-4o');
+        $provider = CompanySetting::getValue($companyId, 'ocr_provider', 'openai');
 
         if (empty($apiKey)) {
             return response()->json([
@@ -37,36 +37,36 @@ class OcrInvoiceController extends Controller
         }
 
         // Store the uploaded image
-        $file      = $request->file('image');
+        $file = $request->file('image');
         $extension = $file->getClientOriginalExtension() ?: 'jpg';
-        $filename  = Str::uuid() . '.' . $extension;
-        $path      = $file->storeAs('ocr', $filename, 'local');
+        $filename = Str::uuid().'.'.$extension;
+        $path = $file->storeAs('ocr', $filename, 'local');
 
         // Base64 encode for OpenAI Vision
         $imageData = base64_encode(file_get_contents(Storage::disk('local')->path($path)));
-        $mimeType  = $file->getMimeType();
+        $mimeType = $file->getMimeType();
 
         // Create the log record (initially as failed; updated after API call)
         $log = OcrInvoiceLog::create([
             'image_path' => $path,
-            'provider'   => $provider,
-            'model'      => $model,
-            'status'     => 'failed',
+            'provider' => $provider,
+            'model' => $model,
+            'status' => 'failed',
             'created_by' => $user->id,
         ]);
 
         try {
             $requestBody = [
-                'model'      => $model,
+                'model' => $model,
                 'max_tokens' => 2000,
-                'messages'   => [
+                'messages' => [
                     [
-                        'role'    => 'user',
+                        'role' => 'user',
                         'content' => [
                             [
-                                'type'      => 'image_url',
+                                'type' => 'image_url',
                                 'image_url' => [
-                                    'url'    => "data:{$mimeType};base64,{$imageData}",
+                                    'url' => "data:{$mimeType};base64,{$imageData}",
                                     'detail' => 'high',
                                 ],
                             ],
@@ -90,9 +90,9 @@ class OcrInvoiceController extends Controller
 
             if (! $response->successful()) {
                 $log->update([
-                    'raw_response'  => $response->json(),
-                    'status'        => 'failed',
-                    'error_message' => 'OpenAI API returned HTTP ' . $response->status(),
+                    'raw_response' => $response->json(),
+                    'status' => 'failed',
+                    'error_message' => 'OpenAI API returned HTTP '.$response->status(),
                 ]);
 
                 return response()->json([
@@ -113,29 +113,29 @@ class OcrInvoiceController extends Controller
             $status = 'failed';
             if ($extracted && is_array($extracted)) {
                 $hasCritical = ! empty($extracted['invoice_date']) || ! empty($extracted['items']);
-                $status      = $hasCritical ? 'success' : 'partial';
+                $status = $hasCritical ? 'success' : 'partial';
             }
 
             $log->update([
-                'raw_response'   => $rawJson,
+                'raw_response' => $rawJson,
                 'extracted_data' => $extracted,
-                'status'         => $status,
+                'status' => $status,
             ]);
 
             return response()->json([
-                'log_id'         => $log->id,
+                'log_id' => $log->id,
                 'extracted_data' => $extracted,
-                'status'         => $status,
+                'status' => $status,
             ]);
 
         } catch (\Exception $e) {
             $log->update([
-                'status'        => 'failed',
+                'status' => 'failed',
                 'error_message' => $e->getMessage(),
             ]);
 
             return response()->json([
-                'message' => 'OCR request failed: ' . $e->getMessage(),
+                'message' => 'OCR request failed: '.$e->getMessage(),
             ], 500);
         }
     }

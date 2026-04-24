@@ -38,15 +38,15 @@ class PayrollController extends Controller
         $this->authorize('create', PayrollRun::class);
 
         $validated = $request->validate([
-            'month'        => 'required|integer|min:1|max:12',
-            'year'         => 'required|integer|min:2000|max:2100',
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2000|max:2100',
             'working_days' => 'nullable|integer|min:1|max:31',
-            'notes'        => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
-        $companyId   = auth()->user()->company_id;
-        $month       = (int) $validated['month'];
-        $year        = (int) $validated['year'];
+        $companyId = auth()->user()->company_id;
+        $month = (int) $validated['month'];
+        $year = (int) $validated['year'];
         $workingDays = (int) ($validated['working_days'] ?? 26);
 
         // Prevent duplicate run
@@ -111,10 +111,10 @@ class PayrollController extends Controller
         $voucher = $this->accountingService->postPayroll($payrollRun, $userId);
 
         $payrollRun->update([
-            'status'      => 'approved',
+            'status' => 'approved',
             'approved_at' => now(),
             'approved_by' => $userId,
-            'voucher_id'  => $voucher?->id,
+            'voucher_id' => $voucher?->id,
         ]);
 
         return response()->json(['data' => $payrollRun->fresh(['voucher'])]);
@@ -158,11 +158,11 @@ class PayrollController extends Controller
         $company = auth()->user()->company;
 
         $data = [
-            'company'     => $company,
-            'employee'    => $employee,
-            'run'         => $payrollRun,
-            'entry'       => $entry,
-            'period'      => date('F Y', mktime(0, 0, 0, $payrollRun->month, 1, $payrollRun->year)),
+            'company' => $company,
+            'employee' => $employee,
+            'run' => $payrollRun,
+            'entry' => $entry,
+            'period' => date('F Y', mktime(0, 0, 0, $payrollRun->month, 1, $payrollRun->year)),
         ];
 
         $pdf = Pdf::loadView('payroll.payslip', $data)

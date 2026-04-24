@@ -25,10 +25,10 @@ class EmployeeController extends Controller
         if ($request->sort_by) {
             $sortOrder = $request->sort_order === 'desc' ? 'desc' : 'asc';
             match ($request->sort_by) {
-                'name'         => $employees->orderBy('name', $sortOrder),
+                'name' => $employees->orderBy('name', $sortOrder),
                 'employee_code' => $employees->orderBy('employee_code', $sortOrder),
                 'joining_date' => $employees->orderBy('joining_date', $sortOrder),
-                default        => $employees->orderBy('name'),
+                default => $employees->orderBy('name'),
             };
         } else {
             $employees->orderBy('name');
@@ -42,26 +42,26 @@ class EmployeeController extends Controller
         $this->authorize('create', Employee::class);
 
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'gender'            => 'nullable|in:male,female,other',
-            'date_of_birth'     => 'nullable|date',
-            'phone'             => 'nullable|string|max:20',
-            'email'             => 'nullable|email',
-            'address'           => 'nullable|string',
-            'city'              => 'nullable|string|max:100',
-            'state'             => 'nullable|string|max:100',
-            'department_id'     => 'nullable|exists:departments,id',
-            'designation_id'    => 'nullable|exists:designations,id',
-            'joining_date'      => 'required|date',
-            'employment_type'   => 'nullable|in:permanent,contract,part_time',
+            'name' => 'required|string|max:255',
+            'gender' => 'nullable|in:male,female,other',
+            'date_of_birth' => 'nullable|date',
+            'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'department_id' => 'nullable|exists:departments,id',
+            'designation_id' => 'nullable|exists:designations,id',
+            'joining_date' => 'required|date',
+            'employment_type' => 'nullable|in:permanent,contract,part_time',
             'bank_account_name' => 'nullable|string|max:255',
-            'bank_account_no'   => 'nullable|string|max:30',
-            'bank_ifsc'         => 'nullable|string|max:15',
-            'bank_name'         => 'nullable|string|max:255',
-            'pan'               => 'nullable|string|max:10',
-            'pf_number'         => 'nullable|string|max:30',
-            'esi_number'        => 'nullable|string|max:30',
-            'is_pf_applicable'  => 'boolean',
+            'bank_account_no' => 'nullable|string|max:30',
+            'bank_ifsc' => 'nullable|string|max:15',
+            'bank_name' => 'nullable|string|max:255',
+            'pan' => 'nullable|string|max:10',
+            'pf_number' => 'nullable|string|max:30',
+            'esi_number' => 'nullable|string|max:30',
+            'is_pf_applicable' => 'boolean',
             'is_esi_applicable' => 'boolean',
         ]);
 
@@ -80,7 +80,7 @@ class EmployeeController extends Controller
                 ['value' => (string) ($nextNumber + 1)]
             );
 
-            $validated['employee_code'] = 'EMP-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            $validated['employee_code'] = 'EMP-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
             return Employee::create($validated);
         });
@@ -100,29 +100,29 @@ class EmployeeController extends Controller
         $this->authorize('update', $employee);
 
         $validated = $request->validate([
-            'employee_code'     => 'nullable|string|max:50',
-            'name'              => 'sometimes|string|max:255',
-            'gender'            => 'nullable|in:male,female,other',
-            'date_of_birth'     => 'nullable|date',
-            'phone'             => 'nullable|string|max:20',
-            'email'             => 'nullable|email',
-            'address'           => 'nullable|string',
-            'city'              => 'nullable|string|max:100',
-            'state'             => 'nullable|string|max:100',
-            'department_id'     => 'nullable|exists:departments,id',
-            'designation_id'    => 'nullable|exists:designations,id',
-            'joining_date'      => 'sometimes|date',
-            'employment_type'   => 'nullable|in:permanent,contract,part_time',
+            'employee_code' => 'nullable|string|max:50',
+            'name' => 'sometimes|string|max:255',
+            'gender' => 'nullable|in:male,female,other',
+            'date_of_birth' => 'nullable|date',
+            'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'department_id' => 'nullable|exists:departments,id',
+            'designation_id' => 'nullable|exists:designations,id',
+            'joining_date' => 'sometimes|date',
+            'employment_type' => 'nullable|in:permanent,contract,part_time',
             'bank_account_name' => 'nullable|string|max:255',
-            'bank_account_no'   => 'nullable|string|max:30',
-            'bank_ifsc'         => 'nullable|string|max:15',
-            'bank_name'         => 'nullable|string|max:255',
-            'pan'               => 'nullable|string|max:10',
-            'pf_number'         => 'nullable|string|max:30',
-            'esi_number'        => 'nullable|string|max:30',
-            'is_pf_applicable'  => 'boolean',
+            'bank_account_no' => 'nullable|string|max:30',
+            'bank_ifsc' => 'nullable|string|max:15',
+            'bank_name' => 'nullable|string|max:255',
+            'pan' => 'nullable|string|max:10',
+            'pf_number' => 'nullable|string|max:30',
+            'esi_number' => 'nullable|string|max:30',
+            'is_pf_applicable' => 'boolean',
             'is_esi_applicable' => 'boolean',
-            'is_active'         => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         $employee->update($validated);

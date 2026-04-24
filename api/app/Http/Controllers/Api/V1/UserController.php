@@ -30,11 +30,11 @@ class UserController extends Controller
             $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
 
             match ($request->sort_by) {
-                'name'      => $query->orderBy('users.name', $sortOrder),
-                'email'     => $query->orderBy('users.email', $sortOrder),
-                'role'      => $query->orderBy('users.role', $sortOrder),
+                'name' => $query->orderBy('users.name', $sortOrder),
+                'email' => $query->orderBy('users.email', $sortOrder),
+                'role' => $query->orderBy('users.role', $sortOrder),
                 'is_active' => $query->orderBy('users.is_active', $sortOrder),
-                default     => $query->orderBy('users.name', 'asc'),
+                default => $query->orderBy('users.name', 'asc'),
             };
         } else {
             $query->orderBy('users.name', 'asc');
@@ -52,17 +52,17 @@ class UserController extends Controller
         $companyId = auth()->user()->company_id;
 
         $validated = $request->validate([
-            'name'      => 'required|string|max:255',
-            'email'     => "required|email|max:255|unique:users,email,NULL,id,company_id,{$companyId}",
-            'phone'     => 'nullable|string|max:20',
-            'role'      => 'required|in:admin,manager,accountant,salesman',
+            'name' => 'required|string|max:255',
+            'email' => "required|email|max:255|unique:users,email,NULL,id,company_id,{$companyId}",
+            'phone' => 'nullable|string|max:20',
+            'role' => 'required|in:admin,manager,accountant,salesman',
             'branch_id' => 'nullable|exists:branches,id',
             'is_active' => 'boolean',
         ]);
 
-        $validated['password']   = Str::random(12);
+        $validated['password'] = Str::random(12);
         $validated['company_id'] = $companyId;
-        $validated['is_active']  = $validated['is_active'] ?? true;
+        $validated['is_active'] = $validated['is_active'] ?? true;
 
         $user = User::create($validated);
 
@@ -81,10 +81,10 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         $validated = $request->validate([
-            'name'      => 'sometimes|string|max:255',
-            'email'     => "sometimes|email|max:255|unique:users,email,{$user->id},id,company_id,{$user->company_id}",
-            'phone'     => 'nullable|string|max:20',
-            'role'      => 'sometimes|in:admin,manager,accountant,salesman',
+            'name' => 'sometimes|string|max:255',
+            'email' => "sometimes|email|max:255|unique:users,email,{$user->id},id,company_id,{$user->company_id}",
+            'phone' => 'nullable|string|max:20',
+            'role' => 'sometimes|in:admin,manager,accountant,salesman',
             'branch_id' => 'nullable|exists:branches,id',
             'is_active' => 'sometimes|boolean',
         ]);

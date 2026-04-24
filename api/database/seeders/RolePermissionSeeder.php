@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -27,7 +28,7 @@ class RolePermissionSeeder extends Seeder
         }
 
         // Flush Spatie cache so newly created permissions are visible to syncPermissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Admin — all permissions
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);

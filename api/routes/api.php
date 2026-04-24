@@ -1,31 +1,32 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountingGroupController;
-use App\Http\Controllers\Api\V1\DepartmentController;
-use App\Http\Controllers\Api\V1\DesignationController;
-use App\Http\Controllers\Api\V1\EmployeeController;
-use App\Http\Controllers\Api\V1\PayrollController;
-use App\Http\Controllers\Api\V1\SalaryStructureController;
-use App\Http\Controllers\Api\V1\POSController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\CompanySettingController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DepartmentController;
+use App\Http\Controllers\Api\V1\DesignationController;
+use App\Http\Controllers\Api\V1\EmployeeController;
 use App\Http\Controllers\Api\V1\FinancialYearController;
 use App\Http\Controllers\Api\V1\GodownController;
 use App\Http\Controllers\Api\V1\InvoiceTemplateController;
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\ItemGroupController;
 use App\Http\Controllers\Api\V1\LedgerController;
+use App\Http\Controllers\Api\V1\OcrInvoiceController;
 use App\Http\Controllers\Api\V1\PartyController;
 use App\Http\Controllers\Api\V1\PaymentReceiptController;
-use App\Http\Controllers\Api\V1\OcrInvoiceController;
+use App\Http\Controllers\Api\V1\PayrollController;
+use App\Http\Controllers\Api\V1\POSController;
+use App\Http\Controllers\Api\V1\PublicInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseInvoiceController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\SalaryStructureController;
 use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
 use App\Http\Controllers\Api\V1\StockLedgerController;
@@ -34,7 +35,6 @@ use App\Http\Controllers\Api\V1\ThermalTemplateController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VoucherController;
-use App\Http\Controllers\Api\V1\PublicInvoiceController;
 use Illuminate\Support\Facades\Route;
 
 /*

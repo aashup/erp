@@ -74,22 +74,22 @@ class ThermalTemplateRenderer
 
         // Build truthy map for {{#if variable}} conditionals
         $truthyMap = [
-            'company_name'    => !empty($company->name),
-            'company_gstin'   => !empty($company->gstin),
-            'company_address' => !empty($company->address),
-            'company_phone'   => !empty($company->phone),
-            'company_email'   => !empty($company->email),
-            'customer_name'   => !empty($invoice->party->name ?? null),
-            'customer_gstin'  => !empty($invoice->party->gstin ?? null),
-            'customer_address'=> !empty($invoice->party->address ?? null),
-            'customer_city'   => !empty($invoice->party->city ?? null),
-            'customer_phone'  => !empty($invoice->party->phone ?? null),
-            'cgst_total'      => (float) $invoice->cgst_total > 0,
-            'sgst_total'      => (float) $invoice->sgst_total > 0,
-            'igst_total'      => (float) $invoice->igst_total > 0,
-            'round_off'       => $roundOff !== 0.0,
-            'round_off_raw'   => $roundOff !== 0.0,
-            'balance_due'     => (float) $invoice->balance_due > 0,
+            'company_name' => ! empty($company->name),
+            'company_gstin' => ! empty($company->gstin),
+            'company_address' => ! empty($company->address),
+            'company_phone' => ! empty($company->phone),
+            'company_email' => ! empty($company->email),
+            'customer_name' => ! empty($invoice->party->name ?? null),
+            'customer_gstin' => ! empty($invoice->party->gstin ?? null),
+            'customer_address' => ! empty($invoice->party->address ?? null),
+            'customer_city' => ! empty($invoice->party->city ?? null),
+            'customer_phone' => ! empty($invoice->party->phone ?? null),
+            'cgst_total' => (float) $invoice->cgst_total > 0,
+            'sgst_total' => (float) $invoice->sgst_total > 0,
+            'igst_total' => (float) $invoice->igst_total > 0,
+            'round_off' => $roundOff !== 0.0,
+            'round_off_raw' => $roundOff !== 0.0,
+            'balance_due' => (float) $invoice->balance_due > 0,
             'balance_due_raw' => (float) $invoice->balance_due > 0,
         ];
 
@@ -120,7 +120,8 @@ class ThermalTemplateRenderer
             $prev = $html;
             $html = preg_replace_callback($pattern, function (array $matches) use ($truthyMap): string {
                 $variable = $matches[1];
-                $content  = $matches[2];
+                $content = $matches[2];
+
                 return ($truthyMap[$variable] ?? false) ? $content : '';
             }, $html);
         }

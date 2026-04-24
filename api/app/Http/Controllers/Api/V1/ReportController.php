@@ -66,17 +66,17 @@ class ReportController extends Controller
         // Group rows (is_group = true) — values are aggregated on the frontend from children
         foreach ($groups as $group) {
             $rows[] = [
-                'account_id'     => $group->id,
-                'name'           => $group->name,
-                'code'           => $group->code ?? '',
-                'type'           => $group->type,
-                'parent_id'      => $group->parent_id, // null for root groups
-                'is_group'       => true,
-                'opening_debit'  => 0,
+                'account_id' => $group->id,
+                'name' => $group->name,
+                'code' => $group->code ?? '',
+                'type' => $group->type,
+                'parent_id' => $group->parent_id, // null for root groups
+                'is_group' => true,
+                'opening_debit' => 0,
                 'opening_credit' => 0,
-                'txn_debit'      => 0,
-                'txn_credit'     => 0,
-                'closing_debit'  => 0,
+                'txn_debit' => 0,
+                'txn_credit' => 0,
+                'closing_debit' => 0,
                 'closing_credit' => 0,
             ];
         }
@@ -84,34 +84,34 @@ class ReportController extends Controller
         // Ledger rows (is_group = false) — parent is their accounting group
         foreach ($ledgers as $ledger) {
             $txn = $totals[$ledger->id] ?? null;
-            $txnDebit  = (float) ($txn->total_debit ?? 0);
+            $txnDebit = (float) ($txn->total_debit ?? 0);
             $txnCredit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
             $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
 
-            $totalDebit  = $openingDebit + $txnDebit;
+            $totalDebit = $openingDebit + $txnDebit;
             $totalCredit = $openingCredit + $txnCredit;
 
             $net = $totalDebit - $totalCredit;
-            $closingDebit  = $net > 0 ? round($net, 2) : 0;
+            $closingDebit = $net > 0 ? round($net, 2) : 0;
             $closingCredit = $net < 0 ? round(abs($net), 2) : 0;
 
-            $grandTotalDebit  += $closingDebit;
+            $grandTotalDebit += $closingDebit;
             $grandTotalCredit += $closingCredit;
 
             $rows[] = [
-                'account_id'     => $ledger->id,
-                'name'           => $ledger->name,
-                'code'           => $ledger->group?->code ?? '',
-                'type'           => $ledger->group?->type ?? 'asset',
-                'parent_id'      => $ledger->group_id, // ledger's parent = its accounting group
-                'is_group'       => false,
-                'opening_debit'  => round($openingDebit, 2),
+                'account_id' => $ledger->id,
+                'name' => $ledger->name,
+                'code' => $ledger->group?->code ?? '',
+                'type' => $ledger->group?->type ?? 'asset',
+                'parent_id' => $ledger->group_id, // ledger's parent = its accounting group
+                'is_group' => false,
+                'opening_debit' => round($openingDebit, 2),
                 'opening_credit' => round($openingCredit, 2),
-                'txn_debit'      => round($txnDebit, 2),
-                'txn_credit'     => round($txnCredit, 2),
-                'closing_debit'  => $closingDebit,
+                'txn_debit' => round($txnDebit, 2),
+                'txn_credit' => round($txnCredit, 2),
+                'closing_debit' => $closingDebit,
                 'closing_credit' => $closingCredit,
             ];
         }
@@ -119,9 +119,9 @@ class ReportController extends Controller
         return response()->json([
             'data' => $rows,
             'summary' => [
-                'total_debit'  => round($grandTotalDebit, 2),
+                'total_debit' => round($grandTotalDebit, 2),
                 'total_credit' => round($grandTotalCredit, 2),
-                'difference'   => round($grandTotalDebit - $grandTotalCredit, 2),
+                'difference' => round($grandTotalDebit - $grandTotalCredit, 2),
             ],
         ]);
     }
@@ -169,38 +169,38 @@ class ReportController extends Controller
             ->orderBy('vouchers.created_at')
             ->get();
 
-        $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+        $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
         $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
         $runningBalance = $openingDebit - $openingCredit;
 
         $rows = [];
         foreach ($entries as $entry) {
-            $debit  = (float) $entry->debit;
+            $debit = (float) $entry->debit;
             $credit = (float) $entry->credit;
             $runningBalance += ($debit - $credit);
 
             $rows[] = [
-                'voucher_id'     => $entry->voucher_id,
+                'voucher_id' => $entry->voucher_id,
                 'voucher_number' => $entry->voucher_number,
-                'voucher_date'   => $entry->voucher_date,
-                'created_at'     => $entry->created_at,
-                'voucher_type'   => $entry->voucher_type,
-                'narration'      => $entry->line_narration ?? $entry->entry_narration,
-                'debit'          => round($debit, 2),
-                'credit'         => round($credit, 2),
-                'balance'        => round($runningBalance, 2),
+                'voucher_date' => $entry->voucher_date,
+                'created_at' => $entry->created_at,
+                'voucher_type' => $entry->voucher_type,
+                'narration' => $entry->line_narration ?? $entry->entry_narration,
+                'debit' => round($debit, 2),
+                'credit' => round($credit, 2),
+                'balance' => round($runningBalance, 2),
             ];
         }
 
         return response()->json([
             'ledger' => [
-                'id'             => $ledger->id,
-                'name'           => $ledger->name,
-                'group_name'     => $ledger->group?->name,
-                'opening_debit'  => round($openingDebit, 2),
+                'id' => $ledger->id,
+                'name' => $ledger->name,
+                'group_name' => $ledger->group?->name,
+                'opening_debit' => round($openingDebit, 2),
                 'opening_credit' => round($openingCredit, 2),
             ],
-            'data'            => array_reverse($rows),
+            'data' => array_reverse($rows),
             'closing_balance' => round($runningBalance, 2),
         ]);
     }
@@ -239,7 +239,7 @@ class ReportController extends Controller
             }
 
             $itemIds = $rows->pluck('item_id')->toArray();
-            $prices  = DB::table('items')
+            $prices = DB::table('items')
                 ->whereIn('id', $itemIds)
                 ->pluck('purchase_price', 'id');
 
@@ -341,42 +341,42 @@ class ReportController extends Controller
             ->keyBy('ledger_id');
 
         // ── 3. Build rows ─────────────────────────────────────────────────────
-        $rows          = [];
-        $totalAssets   = 0;
-        $totalLiabEq   = 0;
+        $rows = [];
+        $totalAssets = 0;
+        $totalLiabEq = 0;
 
         // Group rows — values are 0; frontend aggregates from children
         foreach ($groups as $group) {
             $rows[] = [
-                'account_id'     => $group->id,
-                'name'           => $group->name,
-                'code'           => $group->code ?? '',
-                'type'           => $group->type,
-                'parent_id'      => $group->parent_id,
-                'is_group'       => true,
-                'opening_debit'  => 0,
+                'account_id' => $group->id,
+                'name' => $group->name,
+                'code' => $group->code ?? '',
+                'type' => $group->type,
+                'parent_id' => $group->parent_id,
+                'is_group' => true,
+                'opening_debit' => 0,
                 'opening_credit' => 0,
-                'txn_debit'      => 0,
-                'txn_credit'     => 0,
-                'closing_debit'  => 0,
+                'txn_debit' => 0,
+                'txn_credit' => 0,
+                'closing_debit' => 0,
                 'closing_credit' => 0,
             ];
         }
 
         // Ledger rows — same calculation as trialBalance()
         foreach ($ledgers as $ledger) {
-            $txn        = $totals[$ledger->id] ?? null;
-            $txnDebit   = (float) ($txn->total_debit ?? 0);
-            $txnCredit  = (float) ($txn->total_credit ?? 0);
+            $txn = $totals[$ledger->id] ?? null;
+            $txnDebit = (float) ($txn->total_debit ?? 0);
+            $txnCredit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
             $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
 
-            $totalDebit  = $openingDebit + $txnDebit;
+            $totalDebit = $openingDebit + $txnDebit;
             $totalCredit = $openingCredit + $txnCredit;
 
-            $net           = $totalDebit - $totalCredit;
-            $closingDebit  = $net > 0 ? round($net, 2) : 0;
+            $net = $totalDebit - $totalCredit;
+            $closingDebit = $net > 0 ? round($net, 2) : 0;
             $closingCredit = $net < 0 ? round(abs($net), 2) : 0;
 
             $groupType = $ledger->group?->type;
@@ -388,17 +388,17 @@ class ReportController extends Controller
             }
 
             $rows[] = [
-                'account_id'     => $ledger->id,
-                'name'           => $ledger->name,
-                'code'           => $ledger->group?->code ?? '',
-                'type'           => $groupType ?? 'asset',
-                'parent_id'      => $ledger->group_id,
-                'is_group'       => false,
-                'opening_debit'  => round($openingDebit, 2),
+                'account_id' => $ledger->id,
+                'name' => $ledger->name,
+                'code' => $ledger->group?->code ?? '',
+                'type' => $groupType ?? 'asset',
+                'parent_id' => $ledger->group_id,
+                'is_group' => false,
+                'opening_debit' => round($openingDebit, 2),
                 'opening_credit' => round($openingCredit, 2),
-                'txn_debit'      => round($txnDebit, 2),
-                'txn_credit'     => round($txnCredit, 2),
-                'closing_debit'  => $closingDebit,
+                'txn_debit' => round($txnDebit, 2),
+                'txn_credit' => round($txnCredit, 2),
+                'closing_debit' => $closingDebit,
                 'closing_credit' => $closingCredit,
             ];
         }
@@ -430,22 +430,22 @@ class ReportController extends Controller
             ->get()
             ->keyBy('ledger_id');
 
-        $totalIncome  = 0;
+        $totalIncome = 0;
         $totalExpense = 0;
 
         foreach ($pnlLedgers as $ledger) {
-            $txn    = $pnlTotals[$ledger->id] ?? null;
-            $debit  = (float) ($txn->total_debit ?? 0);
+            $txn = $pnlTotals[$ledger->id] ?? null;
+            $debit = (float) ($txn->total_debit ?? 0);
             $credit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
             $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
 
-            $totalDebit  = $openingDebit + $debit;
+            $totalDebit = $openingDebit + $debit;
             $totalCredit = $openingCredit + $credit;
 
             if ($ledger->group?->type === 'income') {
-                $totalIncome  += ($totalCredit - $totalDebit);
+                $totalIncome += ($totalCredit - $totalDebit);
             } else {
                 $totalExpense += ($totalDebit - $totalCredit);
             }
@@ -454,7 +454,7 @@ class ReportController extends Controller
         [$openingStock, $closingStock] = $this->calcStockValues($companyId, $dateFrom, $dateTo);
 
         $netProfitLoss = $totalIncome - $totalExpense + $closingStock - $openingStock;
-        $isProfit      = $netProfitLoss >= 0;
+        $isProfit = $netProfitLoss >= 0;
 
         // ── 5. Difference diagnostic ─────────────────────────────────────────
         // Correct balance-sheet equation (unified for profit and loss):
@@ -467,12 +467,12 @@ class ReportController extends Controller
         return response()->json([
             'data' => $rows,
             'summary' => [
-                'total_assets'             => round($totalAssets, 2),
+                'total_assets' => round($totalAssets, 2),
                 'total_liabilities_equity' => round($totalLiabEq, 2),
-                'net_profit'               => round(abs($netProfitLoss), 2),
-                'is_profit'                => $isProfit,
-                'closing_stock'            => round($closingStock, 2),
-                'difference'               => $difference,
+                'net_profit' => round(abs($netProfitLoss), 2),
+                'is_profit' => $isProfit,
+                'closing_stock' => round($closingStock, 2),
+                'difference' => $difference,
             ],
         ]);
     }
@@ -527,33 +527,33 @@ class ReportController extends Controller
             ->keyBy('ledger_id');
 
         $rows = [];
-        $totalIncome  = 0;
+        $totalIncome = 0;
         $totalExpense = 0;
 
         // Group rows — values are 0, frontend aggregates from children
         foreach ($groups as $group) {
             $rows[] = [
                 'account_id' => $group->id,
-                'name'       => $group->name,
-                'code'       => $group->code ?? '',
-                'type'       => $group->type,
-                'parent_id'  => $group->parent_id,
-                'is_group'   => true,
-                'amount'     => 0,
+                'name' => $group->name,
+                'code' => $group->code ?? '',
+                'type' => $group->type,
+                'parent_id' => $group->parent_id,
+                'is_group' => true,
+                'amount' => 0,
             ];
         }
 
         // Ledger rows
         foreach ($ledgers as $ledger) {
-            $txn    = $totals[$ledger->id] ?? null;
-            $debit  = (float) ($txn->total_debit ?? 0);
+            $txn = $totals[$ledger->id] ?? null;
+            $debit = (float) ($txn->total_debit ?? 0);
             $credit = (float) ($txn->total_credit ?? 0);
 
             // Include opening balance in P&L amount
-            $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
             $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
 
-            $totalDebit  = $openingDebit + $debit;
+            $totalDebit = $openingDebit + $debit;
             $totalCredit = $openingCredit + $credit;
 
             $groupType = $ledger->group?->type;
@@ -568,12 +568,12 @@ class ReportController extends Controller
 
             $rows[] = [
                 'account_id' => $ledger->id,
-                'name'       => $ledger->name,
-                'code'       => $ledger->group?->code ?? '',
-                'type'       => $groupType ?? 'expense',
-                'parent_id'  => $ledger->group_id, // ledger's parent = its accounting group
-                'is_group'   => false,
-                'amount'     => round($amount, 2),
+                'name' => $ledger->name,
+                'code' => $ledger->group?->code ?? '',
+                'type' => $groupType ?? 'expense',
+                'parent_id' => $ledger->group_id, // ledger's parent = its accounting group
+                'is_group' => false,
+                'amount' => round($amount, 2),
             ];
         }
 
@@ -593,12 +593,12 @@ class ReportController extends Controller
         return response()->json([
             'data' => $rows,
             'summary' => [
-                'total_income'    => round($totalIncome, 2),
-                'total_expense'   => round($totalExpense, 2),
-                'opening_stock'   => round($openingStockValue, 2),
-                'closing_stock'   => round($closingStockValue, 2),
+                'total_income' => round($totalIncome, 2),
+                'total_expense' => round($totalExpense, 2),
+                'opening_stock' => round($openingStockValue, 2),
+                'closing_stock' => round($closingStockValue, 2),
                 'net_profit_loss' => round($netProfitLoss, 2),
-                'is_profit'       => $netProfitLoss >= 0,
+                'is_profit' => $netProfitLoss >= 0,
             ],
         ]);
     }
@@ -618,10 +618,10 @@ class ReportController extends Controller
             ->where('system_key', 'cash')
             ->first();
 
-        if (!$ledger) {
+        if (! $ledger) {
             return response()->json([
-                'ledger'          => null,
-                'data'            => [],
+                'ledger' => null,
+                'data' => [],
                 'closing_balance' => 0,
             ]);
         }
@@ -665,10 +665,10 @@ class ReportController extends Controller
         }
 
         return response()->json([
-            'banks'            => $banks,
-            'selected_ledger'  => $selectedLedger,
-            'data'             => $data,
-            'closing_balance'  => $closingBalance,
+            'banks' => $banks,
+            'selected_ledger' => $selectedLedger,
+            'data' => $data,
+            'closing_balance' => $closingBalance,
         ]);
     }
 
@@ -690,54 +690,54 @@ class ReportController extends Controller
 
         if ($dateFrom && $dateTo) {
             $query->whereDate('voucher_date', '>=', $dateFrom)
-                  ->whereDate('voucher_date', '<=', $dateTo);
+                ->whereDate('voucher_date', '<=', $dateTo);
         }
 
         $vouchers = $query->get();
 
-        $totalDebit  = 0;
+        $totalDebit = 0;
         $totalCredit = 0;
         $rows = [];
 
         foreach ($vouchers as $voucher) {
-            $voucherDebit  = 0;
+            $voucherDebit = 0;
             $voucherCredit = 0;
             $lines = [];
 
             foreach ($voucher->lines as $line) {
                 $dr = (float) $line->debit;
                 $cr = (float) $line->credit;
-                $voucherDebit  += $dr;
+                $voucherDebit += $dr;
                 $voucherCredit += $cr;
 
                 $lines[] = [
                     'ledger_name' => $line->ledger?->name ?? '—',
-                    'narration'   => $line->narration,
-                    'debit'       => round($dr, 2),
-                    'credit'      => round($cr, 2),
+                    'narration' => $line->narration,
+                    'debit' => round($dr, 2),
+                    'credit' => round($cr, 2),
                 ];
             }
 
-            $totalDebit  += $voucherDebit;
+            $totalDebit += $voucherDebit;
             $totalCredit += $voucherCredit;
 
             $rows[] = [
-                'voucher_id'     => $voucher->id,
+                'voucher_id' => $voucher->id,
                 'voucher_number' => $voucher->voucher_number,
-                'voucher_date'   => $voucher->voucher_date,
-                'created_at'     => $voucher->created_at?->toIso8601String(),
-                'voucher_type'   => $voucher->voucher_type,
-                'narration'      => $voucher->narration,
-                'lines'          => $lines,
-                'total_debit'    => round($voucherDebit, 2),
-                'total_credit'   => round($voucherCredit, 2),
+                'voucher_date' => $voucher->voucher_date,
+                'created_at' => $voucher->created_at?->toIso8601String(),
+                'voucher_type' => $voucher->voucher_type,
+                'narration' => $voucher->narration,
+                'lines' => $lines,
+                'total_debit' => round($voucherDebit, 2),
+                'total_credit' => round($voucherCredit, 2),
             ];
         }
 
         return response()->json([
-            'data'    => $rows,
+            'data' => $rows,
             'summary' => [
-                'total_debit'  => round($totalDebit, 2),
+                'total_debit' => round($totalDebit, 2),
                 'total_credit' => round($totalCredit, 2),
             ],
         ]);
@@ -756,7 +756,7 @@ class ReportController extends Controller
 
         if ($dateFrom && $dateTo) {
             $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                  ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $entries = $query->select(
@@ -773,37 +773,37 @@ class ReportController extends Controller
             ->orderBy('vouchers.created_at')
             ->get();
 
-        $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+        $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
         $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
         $runningBalance = $openingDebit - $openingCredit;
 
         $rows = [];
         foreach ($entries as $entry) {
-            $debit  = (float) $entry->debit;
+            $debit = (float) $entry->debit;
             $credit = (float) $entry->credit;
             $runningBalance += ($debit - $credit);
 
             $rows[] = [
-                'voucher_id'     => $entry->voucher_id,
+                'voucher_id' => $entry->voucher_id,
                 'voucher_number' => $entry->voucher_number,
-                'voucher_date'   => $entry->voucher_date,
-                'voucher_type'   => $entry->voucher_type,
-                'narration'      => $entry->line_narration ?? $entry->entry_narration,
-                'debit'          => round($debit, 2),
-                'credit'         => round($credit, 2),
-                'balance'        => round($runningBalance, 2),
+                'voucher_date' => $entry->voucher_date,
+                'voucher_type' => $entry->voucher_type,
+                'narration' => $entry->line_narration ?? $entry->entry_narration,
+                'debit' => round($debit, 2),
+                'credit' => round($credit, 2),
+                'balance' => round($runningBalance, 2),
             ];
         }
 
         return [
             'ledger' => [
-                'id'             => $ledger->id,
-                'name'           => $ledger->name,
-                'group_name'     => $ledger->group?->name,
-                'opening_debit'  => round($openingDebit, 2),
+                'id' => $ledger->id,
+                'name' => $ledger->name,
+                'group_name' => $ledger->group?->name,
+                'opening_debit' => round($openingDebit, 2),
                 'opening_credit' => round($openingCredit, 2),
             ],
-            'data'            => $rows,
+            'data' => $rows,
             'closing_balance' => round($runningBalance, 2),
         ];
     }

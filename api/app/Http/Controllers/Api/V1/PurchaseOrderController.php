@@ -79,7 +79,7 @@ class PurchaseOrderController extends Controller
                     ->whereDate('end_date', '>=', $validated['po_date'])
                     ->first();
 
-                if (!$fy) {
+                if (! $fy) {
                     throw ValidationException::withMessages(['po_date' => 'No financial year found for the selected date']);
                 }
 
@@ -88,7 +88,7 @@ class PurchaseOrderController extends Controller
                     ->where('document_type', 'purchase_order')
                     ->first();
 
-                if (!$counter) {
+                if (! $counter) {
                     throw ValidationException::withMessages(['po_date' => 'Document counter not initialized for this financial year']);
                 }
 
@@ -97,7 +97,7 @@ class PurchaseOrderController extends Controller
                     $fy->id,
                     'purchase_order'
                 );
-                $validated['po_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['po_number'] = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                 $validated['financial_year_id'] = $fy->id;
             }
 
@@ -223,11 +223,11 @@ class PurchaseOrderController extends Controller
         }
 
         $validated = $request->validate([
-            'receipt_date'       => 'nullable|date',
-            'notes'              => 'nullable|string|max:1000',
-            'lines'              => 'required|array|min:1',
+            'receipt_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:1000',
+            'lines' => 'required|array|min:1',
             'lines.*.po_line_id' => 'required|uuid|exists:po_lines,id',
-            'lines.*.quantity'   => 'required|numeric|min:0.001',
+            'lines.*.quantity' => 'required|numeric|min:0.001',
         ]);
 
         $result = DB::transaction(function () use ($purchaseOrder, $validated, $request) {
@@ -248,8 +248,8 @@ class PurchaseOrderController extends Controller
 
             // Determine inter-state from company vs party state codes
             $companyStateCode = $request->user()->company?->state_code;
-            $partyStateCode   = $purchaseOrder->party?->state_code;
-            $isInterState     = $companyStateCode && $partyStateCode && $companyStateCode !== $partyStateCode;
+            $partyStateCode = $purchaseOrder->party?->state_code;
+            $isInterState = $companyStateCode && $partyStateCode && $companyStateCode !== $partyStateCode;
 
             // Resolve financial year for receipt date
             $receiptDate = $validated['receipt_date'] ?? now()->toDateString();
@@ -276,24 +276,24 @@ class PurchaseOrderController extends Controller
                 throw ValidationException::withMessages(['receipt_date' => 'Document counter not initialized for this financial year']);
             }
 
-            $nextNumber    = $counter->getAndIncrementCounter($purchaseOrder->company_id, $fyId, 'purchase_invoice');
-            $invoiceNumber = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            $nextNumber = $counter->getAndIncrementCounter($purchaseOrder->company_id, $fyId, 'purchase_invoice');
+            $invoiceNumber = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
             // Create the purchase invoice
             $invoice = PurchaseInvoice::create([
-                'company_id'        => $purchaseOrder->company_id,
+                'company_id' => $purchaseOrder->company_id,
                 'financial_year_id' => $fyId,
-                'party_id'          => $purchaseOrder->party_id,
-                'branch_id'         => $purchaseOrder->branch_id,
+                'party_id' => $purchaseOrder->party_id,
+                'branch_id' => $purchaseOrder->branch_id,
                 'purchase_order_id' => $purchaseOrder->id,
-                'godown_id'         => $defaultGodown?->id,
-                'invoice_number'    => $invoiceNumber,
-                'invoice_date'      => $receiptDate,
-                'is_inter_state'    => $isInterState,
-                'status'            => 'confirmed',
-                'notes'             => $validated['notes'] ?? null,
-                'created_by'        => $request->user()->id,
-                'updated_by'        => null,
+                'godown_id' => $defaultGodown?->id,
+                'invoice_number' => $invoiceNumber,
+                'invoice_date' => $receiptDate,
+                'is_inter_state' => $isInterState,
+                'status' => 'confirmed',
+                'notes' => $validated['notes'] ?? null,
+                'created_by' => $request->user()->id,
+                'updated_by' => null,
             ]);
 
             $inputLines = collect($validated['lines'])->keyBy('po_line_id');
@@ -304,43 +304,43 @@ class PurchaseOrderController extends Controller
                     continue;
                 }
 
-                $qty      = $input['quantity'];
+                $qty = $input['quantity'];
                 // Proportional taxable amount to preserve original discount
-                $taxable  = round(($qty / $poLine->quantity) * $poLine->taxable_amount, 2);
-                $gstAmt   = round($taxable * $poLine->gst_rate / 100, 2);
-                $cgst     = $isInterState ? 0 : round($gstAmt / 2, 2);
-                $sgst     = $isInterState ? 0 : $gstAmt - $cgst;
-                $igst     = $isInterState ? $gstAmt : 0;
+                $taxable = round(($qty / $poLine->quantity) * $poLine->taxable_amount, 2);
+                $gstAmt = round($taxable * $poLine->gst_rate / 100, 2);
+                $cgst = $isInterState ? 0 : round($gstAmt / 2, 2);
+                $sgst = $isInterState ? 0 : $gstAmt - $cgst;
+                $igst = $isInterState ? $gstAmt : 0;
                 $lineTotal = $taxable + $gstAmt;
 
                 $invoice->lines()->create([
-                    'item_id'          => $poLine->item_id,
-                    'godown_id'        => $defaultGodown?->id,
-                    'quantity'         => $qty,
-                    'rate'             => $poLine->rate,
+                    'item_id' => $poLine->item_id,
+                    'godown_id' => $defaultGodown?->id,
+                    'quantity' => $qty,
+                    'rate' => $poLine->rate,
                     'discount_percent' => $poLine->discount_percent,
-                    'taxable_amount'   => $taxable,
-                    'gst_rate'         => $poLine->gst_rate,
-                    'cgst'             => $cgst,
-                    'sgst'             => $sgst,
-                    'igst'             => $igst,
-                    'line_total'       => $lineTotal,
-                    'created_by'       => $request->user()->id,
-                    'updated_by'       => null,
+                    'taxable_amount' => $taxable,
+                    'gst_rate' => $poLine->gst_rate,
+                    'cgst' => $cgst,
+                    'sgst' => $sgst,
+                    'igst' => $igst,
+                    'line_total' => $lineTotal,
+                    'created_by' => $request->user()->id,
+                    'updated_by' => null,
                 ]);
 
                 StockLedger::create([
-                    'company_id'     => $purchaseOrder->company_id,
-                    'item_id'        => $poLine->item_id,
-                    'godown_id'      => $defaultGodown?->id,
-                    'type'           => 'purchase',
+                    'company_id' => $purchaseOrder->company_id,
+                    'item_id' => $poLine->item_id,
+                    'godown_id' => $defaultGodown?->id,
+                    'type' => 'purchase',
                     'reference_type' => PurchaseInvoice::class,
-                    'reference_id'   => $invoice->id,
-                    'quantity'       => $qty,
-                    'rate'           => $poLine->rate,
-                    'value'          => $qty * $poLine->rate,
-                    'narration'      => "Received from PO #{$purchaseOrder->po_number}",
-                    'created_by'     => $request->user()->id,
+                    'reference_id' => $invoice->id,
+                    'quantity' => $qty,
+                    'rate' => $poLine->rate,
+                    'value' => $qty * $poLine->rate,
+                    'narration' => "Received from PO #{$purchaseOrder->po_number}",
+                    'created_by' => $request->user()->id,
                 ]);
 
                 $poLine->increment('received_quantity', $qty);
@@ -349,13 +349,13 @@ class PurchaseOrderController extends Controller
             // Update invoice totals
             $invoice->refresh();
             $invoice->update([
-                'total_amount'   => $invoice->lines->sum('taxable_amount'),
+                'total_amount' => $invoice->lines->sum('taxable_amount'),
                 'taxable_amount' => $invoice->lines->sum('taxable_amount'),
-                'cgst_total'     => $invoice->lines->sum('cgst'),
-                'sgst_total'     => $invoice->lines->sum('sgst'),
-                'igst_total'     => $invoice->lines->sum('igst'),
-                'grand_total'    => $invoice->lines->sum('line_total'),
-                'balance_due'    => $invoice->lines->sum('line_total'),
+                'cgst_total' => $invoice->lines->sum('cgst'),
+                'sgst_total' => $invoice->lines->sum('sgst'),
+                'igst_total' => $invoice->lines->sum('igst'),
+                'grand_total' => $invoice->lines->sum('line_total'),
+                'balance_due' => $invoice->lines->sum('line_total'),
             ]);
 
             // Post journal entry
@@ -372,7 +372,7 @@ class PurchaseOrderController extends Controller
         [$updatedPo, $invoice] = $result;
 
         return response()->json([
-            'data'    => $updatedPo,
+            'data' => $updatedPo,
             'invoice' => $invoice->load('lines.item'),
             'message' => "Items received. PO status: {$updatedPo->status}.",
         ], 201);

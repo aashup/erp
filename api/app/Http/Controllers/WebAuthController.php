@@ -24,17 +24,17 @@ class WebAuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
         $allowed = array_map('trim', explode(',', env('TELESCOPE_ALLOWED_EMAILS', '')));
 
-        if (!in_array($credentials['email'], $allowed)) {
+        if (! in_array($credentials['email'], $allowed)) {
             return back()->withErrors(['email' => 'Access denied.'])->withInput();
         }
 
-        if (!Auth::guard('web')->attempt($credentials, true)) {
+        if (! Auth::guard('web')->attempt($credentials, true)) {
             return back()->withErrors(['email' => 'Invalid credentials.'])->withInput();
         }
 

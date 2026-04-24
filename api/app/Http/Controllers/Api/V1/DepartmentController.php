@@ -25,7 +25,7 @@ class DepartmentController extends Controller
         $this->authorize('create', Department::class);
 
         $validated = $request->validate([
-            'name'      => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'is_active' => 'boolean',
         ]);
 
@@ -44,7 +44,7 @@ class DepartmentController extends Controller
         $this->authorize('update', $department);
 
         $validated = $request->validate([
-            'name'      => 'sometimes|string|max:255',
+            'name' => 'sometimes|string|max:255',
             'is_active' => 'boolean',
         ]);
 

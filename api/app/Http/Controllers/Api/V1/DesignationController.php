@@ -28,8 +28,8 @@ class DesignationController extends Controller
 
         $validated = $request->validate([
             'department_id' => 'nullable|exists:departments,id',
-            'name'          => 'required|string|max:255',
-            'is_active'     => 'boolean',
+            'name' => 'required|string|max:255',
+            'is_active' => 'boolean',
         ]);
 
         $designation = Designation::create($validated);
@@ -48,8 +48,8 @@ class DesignationController extends Controller
 
         $validated = $request->validate([
             'department_id' => 'nullable|exists:departments,id',
-            'name'          => 'sometimes|string|max:255',
-            'is_active'     => 'boolean',
+            'name' => 'sometimes|string|max:255',
+            'is_active' => 'boolean',
         ]);
 
         $designation->update($validated);

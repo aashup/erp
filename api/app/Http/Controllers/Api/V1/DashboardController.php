@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\FinancialYear;
 use App\Models\Ledger;
+use App\Models\PaymentReceipt;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use Carbon\Carbon;
@@ -40,21 +41,21 @@ class DashboardController extends Controller
             ->where('status', '!=', 'cancelled')
             ->whereBetween('invoice_date', [$range['from'], $range['to']]);
 
-        $salesTotal    = (float) $salesQuery->sum('grand_total');
-        $salesTaxable  = (float) $salesQuery->sum('taxable_amount');
-        $salesCgst     = (float) $salesQuery->sum('cgst_total');
-        $salesSgst     = (float) $salesQuery->sum('sgst_total');
-        $salesIgst     = (float) $salesQuery->sum('igst_total');
+        $salesTotal = (float) $salesQuery->sum('grand_total');
+        $salesTaxable = (float) $salesQuery->sum('taxable_amount');
+        $salesCgst = (float) $salesQuery->sum('cgst_total');
+        $salesSgst = (float) $salesQuery->sum('sgst_total');
+        $salesIgst = (float) $salesQuery->sum('igst_total');
 
         $purchaseQuery = PurchaseInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
             ->whereBetween('invoice_date', [$range['from'], $range['to']]);
 
-        $purchaseTotal    = (float) $purchaseQuery->sum('grand_total');
-        $purchaseTaxable  = (float) $purchaseQuery->sum('taxable_amount');
-        $purchaseCgst     = (float) $purchaseQuery->sum('cgst_total');
-        $purchaseSgst     = (float) $purchaseQuery->sum('sgst_total');
-        $purchaseIgst     = (float) $purchaseQuery->sum('igst_total');
+        $purchaseTotal = (float) $purchaseQuery->sum('grand_total');
+        $purchaseTaxable = (float) $purchaseQuery->sum('taxable_amount');
+        $purchaseCgst = (float) $purchaseQuery->sum('cgst_total');
+        $purchaseSgst = (float) $purchaseQuery->sum('sgst_total');
+        $purchaseIgst = (float) $purchaseQuery->sum('igst_total');
 
         // ── Net Revenue: taxable sales (same filter as total_sales) ──────────
         // net_revenue = total_sales − total_gst = sales_taxable
@@ -86,18 +87,18 @@ class DashboardController extends Controller
             ->keyBy('system_key');
 
         $netBalance = fn (string $key): float => (float) ($gstLedgerRows[$key]->total_credit ?? 0)
-                                               - (float) ($gstLedgerRows[$key]->total_debit  ?? 0);
+                                               - (float) ($gstLedgerRows[$key]->total_debit ?? 0);
 
         // Output GST = net credit on output ledgers (positive = liability)
         $gstOutputCgst = $netBalance('output_cgst');
         $gstOutputSgst = $netBalance('output_sgst');
         $gstOutputIgst = $netBalance('output_igst');
-        $gstOutput     = $gstOutputCgst + $gstOutputSgst + $gstOutputIgst;
+        $gstOutput = $gstOutputCgst + $gstOutputSgst + $gstOutputIgst;
 
         // ITC = net debit on input ledgers (positive = credit available)
-        $gstInputCgst  = -$netBalance('input_cgst');  // net_debit = -(net_credit)
-        $gstInputSgst  = -$netBalance('input_sgst');
-        $gstInputIgst  = -$netBalance('input_igst');
+        $gstInputCgst = -$netBalance('input_cgst');  // net_debit = -(net_credit)
+        $gstInputSgst = -$netBalance('input_sgst');
+        $gstInputIgst = -$netBalance('input_igst');
         $gstInputCredit = $gstInputCgst + $gstInputSgst + $gstInputIgst;
 
         $payableTax = $gstOutput - $gstInputCredit;
@@ -111,7 +112,7 @@ class DashboardController extends Controller
             ->whereNull('deleted_at')
             ->get();
 
-        $pnlIncome  = 0.0;
+        $pnlIncome = 0.0;
         $pnlExpense = 0.0;
 
         if ($pnlLedgers->isNotEmpty()) {
@@ -132,12 +133,12 @@ class DashboardController extends Controller
                 ->keyBy('ledger_id');
 
             foreach ($pnlLedgers as $ledger) {
-                $txn    = $journalTotals[$ledger->id] ?? null;
-                $debit  = (float) ($txn->total_debit ?? 0);
+                $txn = $journalTotals[$ledger->id] ?? null;
+                $debit = (float) ($txn->total_debit ?? 0);
                 $credit = (float) ($txn->total_credit ?? 0);
 
                 if ($ledger->group?->type === 'income') {
-                    $pnlIncome  += $credit - $debit;
+                    $pnlIncome += $credit - $debit;
                 } else {
                     $pnlExpense += $debit - $credit;
                 }
@@ -168,6 +169,7 @@ class DashboardController extends Controller
             foreach ($rows as $row) {
                 $val += (float) $row->total_qty * (float) ($prices[$row->item_id] ?? 0);
             }
+
             return $val;
         };
 
@@ -179,34 +181,34 @@ class DashboardController extends Controller
 
         return response()->json([
             'data' => [
-                'period'          => $period,
-                'from'            => $range['from']->toDateString(),
-                'to'              => $range['to']->toDateString(),
-                'total_sales'     => round($salesTotal, 2),
-                'sales_taxable'   => round($salesTaxable, 2),
-                'sales_cgst'      => round($salesCgst, 2),
-                'sales_sgst'      => round($salesSgst, 2),
-                'sales_igst'      => round($salesIgst, 2),
-                'total_purchase'    => round($purchaseTotal, 2),
+                'period' => $period,
+                'from' => $range['from']->toDateString(),
+                'to' => $range['to']->toDateString(),
+                'total_sales' => round($salesTotal, 2),
+                'sales_taxable' => round($salesTaxable, 2),
+                'sales_cgst' => round($salesCgst, 2),
+                'sales_sgst' => round($salesSgst, 2),
+                'sales_igst' => round($salesIgst, 2),
+                'total_purchase' => round($purchaseTotal, 2),
                 'purchase_taxable' => round($purchaseTaxable, 2),
-                'purchase_cgst'    => round($purchaseCgst, 2),
-                'purchase_sgst'    => round($purchaseSgst, 2),
-                'purchase_igst'    => round($purchaseIgst, 2),
-                'pnl_income'      => round($pnlIncome, 2),
-                'pnl_expense'     => round($pnlExpense, 2),
-                'opening_stock'   => round($openingStock, 2),
-                'closing_stock'   => round($closingStock, 2),
-                'pnl'             => round($pnl, 2),
-                'net_revenue'      => round($netRevenue, 2),
-                'gst_output'       => round($gstOutput, 2),
-                'gst_output_cgst'  => round($gstOutputCgst, 2),
-                'gst_output_sgst'  => round($gstOutputSgst, 2),
-                'gst_output_igst'  => round($gstOutputIgst, 2),
+                'purchase_cgst' => round($purchaseCgst, 2),
+                'purchase_sgst' => round($purchaseSgst, 2),
+                'purchase_igst' => round($purchaseIgst, 2),
+                'pnl_income' => round($pnlIncome, 2),
+                'pnl_expense' => round($pnlExpense, 2),
+                'opening_stock' => round($openingStock, 2),
+                'closing_stock' => round($closingStock, 2),
+                'pnl' => round($pnl, 2),
+                'net_revenue' => round($netRevenue, 2),
+                'gst_output' => round($gstOutput, 2),
+                'gst_output_cgst' => round($gstOutputCgst, 2),
+                'gst_output_sgst' => round($gstOutputSgst, 2),
+                'gst_output_igst' => round($gstOutputIgst, 2),
                 'gst_input_credit' => round($gstInputCredit, 2),
-                'gst_input_cgst'   => round($gstInputCgst, 2),
-                'gst_input_sgst'   => round($gstInputSgst, 2),
-                'gst_input_igst'   => round($gstInputIgst, 2),
-                'payable_tax'      => round($payableTax, 2),
+                'gst_input_cgst' => round($gstInputCgst, 2),
+                'gst_input_sgst' => round($gstInputSgst, 2),
+                'gst_input_igst' => round($gstInputIgst, 2),
+                'payable_tax' => round($payableTax, 2),
             ],
         ]);
     }
@@ -286,11 +288,11 @@ class DashboardController extends Controller
 
     public function collection(Request $request): JsonResponse
     {
-        $period    = $request->query('period', 'today');
+        $period = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
-        $range     = $this->getDateRange($period, $request->query('local_date'));
+        $range = $this->getDateRange($period, $request->query('local_date'));
 
-        $base = \App\Models\PaymentReceipt::where('company_id', $companyId)
+        $base = PaymentReceipt::where('company_id', $companyId)
             ->where('type', 'receipt')
             ->whereNull('deleted_at')
             ->whereBetween('receipt_date', [
@@ -298,11 +300,11 @@ class DashboardController extends Controller
                 $range['to']->toDateString(),
             ]);
 
-        $total   = (float) (clone $base)->sum('amount');
-        $cash    = (float) (clone $base)->where('payment_mode', 'cash')->sum('amount');
+        $total = (float) (clone $base)->sum('amount');
+        $cash = (float) (clone $base)->where('payment_mode', 'cash')->sum('amount');
         $account = (float) (clone $base)->whereIn('payment_mode', ['bank', 'cheque', 'upi', 'other'])->sum('amount');
 
-        $needToCollect = (float) \App\Models\SalesInvoice::where('company_id', $companyId)
+        $needToCollect = (float) SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
             ->whereBetween('invoice_date', [
                 $range['from']->toDateString(),
@@ -312,12 +314,12 @@ class DashboardController extends Controller
 
         return response()->json([
             'data' => [
-                'period'          => $period,
-                'from'            => $range['from']->toDateString(),
-                'to'              => $range['to']->toDateString(),
-                'total'           => round($total, 2),
-                'cash'            => round($cash, 2),
-                'account'         => round($account, 2),
+                'period' => $period,
+                'from' => $range['from']->toDateString(),
+                'to' => $range['to']->toDateString(),
+                'total' => round($total, 2),
+                'cash' => round($cash, 2),
+                'account' => round($account, 2),
                 'need_to_collect' => round($needToCollect, 2),
             ],
         ]);

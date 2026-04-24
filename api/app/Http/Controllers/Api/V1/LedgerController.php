@@ -115,17 +115,17 @@ class LedgerController extends Controller
             )
             ->first();
 
-        $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+        $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
         $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
 
-        $totalDebit  = $openingDebit + (float) ($txn->total_debit ?? 0);
+        $totalDebit = $openingDebit + (float) ($txn->total_debit ?? 0);
         $totalCredit = $openingCredit + (float) ($txn->total_credit ?? 0);
 
         $net = $totalDebit - $totalCredit;
 
         return response()->json([
             'data' => [
-                'balance'      => round(abs($net), 2),
+                'balance' => round(abs($net), 2),
                 'balance_type' => $net >= 0 ? 'dr' : 'cr',
             ],
         ]);

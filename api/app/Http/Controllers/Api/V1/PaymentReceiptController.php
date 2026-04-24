@@ -7,6 +7,7 @@ use App\Models\Party;
 use App\Models\PaymentReceipt;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
+use App\Models\Voucher;
 use App\Services\AccountingService;
 use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
@@ -137,7 +138,7 @@ class PaymentReceiptController extends Controller
     {
         $this->authorize('view', $paymentReceipt);
 
-        $voucher = \App\Models\Voucher::with('lines.ledger')
+        $voucher = Voucher::with('lines.ledger')
             ->where('reference_type', PaymentReceipt::class)
             ->where('reference_id', $paymentReceipt->id)
             ->first();

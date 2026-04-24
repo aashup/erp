@@ -6,9 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\SalesInvoice;
+use App\Models\ThermalTemplate;
 use App\Services\InvoicePdfService;
 use App\Services\ThermalTemplateRenderer;
-use App\Models\ThermalTemplate;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class PublicInvoiceController extends Controller
@@ -28,14 +29,14 @@ class PublicInvoiceController extends Controller
             abort(404, 'Invoice not found.');
         }
 
-        $company  = $invoice->company ?? Company::find($invoice->company_id);
+        $company = $invoice->company ?? Company::find($invoice->company_id);
         // Use query param if provided; otherwise fall back to company's saved setting
         $paperSize = $request->query('paper_size')
             ?? CompanySetting::getValue($invoice->company_id, 'thermal_printer_paper_size', '2inch');
-        $format    = $request->query('format', 'html'); // html | pdf
+        $format = $request->query('format', 'html'); // html | pdf
 
         // Build invoice HTML body (reuse existing service)
-        $service  = app(InvoicePdfService::class);
+        $service = app(InvoicePdfService::class);
         $renderer = app(ThermalTemplateRenderer::class);
 
         $customTemplate = ThermalTemplate::where('company_id', $invoice->company_id)
@@ -49,22 +50,23 @@ class PublicInvoiceController extends Controller
 
         if ($format === 'pdf') {
             $pdf = $service->generate($invoice);
+
             return $pdf->download("Invoice-{$invoice->invoice_number}.pdf");
         }
 
         // Build share URL using the actual request host (not APP_URL which may be internal Docker hostname)
-        $shareUrl = $request->getSchemeAndHttpHost() . "/api/v1/public/invoices/{$token}";
+        $shareUrl = $request->getSchemeAndHttpHost()."/api/v1/public/invoices/{$token}";
 
         // Round-off for display
-        $grandTotal   = (float) $invoice->grand_total;
-        $fraction     = round($grandTotal - floor($grandTotal), 2);
-        $netPayable   = $fraction > 0.6 ? (int) ceil($grandTotal) : (int) floor($grandTotal);
-        $roundOff     = $netPayable - $grandTotal;
+        $grandTotal = (float) $invoice->grand_total;
+        $fraction = round($grandTotal - floor($grandTotal), 2);
+        $netPayable = $fraction > 0.6 ? (int) ceil($grandTotal) : (int) floor($grandTotal);
+        $roundOff = $netPayable - $grandTotal;
 
-        $ogTitle       = "Invoice #{$invoice->invoice_number}" . ($company ? " — {$company->name}" : '');
-        $ogDescription = "Amount: ₹{$netPayable}" .
-            ($invoice->party ? " | {$invoice->party->name}" : '') .
-            " | Date: " . \Carbon\Carbon::parse($invoice->invoice_date)->format('d M Y');
+        $ogTitle = "Invoice #{$invoice->invoice_number}".($company ? " — {$company->name}" : '');
+        $ogDescription = "Amount: ₹{$netPayable}".
+            ($invoice->party ? " | {$invoice->party->name}" : '').
+            ' | Date: '.Carbon::parse($invoice->invoice_date)->format('d M Y');
 
         $html = view('invoices.public', compact(
             'invoice', 'company', 'invoiceHtml', 'shareUrl',
@@ -76,7 +78,7 @@ class PublicInvoiceController extends Controller
         }
 
         return response($html, 200, [
-            'Content-Type'  => 'text/html; charset=utf-8',
+            'Content-Type' => 'text/html; charset=utf-8',
             'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
     }

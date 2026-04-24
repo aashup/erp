@@ -33,15 +33,15 @@ class PayrollRun extends Model
     protected function casts(): array
     {
         return [
-            'month'              => 'integer',
-            'year'               => 'integer',
-            'working_days'       => 'integer',
-            'total_gross'        => 'decimal:2',
-            'total_deductions'   => 'decimal:2',
-            'total_net'          => 'decimal:2',
-            'total_pf_employer'  => 'decimal:2',
+            'month' => 'integer',
+            'year' => 'integer',
+            'working_days' => 'integer',
+            'total_gross' => 'decimal:2',
+            'total_deductions' => 'decimal:2',
+            'total_net' => 'decimal:2',
+            'total_pf_employer' => 'decimal:2',
             'total_esi_employer' => 'decimal:2',
-            'approved_at'        => 'datetime',
+            'approved_at' => 'datetime',
         ];
     }
 

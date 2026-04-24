@@ -94,7 +94,7 @@ class SalesInvoiceController extends Controller
                     ->whereDate('end_date', '>=', $validated['invoice_date'])
                     ->first();
 
-                if (!$fy) {
+                if (! $fy) {
                     throw ValidationException::withMessages(['invoice_date' => 'No financial year found for the selected date']);
                 }
 
@@ -103,7 +103,7 @@ class SalesInvoiceController extends Controller
                     ->where('document_type', 'sales_invoice')
                     ->first();
 
-                if (!$counter) {
+                if (! $counter) {
                     throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized for this financial year']);
                 }
 
@@ -112,7 +112,7 @@ class SalesInvoiceController extends Controller
                     $fy->id,
                     'sales_invoice'
                 );
-                $validated['invoice_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['invoice_number'] = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                 $validated['financial_year_id'] = $fy->id;
             }
 
@@ -414,7 +414,7 @@ class SalesInvoiceController extends Controller
     public function bulkCancel(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ids'   => 'required|array|min:1',
+            'ids' => 'required|array|min:1',
             'ids.*' => 'uuid|exists:sales_invoices,id',
         ]);
 
@@ -424,7 +424,7 @@ class SalesInvoiceController extends Controller
             ->get();
 
         $cancelled = 0;
-        $skipped   = 0;
+        $skipped = 0;
 
         DB::transaction(function () use ($invoices, $request, &$cancelled, &$skipped) {
             $defaultGodown = Godown::where('company_id', $request->user()->company_id)
@@ -433,6 +433,7 @@ class SalesInvoiceController extends Controller
             foreach ($invoices as $invoice) {
                 if ($invoice->status !== 'confirmed') {
                     $skipped++;
+
                     continue;
                 }
 
@@ -441,18 +442,18 @@ class SalesInvoiceController extends Controller
                 foreach ($invoice->lines as $line) {
                     $baseQty = (float) $line->quantity * (float) ($line->conversion_factor ?? 1.0);
                     StockLedger::create([
-                        'company_id'     => $invoice->company_id,
-                        'item_id'        => $line->item_id,
-                        'batch_id'       => $line->batch_id ?? null,
-                        'godown_id'      => $line->godown_id ?? $defaultGodown?->id,
-                        'type'           => 'sale_reversal',
+                        'company_id' => $invoice->company_id,
+                        'item_id' => $line->item_id,
+                        'batch_id' => $line->batch_id ?? null,
+                        'godown_id' => $line->godown_id ?? $defaultGodown?->id,
+                        'type' => 'sale_reversal',
                         'reference_type' => SalesInvoice::class,
-                        'reference_id'   => $invoice->id,
-                        'quantity'       => $baseQty,
-                        'rate'           => $line->rate,
-                        'value'          => $baseQty * $line->rate,
-                        'narration'      => "Reversal: Invoice #{$invoice->invoice_number} cancelled",
-                        'created_by'     => $request->user()->id,
+                        'reference_id' => $invoice->id,
+                        'quantity' => $baseQty,
+                        'rate' => $line->rate,
+                        'value' => $baseQty * $line->rate,
+                        'narration' => "Reversal: Invoice #{$invoice->invoice_number} cancelled",
+                        'created_by' => $request->user()->id,
                     ]);
                 }
 
@@ -468,9 +469,9 @@ class SalesInvoiceController extends Controller
         });
 
         return response()->json([
-            'message'   => "{$cancelled} invoice(s) cancelled." . ($skipped ? " {$skipped} skipped (not confirmed)." : ''),
+            'message' => "{$cancelled} invoice(s) cancelled.".($skipped ? " {$skipped} skipped (not confirmed)." : ''),
             'cancelled' => $cancelled,
-            'skipped'   => $skipped,
+            'skipped' => $skipped,
         ]);
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentCounter;
 use App\Models\FinancialYear;
+use App\Models\Godown;
 use App\Models\PurchaseInvoice;
 use App\Models\StockLedger;
 use App\Models\Voucher;
@@ -13,6 +14,7 @@ use App\Traits\FiltersByFinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class PurchaseInvoiceController extends Controller
@@ -92,7 +94,7 @@ class PurchaseInvoiceController extends Controller
                     ->where('document_type', 'purchase_invoice')
                     ->first();
 
-                if (!$counter) {
+                if (! $counter) {
                     throw ValidationException::withMessages(['financial_year_id' => 'Document counter not initialized for this financial year']);
                 }
 
@@ -101,7 +103,7 @@ class PurchaseInvoiceController extends Controller
                     $fy->id,
                     'purchase_invoice'
                 );
-                $validated['invoice_number'] = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $validated['invoice_number'] = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
             }
 
             $invoice = PurchaseInvoice::create([
@@ -162,8 +164,8 @@ class PurchaseInvoiceController extends Controller
 
             if (! $voucher) {
                 throw new \RuntimeException(
-                    'Purchase invoice cannot be saved: journal entry could not be created. ' .
-                    'Ensure the vendor has a creditor ledger, purchase_account ledger exists, ' .
+                    'Purchase invoice cannot be saved: journal entry could not be created. '.
+                    'Ensure the vendor has a creditor ledger, purchase_account ledger exists, '.
                     'and a financial year covers the invoice date.'
                 );
             }
@@ -195,7 +197,7 @@ class PurchaseInvoiceController extends Controller
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
             'purchase_order_id' => 'nullable|uuid|exists:purchase_orders,id',
-            'invoice_number' => ['nullable', 'string', \Illuminate\Validation\Rule::unique('purchase_invoices', 'invoice_number')->ignore($purchaseInvoice->id)],
+            'invoice_number' => ['nullable', 'string', Rule::unique('purchase_invoices', 'invoice_number')->ignore($purchaseInvoice->id)],
             'vendor_invoice_number' => 'nullable|string',
             'invoice_date' => 'required|date',
             'due_date' => 'nullable|date',
@@ -313,7 +315,7 @@ class PurchaseInvoiceController extends Controller
     public function bulkCancel(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ids'   => 'required|array|min:1',
+            'ids' => 'required|array|min:1',
             'ids.*' => 'uuid|exists:purchase_invoices,id',
         ]);
 
@@ -323,15 +325,16 @@ class PurchaseInvoiceController extends Controller
             ->get();
 
         $cancelled = 0;
-        $skipped   = 0;
+        $skipped = 0;
 
         DB::transaction(function () use ($invoices, $request, &$cancelled, &$skipped) {
-            $defaultGodown = \App\Models\Godown::where('company_id', $request->user()->company_id)
+            $defaultGodown = Godown::where('company_id', $request->user()->company_id)
                 ->where('is_default', true)->first();
 
             foreach ($invoices as $invoice) {
                 if ($invoice->status !== 'confirmed') {
                     $skipped++;
+
                     continue;
                 }
 
@@ -341,18 +344,18 @@ class PurchaseInvoiceController extends Controller
                 foreach ($invoice->lines as $line) {
                     $baseQty = (float) $line->quantity * (float) ($line->conversion_factor ?? 1.0);
                     StockLedger::create([
-                        'company_id'     => $invoice->company_id,
-                        'item_id'        => $line->item_id,
-                        'batch_id'       => $line->batch_id ?? null,
-                        'godown_id'      => $line->godown_id ?? $defaultGodown?->id,
-                        'type'           => 'purchase_reversal',
+                        'company_id' => $invoice->company_id,
+                        'item_id' => $line->item_id,
+                        'batch_id' => $line->batch_id ?? null,
+                        'godown_id' => $line->godown_id ?? $defaultGodown?->id,
+                        'type' => 'purchase_reversal',
                         'reference_type' => PurchaseInvoice::class,
-                        'reference_id'   => $invoice->id,
-                        'quantity'       => -$baseQty,
-                        'rate'           => $line->rate,
-                        'value'          => $baseQty * $line->rate,
-                        'narration'      => "Reversal: Invoice #{$invoice->invoice_number} cancelled",
-                        'created_by'     => $request->user()->id,
+                        'reference_id' => $invoice->id,
+                        'quantity' => -$baseQty,
+                        'rate' => $line->rate,
+                        'value' => $baseQty * $line->rate,
+                        'narration' => "Reversal: Invoice #{$invoice->invoice_number} cancelled",
+                        'created_by' => $request->user()->id,
                     ]);
                 }
 
@@ -369,9 +372,9 @@ class PurchaseInvoiceController extends Controller
         });
 
         return response()->json([
-            'message'   => "{$cancelled} invoice(s) cancelled." . ($skipped ? " {$skipped} skipped (not confirmed)." : ''),
+            'message' => "{$cancelled} invoice(s) cancelled.".($skipped ? " {$skipped} skipped (not confirmed)." : ''),
             'cancelled' => $cancelled,
-            'skipped'   => $skipped,
+            'skipped' => $skipped,
         ]);
     }
 }

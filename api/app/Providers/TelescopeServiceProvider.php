@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Telescope\IncomingEntry;
@@ -59,10 +58,11 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     {
         Gate::define('viewTelescope', function ($user = null) {
             $sessionUser = Auth::guard('web')->user();
-            if (!$sessionUser) {
+            if (! $sessionUser) {
                 abort(redirect('/api'));
             }
             $allowed = array_map('trim', explode(',', env('TELESCOPE_ALLOWED_EMAILS', '')));
+
             return in_array($sessionUser->email, $allowed);
         });
     }

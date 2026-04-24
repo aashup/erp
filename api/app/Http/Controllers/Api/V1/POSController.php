@@ -31,8 +31,7 @@ class POSController extends Controller
             ->where('is_active', true)
             ->when(
                 $request->search,
-                fn ($q, $s) => $q->where(fn ($q2) =>
-                    $q2->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%")
+                fn ($q, $s) => $q->where(fn ($q2) => $q2->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%")
                 )
             )
             ->when($request->item_group_id, fn ($q, $g) => $q->where('item_group_id', $g))
@@ -65,27 +64,27 @@ class POSController extends Controller
     public function checkout(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'party_id'             => 'nullable|uuid|exists:parties,id',
-            'godown_id'            => 'required|uuid|exists:godowns,id',
-            'is_inter_state'       => 'boolean',
-            'invoice_date'         => 'required|date',
-            'notes'                => 'nullable|string',
-            'post_payment'         => 'boolean',
-            'amount_tendered'      => 'nullable|numeric|min:0',
-            'change_amount'        => 'nullable|numeric|min:0',
-            'lines'                => 'required|array|min:1',
-            'lines.*.item_id'      => 'required|uuid|exists:items,id',
-            'lines.*.batch_id'     => 'nullable|uuid|exists:batches,id',
-            'lines.*.quantity'     => 'required|numeric|min:0.001',
-            'lines.*.unit'         => 'nullable|string|max:20',
+            'party_id' => 'nullable|uuid|exists:parties,id',
+            'godown_id' => 'required|uuid|exists:godowns,id',
+            'is_inter_state' => 'boolean',
+            'invoice_date' => 'required|date',
+            'notes' => 'nullable|string',
+            'post_payment' => 'boolean',
+            'amount_tendered' => 'nullable|numeric|min:0',
+            'change_amount' => 'nullable|numeric|min:0',
+            'lines' => 'required|array|min:1',
+            'lines.*.item_id' => 'required|uuid|exists:items,id',
+            'lines.*.batch_id' => 'nullable|uuid|exists:batches,id',
+            'lines.*.quantity' => 'required|numeric|min:0.001',
+            'lines.*.unit' => 'nullable|string|max:20',
             'lines.*.conversion_factor' => 'nullable|numeric|min:0.0001',
-            'lines.*.rate'         => 'required|numeric|min:0',
+            'lines.*.rate' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
-            'lines.*.gst_rate'     => 'required|numeric|min:0',
-            'round_off'            => 'nullable|numeric',
-            'payments'             => 'nullable|array',
-            'payments.*.mode'      => 'required_with:payments|in:cash,upi,card,lend',
-            'payments.*.amount'    => 'required_with:payments|numeric|min:0.01',
+            'lines.*.gst_rate' => 'required|numeric|min:0',
+            'round_off' => 'nullable|numeric',
+            'payments' => 'nullable|array',
+            'payments.*.mode' => 'required_with:payments|in:cash,upi,card,lend',
+            'payments.*.amount' => 'required_with:payments|numeric|min:0.01',
             'payments.*.reference' => 'nullable|string',
         ]);
 
@@ -116,8 +115,8 @@ class POSController extends Controller
         // Resolve party BEFORE transaction — PartyObserver creates ledger entries
         // which must not be nested inside the checkout transaction
         $companyId = $request->user()->company_id;
-        $userId    = $request->user()->id;
-        $partyId   = $validated['party_id'] ?? null;
+        $userId = $request->user()->id;
+        $partyId = $validated['party_id'] ?? null;
 
         if (! $partyId) {
             $walkIn = Party::firstOrCreate(
@@ -127,7 +126,7 @@ class POSController extends Controller
             $partyId = $walkIn->id;
         }
 
-        $invoice = DB::transaction(function () use ($validated, $request, $companyId, $userId, $partyId, $isPostPayment) {
+        $invoice = DB::transaction(function () use ($validated, $companyId, $userId, $partyId, $isPostPayment) {
             $isInterState = $validated['is_inter_state'] ?? false;
 
             // Find financial year for invoice date
@@ -149,85 +148,85 @@ class POSController extends Controller
                 throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized for this financial year']);
             }
 
-            $nextNumber    = $counter->getAndIncrementCounter($companyId, $fy->id, 'sales_invoice');
-            $invoiceNumber = $counter->prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            $nextNumber = $counter->getAndIncrementCounter($companyId, $fy->id, 'sales_invoice');
+            $invoiceNumber = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
             // Determine primary payment mode for display
             $primaryMode = $isPostPayment ? 'post' : ($validated['payments'][0]['mode'] ?? 'cash');
 
             $invoice = SalesInvoice::create([
-                'party_id'          => $partyId,
-                'godown_id'         => $validated['godown_id'],
-                'invoice_number'    => $invoiceNumber,
-                'invoice_date'      => $validated['invoice_date'],
-                'is_inter_state'    => $isInterState,
-                'status'            => 'confirmed',
-                'notes'             => $validated['notes'] ?? null,
-                'pos_held'          => false,
-                'pos_payment_mode'  => $primaryMode,
-                'amount_tendered'   => $validated['amount_tendered'] ?? 0,
-                'change_amount'     => $validated['change_amount'] ?? 0,
-                'created_by'        => $userId,
-                'updated_by'        => null,
+                'party_id' => $partyId,
+                'godown_id' => $validated['godown_id'],
+                'invoice_number' => $invoiceNumber,
+                'invoice_date' => $validated['invoice_date'],
+                'is_inter_state' => $isInterState,
+                'status' => 'confirmed',
+                'notes' => $validated['notes'] ?? null,
+                'pos_held' => false,
+                'pos_payment_mode' => $primaryMode,
+                'amount_tendered' => $validated['amount_tendered'] ?? 0,
+                'change_amount' => $validated['change_amount'] ?? 0,
+                'created_by' => $userId,
+                'updated_by' => null,
             ]);
 
             foreach ($validated['lines'] as $line) {
                 $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
-                $baseQuantity     = $line['quantity'] * $conversionFactor;
-                $taxable          = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
-                $gstAmt           = $taxable * $line['gst_rate'] / 100;
+                $baseQuantity = $line['quantity'] * $conversionFactor;
+                $taxable = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $gstAmt = $taxable * $line['gst_rate'] / 100;
 
                 $invoice->lines()->create([
-                    'item_id'          => $line['item_id'],
-                    'batch_id'         => $line['batch_id'] ?? null,
-                    'godown_id'        => $validated['godown_id'],
-                    'quantity'         => $line['quantity'],
-                    'unit'             => $line['unit'] ?? null,
-                    'conversion_factor'=> $conversionFactor,
-                    'rate'             => $line['rate'],
+                    'item_id' => $line['item_id'],
+                    'batch_id' => $line['batch_id'] ?? null,
+                    'godown_id' => $validated['godown_id'],
+                    'quantity' => $line['quantity'],
+                    'unit' => $line['unit'] ?? null,
+                    'conversion_factor' => $conversionFactor,
+                    'rate' => $line['rate'],
                     'discount_percent' => $line['discount_percent'] ?? 0,
-                    'taxable_amount'   => $taxable,
-                    'gst_rate'         => $line['gst_rate'],
-                    'cgst'             => $isInterState ? 0 : $gstAmt / 2,
-                    'sgst'             => $isInterState ? 0 : $gstAmt / 2,
-                    'igst'             => $isInterState ? $gstAmt : 0,
-                    'line_total'       => $taxable + $gstAmt,
-                    'created_by'       => $userId,
+                    'taxable_amount' => $taxable,
+                    'gst_rate' => $line['gst_rate'],
+                    'cgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'sgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'igst' => $isInterState ? $gstAmt : 0,
+                    'line_total' => $taxable + $gstAmt,
+                    'created_by' => $userId,
                 ]);
 
                 StockLedger::create([
-                    'company_id'     => $companyId,
-                    'item_id'        => $line['item_id'],
-                    'batch_id'       => $line['batch_id'] ?? null,
-                    'godown_id'      => $validated['godown_id'],
-                    'type'           => 'sale',
+                    'company_id' => $companyId,
+                    'item_id' => $line['item_id'],
+                    'batch_id' => $line['batch_id'] ?? null,
+                    'godown_id' => $validated['godown_id'],
+                    'type' => 'sale',
                     'reference_type' => SalesInvoice::class,
-                    'reference_id'   => $invoice->id,
-                    'quantity'       => -$baseQuantity,
-                    'rate'           => $line['rate'],
-                    'value'          => $baseQuantity * $line['rate'],
-                    'narration'      => "POS Sale #{$invoiceNumber}",
-                    'created_by'     => $userId,
+                    'reference_id' => $invoice->id,
+                    'quantity' => -$baseQuantity,
+                    'rate' => $line['rate'],
+                    'value' => $baseQuantity * $line['rate'],
+                    'narration' => "POS Sale #{$invoiceNumber}",
+                    'created_by' => $userId,
                 ]);
             }
 
             $invoice->load('lines');
             $grandTotal = $invoice->lines->sum('line_total');
-            $roundOff   = (float) ($validated['round_off'] ?? 0);
+            $roundOff = (float) ($validated['round_off'] ?? 0);
             $netPayable = round($grandTotal + $roundOff, 2);
 
             if ($isPostPayment) {
                 // Credit sale — no payment collected now; full amount goes to party ledger
                 $invoice->update([
-                    'total_amount'   => $invoice->lines->sum('taxable_amount'),
+                    'total_amount' => $invoice->lines->sum('taxable_amount'),
                     'taxable_amount' => $invoice->lines->sum('taxable_amount'),
-                    'cgst_total'     => $invoice->lines->sum('cgst'),
-                    'sgst_total'     => $invoice->lines->sum('sgst'),
-                    'igst_total'     => $invoice->lines->sum('igst'),
-                    'grand_total'    => $netPayable,
-                    'round_off'      => $roundOff,
-                    'amount_paid'    => 0,
-                    'balance_due'    => $netPayable,
+                    'cgst_total' => $invoice->lines->sum('cgst'),
+                    'sgst_total' => $invoice->lines->sum('sgst'),
+                    'igst_total' => $invoice->lines->sum('igst'),
+                    'grand_total' => $netPayable,
+                    'round_off' => $roundOff,
+                    'amount_paid' => 0,
+                    'balance_due' => $netPayable,
                 ]);
 
                 // Post sales journal only (Dr: Party A/c, Cr: Sales + GST)
@@ -235,23 +234,23 @@ class POSController extends Controller
                 $invoice->refresh();
                 app(AccountingService::class)->postSalesInvoice($invoice, $userId);
             } else {
-                $allPayments  = collect($validated['payments']);
+                $allPayments = collect($validated['payments']);
                 $lendPayments = $allPayments->where('mode', 'lend');
                 $cashPayments = $allPayments->where('mode', '!=', 'lend');
-                $totalPaid    = $cashPayments->sum('amount');
-                $lendAmount   = $lendPayments->sum('amount');
-                $balanceDue   = max(0, $netPayable - $totalPaid);
+                $totalPaid = $cashPayments->sum('amount');
+                $lendAmount = $lendPayments->sum('amount');
+                $balanceDue = max(0, $netPayable - $totalPaid);
 
                 $invoice->update([
-                    'total_amount'   => $invoice->lines->sum('taxable_amount'),
+                    'total_amount' => $invoice->lines->sum('taxable_amount'),
                     'taxable_amount' => $invoice->lines->sum('taxable_amount'),
-                    'cgst_total'     => $invoice->lines->sum('cgst'),
-                    'sgst_total'     => $invoice->lines->sum('sgst'),
-                    'igst_total'     => $invoice->lines->sum('igst'),
-                    'grand_total'    => $netPayable,
-                    'round_off'      => $roundOff,
-                    'amount_paid'    => min($totalPaid, $netPayable),
-                    'balance_due'    => $balanceDue,
+                    'cgst_total' => $invoice->lines->sum('cgst'),
+                    'sgst_total' => $invoice->lines->sum('sgst'),
+                    'igst_total' => $invoice->lines->sum('igst'),
+                    'grand_total' => $netPayable,
+                    'round_off' => $roundOff,
+                    'amount_paid' => min($totalPaid, $netPayable),
+                    'balance_due' => $balanceDue,
                 ]);
 
                 // Auto-post sales journal entry
@@ -266,8 +265,8 @@ class POSController extends Controller
 
                 // Create receipt-number counter prefix
                 $receiptPrefix = 'RCP';
-                $receiptBase   = now()->format('ymdHis');
-                $receiptIdx    = 0;
+                $receiptBase = now()->format('ymdHis');
+                $receiptIdx = 0;
 
                 $party = Party::find($partyId);
 
@@ -278,24 +277,24 @@ class POSController extends Controller
                     }
 
                     // Map mode to ledger: cash/upi → cash; card → bank
-                    $modeLedger  = in_array($payment['mode'], ['cash', 'upi']) ? $cashLedger : $bankLedger;
+                    $modeLedger = in_array($payment['mode'], ['cash', 'upi']) ? $cashLedger : $bankLedger;
                     $paymentMode = $payment['mode'] === 'card' ? 'bank' : $payment['mode'];
 
-                    $receiptNumber = $receiptPrefix . '-' . $receiptBase . ($receiptIdx > 0 ? "-{$receiptIdx}" : '');
+                    $receiptNumber = $receiptPrefix.'-'.$receiptBase.($receiptIdx > 0 ? "-{$receiptIdx}" : '');
                     $receiptIdx++;
 
                     $receipt = PaymentReceipt::create([
-                        'company_id'       => $companyId,
-                        'party_id'         => $partyId,
-                        'type'             => 'receipt',
-                        'receipt_number'   => $receiptNumber,
-                        'receipt_date'     => $validated['invoice_date'],
-                        'amount'           => $payment['amount'],
-                        'payment_mode'     => $paymentMode,
+                        'company_id' => $companyId,
+                        'party_id' => $partyId,
+                        'type' => 'receipt',
+                        'receipt_number' => $receiptNumber,
+                        'receipt_date' => $validated['invoice_date'],
+                        'amount' => $payment['amount'],
+                        'payment_mode' => $paymentMode,
                         'reference_number' => $payment['reference'] ?? null,
-                        'notes'            => "POS #{$invoiceNumber}",
+                        'notes' => "POS #{$invoiceNumber}",
                         'sales_invoice_id' => $invoice->id,
-                        'created_by'       => $userId,
+                        'created_by' => $userId,
                     ]);
 
                     // Post receipt journal (Dr Cash/Bank, Cr Party)
@@ -327,82 +326,82 @@ class POSController extends Controller
     public function hold(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'party_id'             => 'nullable|uuid|exists:parties,id',
-            'godown_id'            => 'required|uuid|exists:godowns,id',
-            'is_inter_state'       => 'boolean',
-            'invoice_date'         => 'required|date',
-            'notes'                => 'nullable|string',
-            'lines'                => 'required|array|min:1',
-            'lines.*.item_id'      => 'required|uuid|exists:items,id',
-            'lines.*.batch_id'     => 'nullable|uuid|exists:batches,id',
-            'lines.*.quantity'     => 'required|numeric|min:0.001',
-            'lines.*.unit'         => 'nullable|string|max:20',
+            'party_id' => 'nullable|uuid|exists:parties,id',
+            'godown_id' => 'required|uuid|exists:godowns,id',
+            'is_inter_state' => 'boolean',
+            'invoice_date' => 'required|date',
+            'notes' => 'nullable|string',
+            'lines' => 'required|array|min:1',
+            'lines.*.item_id' => 'required|uuid|exists:items,id',
+            'lines.*.batch_id' => 'nullable|uuid|exists:batches,id',
+            'lines.*.quantity' => 'required|numeric|min:0.001',
+            'lines.*.unit' => 'nullable|string|max:20',
             'lines.*.conversion_factor' => 'nullable|numeric|min:0.0001',
-            'lines.*.rate'         => 'required|numeric|min:0',
+            'lines.*.rate' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
-            'lines.*.gst_rate'     => 'required|numeric|min:0',
+            'lines.*.gst_rate' => 'required|numeric|min:0',
         ]);
 
         // Resolve party outside transaction (PartyObserver creates ledgers)
         $companyId = $request->user()->company_id;
-        $userId    = $request->user()->id;
-        $partyId   = $validated['party_id'] ?? null;
+        $userId = $request->user()->id;
+        $partyId = $validated['party_id'] ?? null;
         if (! $partyId) {
-            $walkIn  = Party::firstOrCreate(
+            $walkIn = Party::firstOrCreate(
                 ['company_id' => $companyId, 'name' => 'Walk-in Customer', 'type' => 'customer'],
                 ['is_active' => true]
             );
             $partyId = $walkIn->id;
         }
 
-        $invoice = DB::transaction(function () use ($validated, $request, $companyId, $userId, $partyId) {
+        $invoice = DB::transaction(function () use ($validated, $userId, $partyId) {
             $isInterState = $validated['is_inter_state'] ?? false;
 
             $invoice = SalesInvoice::create([
-                'party_id'       => $partyId,
-                'godown_id'      => $validated['godown_id'],
-                'invoice_number' => 'HOLD-' . now()->format('ymdHis'),
-                'invoice_date'   => $validated['invoice_date'],
+                'party_id' => $partyId,
+                'godown_id' => $validated['godown_id'],
+                'invoice_number' => 'HOLD-'.now()->format('ymdHis'),
+                'invoice_date' => $validated['invoice_date'],
                 'is_inter_state' => $isInterState,
-                'status'         => 'draft',
-                'pos_held'       => true,
-                'notes'          => $validated['notes'] ?? null,
-                'created_by'     => $userId,
+                'status' => 'draft',
+                'pos_held' => true,
+                'notes' => $validated['notes'] ?? null,
+                'created_by' => $userId,
             ]);
 
             foreach ($validated['lines'] as $line) {
                 $conversionFactor = (float) ($line['conversion_factor'] ?? 1.0);
-                $taxable          = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
-                $gstAmt           = $taxable * $line['gst_rate'] / 100;
+                $taxable = ($line['quantity'] * $line['rate']) * (1 - ($line['discount_percent'] ?? 0) / 100);
+                $gstAmt = $taxable * $line['gst_rate'] / 100;
 
                 $invoice->lines()->create([
-                    'item_id'           => $line['item_id'],
-                    'batch_id'          => $line['batch_id'] ?? null,
-                    'godown_id'         => $validated['godown_id'],
-                    'quantity'          => $line['quantity'],
-                    'unit'              => $line['unit'] ?? null,
+                    'item_id' => $line['item_id'],
+                    'batch_id' => $line['batch_id'] ?? null,
+                    'godown_id' => $validated['godown_id'],
+                    'quantity' => $line['quantity'],
+                    'unit' => $line['unit'] ?? null,
                     'conversion_factor' => $conversionFactor,
-                    'rate'              => $line['rate'],
-                    'discount_percent'  => $line['discount_percent'] ?? 0,
-                    'taxable_amount'    => $taxable,
-                    'gst_rate'          => $line['gst_rate'],
-                    'cgst'              => $isInterState ? 0 : $gstAmt / 2,
-                    'sgst'              => $isInterState ? 0 : $gstAmt / 2,
-                    'igst'              => $isInterState ? $gstAmt : 0,
-                    'line_total'        => $taxable + $gstAmt,
-                    'created_by'        => $userId,
+                    'rate' => $line['rate'],
+                    'discount_percent' => $line['discount_percent'] ?? 0,
+                    'taxable_amount' => $taxable,
+                    'gst_rate' => $line['gst_rate'],
+                    'cgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'sgst' => $isInterState ? 0 : $gstAmt / 2,
+                    'igst' => $isInterState ? $gstAmt : 0,
+                    'line_total' => $taxable + $gstAmt,
+                    'created_by' => $userId,
                 ]);
             }
 
             $invoice->load('lines');
             $invoice->update([
-                'total_amount'   => $invoice->lines->sum('taxable_amount'),
+                'total_amount' => $invoice->lines->sum('taxable_amount'),
                 'taxable_amount' => $invoice->lines->sum('taxable_amount'),
-                'cgst_total'     => $invoice->lines->sum('cgst'),
-                'sgst_total'     => $invoice->lines->sum('sgst'),
-                'igst_total'     => $invoice->lines->sum('igst'),
-                'grand_total'    => $invoice->lines->sum('line_total'),
-                'balance_due'    => $invoice->lines->sum('line_total'),
+                'cgst_total' => $invoice->lines->sum('cgst'),
+                'sgst_total' => $invoice->lines->sum('sgst'),
+                'igst_total' => $invoice->lines->sum('igst'),
+                'grand_total' => $invoice->lines->sum('line_total'),
+                'balance_due' => $invoice->lines->sum('line_total'),
             ]);
 
             return $invoice->load('lines.item', 'party');
@@ -446,18 +445,18 @@ class POSController extends Controller
     public function quickParty(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'  => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
         ]);
 
         $party = Party::create([
             'company_id' => $request->user()->company_id,
-            'name'       => $validated['name'],
-            'phone'      => $validated['phone'] ?? null,
-            'email'      => $validated['email'] ?? null,
-            'type'       => 'customer',
-            'is_active'  => true,
+            'name' => $validated['name'],
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'type' => 'customer',
+            'is_active' => true,
             'created_by' => $request->user()->id,
         ]);
 
