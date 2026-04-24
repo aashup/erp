@@ -75,6 +75,9 @@ class PublicInvoiceController extends Controller
             $invoice->update(['is_printed' => true]);
         }
 
-        return response($html, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+        return response($html, 200, [
+            'Content-Type'  => 'text/html; charset=utf-8',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
     }
 }
