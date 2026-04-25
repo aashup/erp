@@ -51,7 +51,7 @@ class SalesInvoiceController extends Controller
             $query->latest('sales_invoices.invoice_date');
         }
 
-        $this->applyFYFilter($query, $request, 'sales_invoices.invoice_date');
+        $this->applyFYFilter($query, $request);
 
         $invoices = $query->paginate($request->per_page ?? 25);
 
@@ -86,18 +86,20 @@ class SalesInvoiceController extends Controller
         $invoice = DB::transaction(function () use ($validated, $request) {
             $isInterState = $validated['is_inter_state'] ?? false;
 
+            // Always resolve financial year from invoice date
+            $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                ->whereDate('start_date', '<=', $validated['invoice_date'])
+                ->whereDate('end_date', '>=', $validated['invoice_date'])
+                ->first();
+
+            if (! $fy) {
+                throw ValidationException::withMessages(['invoice_date' => 'No financial year found for the selected date']);
+            }
+
+            $validated['financial_year_id'] = $fy->id;
+
             // Auto-generate invoice number if not provided
             if (empty($validated['invoice_number'])) {
-                // Find the financial year that contains the invoice date
-                $fy = FinancialYear::where('company_id', $request->user()->company_id)
-                    ->whereDate('start_date', '<=', $validated['invoice_date'])
-                    ->whereDate('end_date', '>=', $validated['invoice_date'])
-                    ->first();
-
-                if (! $fy) {
-                    throw ValidationException::withMessages(['invoice_date' => 'No financial year found for the selected date']);
-                }
-
                 $counter = DocumentCounter::where('company_id', $request->user()->company_id)
                     ->where('financial_year_id', $fy->id)
                     ->where('document_type', 'sales_invoice')
@@ -113,7 +115,6 @@ class SalesInvoiceController extends Controller
                     'sales_invoice'
                 );
                 $validated['invoice_number'] = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-                $validated['financial_year_id'] = $fy->id;
             }
 
             $invoice = SalesInvoice::create([
@@ -219,6 +220,12 @@ class SalesInvoiceController extends Controller
         $salesInvoice = DB::transaction(function () use ($validated, $salesInvoice, $request) {
             $isInterState = $validated['is_inter_state'] ?? false;
 
+            // Re-resolve financial year in case invoice_date changed
+            $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                ->whereDate('start_date', '<=', $validated['invoice_date'])
+                ->whereDate('end_date', '>=', $validated['invoice_date'])
+                ->first();
+
             $salesInvoice->update([
                 'party_id' => $validated['party_id'],
                 'branch_id' => $validated['branch_id'] ?? null,
@@ -228,6 +235,7 @@ class SalesInvoiceController extends Controller
                 'due_date' => $validated['due_date'] ?? null,
                 'is_inter_state' => $isInterState,
                 'notes' => $validated['notes'] ?? null,
+                'financial_year_id' => $fy?->id,
                 'updated_by' => $request->user()->id,
             ]);
 
@@ -332,10 +340,24 @@ class SalesInvoiceController extends Controller
         }
 
         $result = DB::transaction(function () use ($salesInvoice, $newStatus, $request) {
-            $salesInvoice->update([
+            $updateData = [
                 'status' => $newStatus,
                 'updated_by' => $request->user()->id,
-            ]);
+            ];
+
+            // Backfill financial_year_id on confirm if missing
+            if ($newStatus === 'confirmed' && ! $salesInvoice->financial_year_id) {
+                $fy = FinancialYear::where('company_id', $salesInvoice->company_id)
+                    ->whereDate('start_date', '<=', $salesInvoice->invoice_date)
+                    ->whereDate('end_date', '>=', $salesInvoice->invoice_date)
+                    ->first();
+
+                if ($fy) {
+                    $updateData['financial_year_id'] = $fy->id;
+                }
+            }
+
+            $salesInvoice->update($updateData);
 
             // On confirm → create stock ledger entries (stock out) + journal entry
             if ($newStatus === 'confirmed') {

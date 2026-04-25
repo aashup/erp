@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\FinancialYear;
 use App\Traits\BelongsToCompany;
 use App\Traits\HasSyncColumns;
 use App\Traits\HasUuid;
@@ -17,6 +18,7 @@ class SalesOrder extends Model
 
     protected $fillable = [
         'company_id',
+        'financial_year_id',
         'party_id',
         'branch_id',
         'so_number',
@@ -45,6 +47,11 @@ class SalesOrder extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logFillable();
+    }
+
+    public function financialYear()
+    {
+        return $this->belongsTo(FinancialYear::class);
     }
 
     public function party()

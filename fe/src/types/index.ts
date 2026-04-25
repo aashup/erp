@@ -267,6 +267,7 @@ export interface PurchaseInvoiceLine extends SyncColumns {
 export interface SalesOrder extends SyncColumns {
   id: string;
   company_id: string;
+  financial_year_id: string | null;
   party_id: string;
   branch_id: string | null;
   so_number: string;
@@ -303,6 +304,7 @@ export interface SoLine extends SyncColumns {
 export interface SalesInvoice extends SyncColumns {
   id: string;
   company_id: string;
+  financial_year_id: string | null;
   party_id: string;
   branch_id: string | null;
   sales_order_id: string | null;

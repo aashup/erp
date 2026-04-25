@@ -15,9 +15,11 @@ trait FiltersByFinancialYear
      * @param  Request  $request  The HTTP request (checks for 'financial_year_id' param)
      * @param  string  $dateColumn  The date column to filter on (e.g. 'invoice_date', 'voucher_date')
      */
-    protected function applyFYFilter(Builder $query, Request $request, string $dateColumn): Builder
+    protected function applyFYFilter(Builder $query, Request $request, string $dateColumn = 'financial_year_id'): Builder
     {
-        if ($request->financial_year_id) {
+        if ($dateColumn == 'financial_year_id') {
+            $query->where($dateColumn, $request->financial_year_id);
+        } elseif ($request->financial_year_id) {
             $fy = FinancialYear::find($request->financial_year_id);
             if ($fy) {
                 $query->whereDate($dateColumn, '>=', $fy->start_date)

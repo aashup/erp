@@ -44,7 +44,7 @@ class PurchaseOrderController extends Controller
             $query->latest('po_date');
         }
 
-        $this->applyFYFilter($query, $request, 'purchase_orders.po_date');
+        $this->applyFYFilter($query, $request);
 
         $orders = $query->paginate($request->per_page ?? 25);
 
@@ -204,18 +204,6 @@ class PurchaseOrderController extends Controller
             'updated_by' => $request->user()->id,
         ];
 
-        // Backfill financial_year_id on confirm if missing (e.g. manually-numbered POs)
-        if ($newStatus === 'confirmed' && ! $purchaseOrder->financial_year_id) {
-            $fy = FinancialYear::where('company_id', $purchaseOrder->company_id)
-                ->whereDate('start_date', '<=', $purchaseOrder->po_date)
-                ->whereDate('end_date', '>=', $purchaseOrder->po_date)
-                ->first();
-
-            if ($fy) {
-                $updateData['financial_year_id'] = $fy->id;
-            }
-        }
-
         $purchaseOrder->update($updateData);
 
         return response()->json([
@@ -268,19 +256,11 @@ class PurchaseOrderController extends Controller
 
             // Resolve financial year for receipt date
             $receiptDate = $validated['receipt_date'] ?? now()->toDateString();
-            $fyId = FinancialYear::where('company_id', $purchaseOrder->company_id)
-                ->whereDate('start_date', '<=', $receiptDate)
-                ->whereDate('end_date', '>=', $receiptDate)
-                ->first()?->id;
-
-            if (! $fyId) {
-                throw ValidationException::withMessages(['receipt_date' => 'No financial year found for receipt date']);
-            }
 
             $defaultGodown = Godown::where('company_id', $purchaseOrder->company_id)
                 ->where('is_default', true)
                 ->first();
-
+            $fyId = $purchaseOrder->financial_year_id;
             // Generate invoice number
             $counter = DocumentCounter::where('company_id', $purchaseOrder->company_id)
                 ->where('financial_year_id', $fyId)

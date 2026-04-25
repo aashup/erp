@@ -44,7 +44,7 @@ class SalesOrderController extends Controller
             $query->latest('sales_orders.so_date');
         }
 
-        $this->applyFYFilter($query, $request, 'sales_orders.so_date');
+        $this->applyFYFilter($query, $request);
 
         $orders = $query->paginate($request->per_page ?? 25);
 
@@ -71,18 +71,20 @@ class SalesOrderController extends Controller
         ]);
 
         $so = DB::transaction(function () use ($validated, $request) {
+            // Always resolve financial year from SO date
+            $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                ->whereDate('start_date', '<=', $validated['so_date'])
+                ->whereDate('end_date', '>=', $validated['so_date'])
+                ->first();
+
+            if (! $fy) {
+                throw ValidationException::withMessages(['so_date' => 'No financial year found for the selected date']);
+            }
+
+            $validated['financial_year_id'] = $fy->id;
+
             // Auto-generate SO number if not provided
             if (empty($validated['so_number'])) {
-                // Find the financial year that contains the SO date
-                $fy = FinancialYear::where('company_id', $request->user()->company_id)
-                    ->whereDate('start_date', '<=', $validated['so_date'])
-                    ->whereDate('end_date', '>=', $validated['so_date'])
-                    ->first();
-
-                if (! $fy) {
-                    throw ValidationException::withMessages(['so_date' => 'No financial year found for the selected date']);
-                }
-
                 $counter = DocumentCounter::where('company_id', $request->user()->company_id)
                     ->where('financial_year_id', $fy->id)
                     ->where('document_type', 'sales_order')
@@ -98,7 +100,6 @@ class SalesOrderController extends Controller
                     'sales_order'
                 );
                 $validated['so_number'] = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-                $validated['financial_year_id'] = $fy->id;
             }
 
             $so = SalesOrder::create([
@@ -200,10 +201,24 @@ class SalesOrderController extends Controller
         }
 
         $result = DB::transaction(function () use ($salesOrder, $newStatus, $request) {
-            $salesOrder->update([
+            $updateData = [
                 'status' => $newStatus,
                 'updated_by' => $request->user()->id,
-            ]);
+            ];
+
+            // Backfill financial_year_id on confirm if missing (e.g. manually-numbered SOs)
+            if ($newStatus === 'confirmed' && ! $salesOrder->financial_year_id) {
+                $fy = FinancialYear::where('company_id', $salesOrder->company_id)
+                    ->whereDate('start_date', '<=', $salesOrder->so_date)
+                    ->whereDate('end_date', '>=', $salesOrder->so_date)
+                    ->first();
+
+                if ($fy) {
+                    $updateData['financial_year_id'] = $fy->id;
+                }
+            }
+
+            $salesOrder->update($updateData);
 
             // On confirm → auto-create sales invoice from SO lines
             if ($newStatus === 'confirmed') {

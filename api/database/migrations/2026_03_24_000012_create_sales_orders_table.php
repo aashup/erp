@@ -12,6 +12,7 @@ return new class extends Migration
         Schema::create('sales_orders', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('financial_year_id')->nullable()->constrained('financial_years')->nullOnDelete();
             $table->foreignUuid('party_id')->constrained('parties');
             $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->string('so_number')->unique();

@@ -47,7 +47,7 @@ class PurchaseInvoiceController extends Controller
             $query->latest('purchase_invoices.invoice_date');
         }
 
-        $this->applyFYFilter($query, $request, 'purchase_invoices.invoice_date');
+        $this->applyFYFilter($query, $request);
 
         $invoices = $query->paginate($request->per_page ?? 25);
 
