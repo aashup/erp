@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SlideSelect } from "@/components/ui/SlideSelect";
 import { ItemGroupFormModal } from "@/components/ui/ItemGroupFormModal";
+import { UnitFormModal } from "@/components/ui/UnitFormModal";
 import { ArrowLeft, Plus, X, Info } from "lucide-react";
 
 const alternateUnitSchema = z.object({
@@ -52,6 +53,7 @@ export default function ItemFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showAddGroup, setShowAddGroup] = useState(false);
+  const [showAddUnit, setShowAddUnit] = useState(false);
 
   const { data: unitsData, isLoading: isUnitsLoading } = useQuery({
     queryKey: ["units"],
@@ -236,6 +238,8 @@ export default function ItemFormPage() {
               onChange={(val) => setValue("unit", val, { shouldValidate: true })}
               error={errors.unit?.message}
               disabled={isUnitsLoading || formUnitOptions.length === 0}
+              onAddNew={() => setShowAddUnit(true)}
+              addNewLabel="Add New Unit"
             />
             <SlideSelect
               name="item_group_id"
@@ -493,6 +497,15 @@ export default function ItemFormPage() {
         onCreated={(group) => {
           queryClient.invalidateQueries({ queryKey: ["item-groups"] });
           setValue("item_group_id", group.id);
+        }}
+      />
+
+      <UnitFormModal
+        open={showAddUnit}
+        onClose={() => setShowAddUnit(false)}
+        onCreated={(unit) => {
+          queryClient.invalidateQueries({ queryKey: ["units"] });
+          setValue("unit", unit.value, { shouldValidate: true });
         }}
       />
     </div>

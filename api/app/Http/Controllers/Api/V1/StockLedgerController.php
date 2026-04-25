@@ -48,7 +48,7 @@ class StockLedgerController extends Controller
             $query->orderByDesc('stock_ledger.created_at');
         }
 
-        $this->applyFYFilter($query, $request, 'stock_ledger.created_at');
+        // $this->applyFYFilter($query, $request, 'stock_ledger.created_at');
 
         $entries = $query->paginate($request->per_page ?? 25);
 
