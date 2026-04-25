@@ -60,7 +60,8 @@ export const payrollApi = {
   updateEntry: (runId: string, entryId: string, present_days: number) =>
     api.patch<ApiResponse<PayrollRun>>(`/payroll-runs/${runId}/entries/${entryId}`, { present_days }),
   approve: (id: string) => api.patch<ApiResponse<PayrollRun>>(`/payroll-runs/${id}/approve`),
-  markPaid: (id: string) => api.patch<ApiResponse<PayrollRun>>(`/payroll-runs/${id}/mark-paid`),
+  markPaid: (id: string, data: { entry_ids: string[]; payment_mode: 'cash' | 'bank' }) =>
+    api.patch<ApiResponse<PayrollRun>>(`/payroll-runs/${id}/mark-paid`, data),
   delete: (id: string) => api.delete(`/payroll-runs/${id}`),
   payslipUrl: (runId: string, employeeId: string) =>
     `/api/v1/payroll-runs/${runId}/payslip/${employeeId}`,

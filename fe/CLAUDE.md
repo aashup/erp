@@ -60,7 +60,8 @@ fe/src/
 │   ├── sales/              # SalesOrders, SalesInvoices, SalesInvoiceFormPage
 │   ├── auth/               # Login, Register
 │   ├── reports/            # CashBook, BankBook, LedgerBook, DayBook (Account Books)
-│   ├── payroll/            # Departments, Employees, SalaryStructureModal, PayrollRuns, PayrollRunDetail
+│   ├── payroll/            # Departments, Employees, SalaryStructureModal, PayrollRuns, PayrollRunDetail, GeneratePayrollRun
+│   ├── settings/           # FinancialYears, Units, InventorySettings, InvoiceSettings, Theme, PayrollSettings
 │   ├── Parties.tsx, Branches.tsx, Settings.tsx
 │   └── dashboard/
 ├── store/                  # Zustand: authStore, fyStore, themeStore
@@ -117,13 +118,36 @@ export const fooApi = {
 |------|-------|---------|
 | Departments.tsx | /payroll/departments | List + inline modal CRUD; requires `payroll.view` |
 | Employees.tsx | /payroll/employees | List with salary structure ₹ button (opens SalaryStructureModal); dept/designation via SlideSelect |
-| SalaryStructureModal.tsx | (modal) | Create/view salary structure per employee; shows gross preview; deactivates previous on save |
-| PayrollRuns.tsx | /payroll/runs | List with Generate modal (month/year/working_days); navigates to detail on generate |
+| SalaryStructureModal.tsx | (modal) | Create/view salary structure per employee; fixed + custom component inputs; gross preview; total-salary auto-distribution; deactivates previous on save |
+| PayrollRuns.tsx | /payroll/runs | List of past runs; "Generate Payroll" navigates to GeneratePayrollRun page (no modal) |
+| GeneratePayrollRun.tsx | /payroll/runs/new | Dedicated page: set month/year/working days, per-employee present-days table with checkboxes, select-all, bulk-fill; calls generate then patches differing entries |
 | PayrollRunDetail.tsx | /payroll/runs/:id | Inline present_days editing; Approve & Post; Mark as Paid; per-employee payslip download |
 
+### Custom Salary Components (Settings → Payroll)
+`PayrollSettings.tsx` at `/settings/payroll`:
+- **Component Headers section**: CRUD for `salary_component_definitions` (earnings + deductions); toggle active/inactive; soft-delete
+- **Salary Distribution section**: set % split for each earning (6 fixed + active custom earnings); total must = 100%; saves to `company_settings` key `salary_distribution_percentages` as JSON string
+  - Key format: `{ basic: 40, hra: 20, da: 10, conveyance: 10, medical: 10, special_allowance: 10, "<definition_uuid>": 5 }`
+
+### SalaryStructureModal — Auto-distribution
+When user enters a **Total Gross Salary**, amounts are auto-filled into each earning field:
+- Reads `salary_distribution_percentages` from `company-settings` query (lazy-loaded when modal opens)
+- `amount = total × (pct / 100)` for each component key
+- If no distribution is configured → orange warning shown; fields not filled
+- Custom deduction components are always entered manually (not part of distribution)
+- `custom_components` array built on submit; included in `employeesApi.createSalaryStructure()` payload
+
+### GeneratePayrollRun — Per-Employee Attendance
+- Fetches all employees with `employeesApi.list({ per_page: '500' })`
+- **Sticky toolbar**: Select All checkbox (with indeterminate state) + bulk-fill: enter days → Apply to selected
+- Present-days inputs turn orange when below working_days
+- On Generate: `payrollApi.generate()` → `payrollApi.get(runId)` to get entry IDs → `Promise.all` patches only entries where present_days ≠ workingDays → navigate to detail
+
 ### API Service (`fe/src/api/payroll.ts`)
-Exports: `departmentsApi`, `designationsApi`, `employeesApi`, `payrollApi`
+Exports: `departmentsApi`, `designationsApi`, `employeesApi`, `payrollApi`, `salaryComponentDefinitionsApi`
 - `payrollApi.payslipUrl(runId, employeeId)` — returns raw URL string for fetch-based PDF download (uses Bearer token, not direct `<a href>`)
+- `salaryComponentDefinitionsApi.list({ active_only: 'true' | type: 'earning' | 'deduction' })` — company-scoped list
+- `salaryComponentDefinitionsApi.create/update/delete` — maps to `/salary-component-definitions` resource
 
 ### Payslip Download Pattern
 ```typescript
@@ -143,11 +167,31 @@ Payroll (requiredPermission: payroll.view)
   ├── Employees     /payroll/employees
   ├── Departments   /payroll/departments
   └── Payroll Runs  /payroll/runs
+
+Settings (requiredPermission: branch.view)
+  ├── Company       /settings/base
+  ├── Theme         /settings/theme
+  ├── Invoice       /settings/invoice
+  ├── Thermal Templates /settings/thermal-templates
+  ├── Branches      /branches
+  ├── Godowns       /inventory/godowns
+  ├── Inventory     /settings/inventory
+  ├── Units         /settings/units
+  ├── Financial Years /settings/financial-years
+  └── Payroll       /settings/payroll   ← requiredPermission: payroll.view
 ```
 
 ## Type Definitions (fe/src/types/index.ts)
 
 Key interfaces: Company, User, Branch, FinancialYear, Item, Batch, Godown, Party, AccountingGroup, Ledger, Voucher, VoucherLine, PaymentReceipt, StockLedgerEntry, PurchaseOrder/Invoice, SalesOrder/Invoice, Department, Designation, Employee, SalaryStructure, PayrollRun, PayrollEntry
+
+**Payroll-specific types:**
+```typescript
+SalaryComponentDefinition  // id, company_id, name, type ('earning'|'deduction'), is_active
+CustomComponent            // definition_id, name, type, amount
+SalaryStructure            // includes custom_components?: CustomComponent[] | null
+PayrollEntry               // includes custom_components?: CustomComponent[] | null
+```
 
 All entities include SyncColumns: sync_status, device_id, synced_at, updated_at_local, created_at, updated_at
 

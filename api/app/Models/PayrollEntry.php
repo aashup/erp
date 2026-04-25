@@ -31,6 +31,8 @@ class PayrollEntry extends Model
         'pf_employer',
         'esi_employer',
         'custom_components',
+        'is_paid',
+        'payment_voucher_id',
     ];
 
     protected function casts(): array
@@ -53,6 +55,7 @@ class PayrollEntry extends Model
             'pf_employer' => 'decimal:2',
             'esi_employer' => 'decimal:2',
             'custom_components' => 'array',
+            'is_paid' => 'boolean',
         ];
     }
 
@@ -64,5 +67,10 @@ class PayrollEntry extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function paymentVoucher()
+    {
+        return $this->belongsTo(Voucher::class, 'payment_voucher_id');
     }
 }

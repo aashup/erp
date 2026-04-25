@@ -320,43 +320,43 @@
                     <tbody>
                         <tr>
                             <td>Basic Salary</td>
-                            <td class="amount">₹{{ number_format($entry->basic, 2) }}</td>
+                            <td class="amount">Rs.{{ number_format($entry->basic, 2) }}</td>
                         </tr>
                         @if ((float) $entry->hra > 0)
                             <tr>
                                 <td>HRA</td>
-                                <td class="amount">₹{{ number_format($entry->hra, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->hra, 2) }}</td>
                             </tr>
                         @endif
                         @if ((float) $entry->da > 0)
                             <tr>
                                 <td>Dearness Allowance</td>
-                                <td class="amount">₹{{ number_format($entry->da, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->da, 2) }}</td>
                             </tr>
                         @endif
                         @if ((float) $entry->conveyance > 0)
                             <tr>
                                 <td>Conveyance</td>
-                                <td class="amount">₹{{ number_format($entry->conveyance, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->conveyance, 2) }}</td>
                             </tr>
                         @endif
                         @if ((float) $entry->medical > 0)
                             <tr>
                                 <td>Medical Allowance</td>
-                                <td class="amount">₹{{ number_format($entry->medical, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->medical, 2) }}</td>
                             </tr>
                         @endif
                         @if ((float) $entry->special_allowance > 0)
                             <tr>
                                 <td>Special Allowance</td>
-                                <td class="amount">₹{{ number_format($entry->special_allowance, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->special_allowance, 2) }}</td>
                             </tr>
                         @endif
                         @foreach ($entry->custom_components ?? [] as $comp)
                             @if (($comp['type'] ?? '') === 'earning' && (float) ($comp['amount'] ?? 0) > 0)
                                 <tr>
                                     <td>{{ $comp['name'] }}</td>
-                                    <td class="amount">₹{{ number_format((float) $comp['amount'], 2) }}</td>
+                                    <td class="amount">Rs.{{ number_format((float) $comp['amount'], 2) }}</td>
                                 </tr>
                             @endif
                         @endforeach
@@ -364,7 +364,7 @@
                     <tfoot>
                         <tr>
                             <td><strong>Gross Salary</strong></td>
-                            <td class="amount"><strong>₹{{ number_format($entry->gross_salary, 2) }}</strong></td>
+                            <td class="amount"><strong>Rs.{{ number_format($entry->gross_salary, 2) }}</strong></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -377,32 +377,32 @@
                         @if ((float) $entry->pf_employee > 0)
                             <tr>
                                 <td>PF (Employee 12%)</td>
-                                <td class="amount">₹{{ number_format($entry->pf_employee, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->pf_employee, 2) }}</td>
                             </tr>
                         @endif
                         @if ((float) $entry->esi_employee > 0)
                             <tr>
                                 <td>ESI (Employee 0.75%)</td>
-                                <td class="amount">₹{{ number_format($entry->esi_employee, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->esi_employee, 2) }}</td>
                             </tr>
                         @endif
                         @if ((float) $entry->professional_tax > 0)
                             <tr>
                                 <td>Professional Tax</td>
-                                <td class="amount">₹{{ number_format($entry->professional_tax, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->professional_tax, 2) }}</td>
                             </tr>
                         @endif
                         @if ((float) $entry->tds > 0)
                             <tr>
                                 <td>TDS</td>
-                                <td class="amount">₹{{ number_format($entry->tds, 2) }}</td>
+                                <td class="amount">Rs.{{ number_format($entry->tds, 2) }}</td>
                             </tr>
                         @endif
                         @foreach ($entry->custom_components ?? [] as $comp)
                             @if (($comp['type'] ?? '') === 'deduction' && (float) ($comp['amount'] ?? 0) > 0)
                                 <tr>
                                     <td>{{ $comp['name'] }}</td>
-                                    <td class="amount">₹{{ number_format((float) $comp['amount'], 2) }}</td>
+                                    <td class="amount">Rs.{{ number_format((float) $comp['amount'], 2) }}</td>
                                 </tr>
                             @endif
                         @endforeach
@@ -416,7 +416,7 @@
                     <tfoot>
                         <tr>
                             <td><strong>Total Deductions</strong></td>
-                            <td class="amount"><strong>₹{{ number_format($entry->total_deductions, 2) }}</strong></td>
+                            <td class="amount"><strong>Rs.{{ number_format($entry->total_deductions, 2) }}</strong></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -429,7 +429,7 @@
                 <div class="label">Net Salary (Take Home)</div>
             </div>
             <div style="text-align: right;">
-                <div class="amount">₹{{ number_format($entry->net_salary, 2) }}</div>
+                <div class="amount">Rs.{{ number_format($entry->net_salary, 2) }}</div>
             </div>
         </div>
 
@@ -441,13 +441,13 @@
                     @if ((float) $entry->pf_employer > 0)
                         <tr>
                             <td>PF Employer (13%)</td>
-                            <td class="amount">₹{{ number_format($entry->pf_employer, 2) }}</td>
+                            <td class="amount">Rs.{{ number_format($entry->pf_employer, 2) }}</td>
                         </tr>
                     @endif
                     @if ((float) $entry->esi_employer > 0)
                         <tr>
                             <td>ESI Employer (3.25%)</td>
-                            <td class="amount">₹{{ number_format($entry->esi_employer, 2) }}</td>
+                            <td class="amount">Rs.{{ number_format($entry->esi_employer, 2) }}</td>
                         </tr>
                     @endif
                 </table>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Ledger;
 use App\Traits\BelongsToCompany;
 use App\Traits\HasSyncColumns;
 use App\Traits\HasUuid;
@@ -38,6 +39,7 @@ class Employee extends Model
         'is_pf_applicable',
         'is_esi_applicable',
         'is_active',
+        'salary_ledger_id',
     ];
 
     protected function casts(): array
@@ -74,5 +76,10 @@ class Employee extends Model
     public function payrollEntries()
     {
         return $this->hasMany(PayrollEntry::class);
+    }
+
+    public function salaryLedger()
+    {
+        return $this->belongsTo(Ledger::class, 'salary_ledger_id');
     }
 }

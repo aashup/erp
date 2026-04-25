@@ -103,29 +103,59 @@ Types: purchase, sales, payment, receipt, journal, contra, **payroll** (prefix: 
 - `departments` — company_id, name, is_active; soft-deletes
 - `designations` — company_id, department_id (nullable FK), name, is_active; soft-deletes
 - `employees` — full employee master: personal info, bank details, PF/ESI flags, department/designation FKs; soft-deletes
-- `salary_structures` — employee_id, effective_from, Basic/HRA/DA/Conveyance/Medical/Special Allowance, PT (fixed), TDS (fixed), is_active; no soft-deletes
+- `salary_structures` — employee_id, effective_from, Basic/HRA/DA/Conveyance/Medical/Special Allowance, PT (fixed), TDS (fixed), `custom_components` JSON, is_active; no soft-deletes
 - `payroll_runs` — company_id, month, year, working_days, status (draft/approved/paid), totals, voucher_id FK; UNIQUE(company_id, month, year); soft-deletes
-- `payroll_entries` — payroll_run_id, employee_id, present_days, all earning components, deductions, net_salary, employer PF/ESI; no BelongsToCompany, no soft-deletes
+- `payroll_entries` — payroll_run_id, employee_id, present_days, all earning components, deductions, net_salary, employer PF/ESI, `custom_components` JSON; no BelongsToCompany, no soft-deletes
+- `salary_component_definitions` — company_id, name, type (earning|deduction), is_active; BelongsToCompany, HasUuid, HasSyncColumns, SoftDeletes; managed from **Settings → Payroll**
+
+### Custom Salary Components
+Company-level custom earning/deduction headers (e.g. "Transport Allowance", "Canteen Deduction").
+
+**Immutability guarantee:** When a payroll run is generated, `PayrollService` snapshots each component's name + pro-rated amount into `payroll_entries.custom_components` JSON. Payslip renders from the snapshot — renaming or deleting a definition never alters past payslips.
+
+**JSON format** (same shape for `salary_structures.custom_components` and `payroll_entries.custom_components`):
+```json
+[{ "definition_id": "uuid", "name": "Transport Allowance", "type": "earning", "amount": 2000.00 }]
+```
+
+**Pro-rata rule in PayrollService:**
+- `type = "earning"` → pro-rated: `amount × (present_days / working_days)` → added to gross
+- `type = "deduction"` → fixed (like PT/TDS) → added to total_deductions
+
+**Controller:** `SalaryComponentDefinitionController` — `index` (supports `?type=`, `?active_only=true`), `store`, `update`, `destroy` (soft-delete). Inline permission checks (`payroll.create/edit/delete`).
+
+**Route:** `Route::apiResource('salary-component-definitions', ...)->only(['index','store','update','destroy']);`
+
+### Salary Distribution (company_settings)
+Admin sets % split for each earning component (fixed + custom) that must total 100%.
+Stored as `salary_distribution_percentages` key in `company_settings` table (JSON string).
+Keys: fixed earning names (`basic`, `hra`, `da`, `conveyance`, `medical`, `special_allowance`) + custom definition UUIDs.
+Used by `SalaryStructureModal` on the frontend to auto-fill amounts when a total gross salary is entered.
 
 ### Models
-- `Department`, `Designation`, `Employee`, `SalaryStructure` — use BelongsToCompany, HasUuid, HasSyncColumns
+- `Department`, `Designation`, `Employee`, `SalaryStructure`, `SalaryComponentDefinition` — use BelongsToCompany, HasUuid, HasSyncColumns
 - `Employee` — `salaryStructure()` = `hasOne(SalaryStructure)->where('is_active',true)->latestOfMany('effective_from')`
+- `SalaryStructure` — `custom_components` cast to array; `getGrossAttribute()` sums earning-type custom components
 - `PayrollRun` — has SoftDeletes; relationships to entries, voucher, approvedBy
-- `PayrollEntry` — HasUuid + HasSyncColumns only (no BelongsToCompany)
+- `PayrollEntry` — HasUuid + HasSyncColumns only (no BelongsToCompany); `custom_components` cast to array
 
 ### PayrollService
-- `generate(companyId, month, year, workingDays)` — creates draft run; present_days defaults to working_days; pro-rata = component × (present_days / working_days)
-- `recomputeEntry(entry, presentDays, workingDays)` — recalculates all fields after attendance edit
+- `generate(companyId, month, year, workingDays)` — creates draft run; present_days defaults to working_days; pro-rata = component × (present_days / working_days); snapshots custom_components
+- `recomputeEntry(entry, presentDays, workingDays)` — recalculates all fields after attendance edit; re-pro-rates custom earning components
 - `recalculateTotals(run)` — sums all entries back to run totals
-- **Indian statutory rules**: PF employee = 12% basic, PF employer = 13% basic; ESI employee = 0.75% gross (only if gross ≤ ₹21,000), ESI employer = 3.25% gross
+- **Indian statutory rules**: PF employee = 12% basic, PF employer = 13% basic; ESI employee = 0.75% gross (only if gross ≤ Rs.21,000), ESI employer = 3.25% gross
 
 ### Policies
 - `EmployeePolicy`, `PayrollPolicy` — both use `payroll.view/create/edit/delete` permissions
+- `PayrollRun` model is bound to `PayrollPolicy` via `Gate::policy()` in `AppServiceProvider`
 
 ### Payslip PDF
-- Route: `GET /payroll-runs/{id}/payslip/{employeeId}` → DomPDF download
+- Route: `GET /payroll-runs/{id}/payslip/{employeeId}` → DomPDF download (`barryvdh/laravel-dompdf` v3.1)
 - Blade template: `resources/views/payroll/payslip.blade.php`
-- Sections: company header, employee info, earnings table, deductions table, net salary, employer contributions
+- Sections: company header, employee info, attendance, earnings table (incl. custom earnings), deductions table (incl. custom deductions), net salary, employer contributions
+- **⚠️ Do NOT use the literal ₹ character in the blade template** — DejaVu Sans Regular (dompdf default font) lacks the glyph; use `Rs.` instead. Bold weight has the glyph but Regular does not.
+- **⚠️ Never write `@endif@if` on the same line without whitespace** — Blade's regex compiler skips the `@if`, compiling only the `@endif`, causing a PHP `unexpected token "endif"` parse error. Always put `@if` on a new line after `@endif`.
+- After editing the blade template always run `php artisan view:clear` inside the Docker container: `docker compose exec api php artisan view:clear`
 
 ### ⚠️ RolePermissionSeeder — Cache Flush Required
 When adding new modules to `$modules` array in `RolePermissionSeeder.php`, always call:

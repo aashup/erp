@@ -12,6 +12,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class PayrollController extends Controller
 {
@@ -73,7 +74,7 @@ class PayrollController extends Controller
     {
         $this->authorize('view', $payrollRun);
 
-        $payrollRun->load(['entries.employee.department', 'entries.employee.designation', 'voucher']);
+        $payrollRun->load(['entries.employee.department', 'entries.employee.designation', 'entries.paymentVoucher', 'voucher']);
 
         return response()->json(['data' => $payrollRun]);
     }
@@ -120,7 +121,7 @@ class PayrollController extends Controller
         return response()->json(['data' => $payrollRun->fresh(['voucher'])]);
     }
 
-    public function markPaid(PayrollRun $payrollRun): JsonResponse
+    public function markPaid(Request $request, PayrollRun $payrollRun): JsonResponse
     {
         $this->authorize('update', $payrollRun);
 
@@ -128,9 +129,51 @@ class PayrollController extends Controller
             return response()->json(['message' => 'Only approved runs can be marked as paid.'], 422);
         }
 
-        $payrollRun->update(['status' => 'paid']);
+        $validated = $request->validate([
+            'entry_ids'    => 'required|array|min:1',
+            'entry_ids.*'  => 'required|string|exists:payroll_entries,id',
+            'payment_mode' => 'required|in:cash,bank',
+        ]);
 
-        return response()->json(['data' => $payrollRun->fresh()]);
+        $entries = PayrollEntry::whereIn('id', $validated['entry_ids'])
+            ->where('payroll_run_id', $payrollRun->id)
+            ->where('is_paid', false)
+            ->with('employee')
+            ->get();
+
+        if ($entries->isEmpty()) {
+            return response()->json(['message' => 'No unpaid entries found for the given IDs.'], 422);
+        }
+
+        $voucher = $this->accountingService->postPayrollPayment(
+            $payrollRun,
+            $entries->all(),
+            $validated['payment_mode'],
+            auth()->id()
+        );
+
+        if (! $voucher) {
+            return response()->json(['message' => 'Failed to post payment voucher.'], 500);
+        }
+
+        DB::transaction(function () use ($entries, $voucher, $payrollRun) {
+            PayrollEntry::whereIn('id', $entries->pluck('id'))
+                ->update(['is_paid' => true, 'payment_voucher_id' => $voucher->id]);
+
+            $unpaidCount = PayrollEntry::where('payroll_run_id', $payrollRun->id)
+                ->where('is_paid', false)
+                ->count();
+
+            if ($unpaidCount === 0) {
+                $payrollRun->update(['status' => 'paid']);
+            }
+        });
+
+        return response()->json([
+            'data'       => $payrollRun->fresh(['entries.employee', 'entries.paymentVoucher']),
+            'voucher'    => $voucher,
+            'paid_count' => $entries->count(),
+        ]);
     }
 
     public function destroy(PayrollRun $payrollRun): JsonResponse

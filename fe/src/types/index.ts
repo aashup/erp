@@ -717,6 +717,7 @@ export interface Employee extends SyncColumns {
   is_pf_applicable: boolean;
   is_esi_applicable: boolean;
   is_active: boolean;
+  salary_ledger_id: string | null;
   department?: Department;
   designation?: Designation;
   salary_structure?: SalaryStructure | null;
@@ -775,6 +776,8 @@ export interface PayrollEntry extends SyncColumns {
   pf_employer: number;
   esi_employer: number;
   custom_components?: CustomComponent[] | null;
+  is_paid: boolean;
+  payment_voucher_id: string | null;
   employee?: Employee;
 }
 

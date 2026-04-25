@@ -294,7 +294,8 @@ class AccountingService
      * Create a journal entry for an approved Payroll Run.
      *
      * Dr: Salary Expense (gross + employer PF + employer ESI)
-     *   Cr: Salary Payable (net salary)
+     *   Cr: [Per-employee salary ledger] (net salary per employee)
+     *   Cr: Salary Payable shared (TDS — fallback for employees without individual ledger)
      *   Cr: PF Payable (employee PF + employer PF)
      *   Cr: ESI Payable (employee ESI + employer ESI)
      *   Cr: PT Payable (professional tax)
@@ -302,10 +303,9 @@ class AccountingService
     public function postPayroll(PayrollRun $run, string $userId): ?Voucher
     {
         $companyId = $run->company_id;
-        $run->loadMissing('entries');
+        $run->loadMissing('entries.employee');
 
         $totalGross = (float) $run->total_gross;
-        $totalNet = (float) $run->total_net;
         $totalPfEmployer = (float) $run->total_pf_employer;
         $totalEsiEmployer = (float) $run->total_esi_employer;
 
@@ -329,7 +329,7 @@ class AccountingService
 
         return DB::transaction(function () use (
             $run, $companyId, $userId, $fy, $voucherDate,
-            $totalGross, $totalNet, $totalPfEmployer, $totalEsiEmployer,
+            $totalGross, $totalPfEmployer, $totalEsiEmployer,
             $totalPfEmployee, $totalEsiEmployee, $totalPt, $totalTds,
             $salaryExpenseLedger, $salaryPayableLedger
         ) {
@@ -359,13 +359,23 @@ class AccountingService
                 'narration' => "Salary expense for {$periodLabel}",
             ]);
 
-            // Cr: Salary Payable (net salary)
-            $entry->lines()->create([
-                'ledger_id' => $salaryPayableLedger->id,
-                'debit' => 0,
-                'credit' => $totalNet,
-                'narration' => 'Net salary payable',
-            ]);
+            // Cr: Per-employee net salary (individual ledgers; fallback to shared salary_payable)
+            foreach ($run->entries as $payrollEntry) {
+                $empNet = round((float) $payrollEntry->net_salary, 2);
+                if ($empNet <= 0) {
+                    continue;
+                }
+                $ledgerId = ($payrollEntry->employee && $payrollEntry->employee->salary_ledger_id)
+                    ? $payrollEntry->employee->salary_ledger_id
+                    : $salaryPayableLedger->id;
+
+                $entry->lines()->create([
+                    'ledger_id' => $ledgerId,
+                    'debit' => 0,
+                    'credit' => $empNet,
+                    'narration' => 'Net salary — ' . ($payrollEntry->employee?->name ?? $payrollEntry->employee_id),
+                ]);
+            }
 
             // Cr: PF Payable
             $totalPf = round((float) $totalPfEmployee + $totalPfEmployer, 2);
@@ -408,9 +418,8 @@ class AccountingService
                 }
             }
 
-            // Cr: TDS (use salary_payable as fallback or skip when ledger absent)
+            // Cr: TDS (added to shared salary_payable)
             if ($totalTds > 0) {
-                // Add TDS to salary payable credit if no dedicated ledger
                 $entry->lines()->create([
                     'ledger_id' => $salaryPayableLedger->id,
                     'debit' => 0,
@@ -420,6 +429,88 @@ class AccountingService
             }
 
             return $entry;
+        });
+    }
+
+    /**
+     * Create a payment voucher when selected payroll employees are marked as paid.
+     *
+     * Dr: [Per-employee salary ledger] (clears the liability posted at approval)
+     *   Cr: Cash / Bank (total disbursed)
+     */
+    public function postPayrollPayment(PayrollRun $run, array $entries, string $paymentMode, string $userId): ?Voucher
+    {
+        $companyId = $run->company_id;
+
+        $cashOrBank = $this->getCashOrBankLedger($companyId, $paymentMode);
+        $salaryPayableLedger = Ledger::findBySystemKey($companyId, 'salary_payable');
+
+        if (! $cashOrBank) {
+            return null;
+        }
+
+        $voucherDate = now()->format('Y-m-d');
+        $fy = $this->getCurrentFY($companyId, $voucherDate);
+        if (! $fy) {
+            return null;
+        }
+
+        $totalAmount = collect($entries)->sum(fn ($e) => (float) $e->net_salary);
+        $periodLabel = date('F Y', mktime(0, 0, 0, $run->month, 1, $run->year));
+        $count = count($entries);
+
+        return DB::transaction(function () use (
+            $companyId, $userId, $fy, $voucherDate, $run,
+            $entries, $cashOrBank, $salaryPayableLedger,
+            $totalAmount, $periodLabel, $count
+        ) {
+            $voucherNumber = $this->generateVoucherNumber($companyId, 'payment');
+
+            $voucher = Voucher::create([
+                'company_id'         => $companyId,
+                'financial_year_id'  => $fy->id,
+                'voucher_number'     => $voucherNumber,
+                'voucher_date'       => $voucherDate,
+                'voucher_type'       => 'payment',
+                'narration'          => "Salary payment — {$periodLabel} ({$count} employee" . ($count > 1 ? 's' : '') . ')',
+                'source'             => 'auto',
+                'reference_type'     => PayrollRun::class,
+                'reference_id'       => $run->id,
+                'is_posted'          => true,
+                'created_by'         => $userId,
+            ]);
+
+            // Dr: per-employee salary ledger (clears the liability)
+            foreach ($entries as $payrollEntry) {
+                $empNet = round((float) $payrollEntry->net_salary, 2);
+                if ($empNet <= 0) {
+                    continue;
+                }
+                $ledgerId = ($payrollEntry->employee && $payrollEntry->employee->salary_ledger_id)
+                    ? $payrollEntry->employee->salary_ledger_id
+                    : $salaryPayableLedger?->id;
+
+                if (! $ledgerId) {
+                    continue;
+                }
+
+                $voucher->lines()->create([
+                    'ledger_id' => $ledgerId,
+                    'debit'     => $empNet,
+                    'credit'    => 0,
+                    'narration' => 'Salary paid — ' . ($payrollEntry->employee?->name ?? $payrollEntry->employee_id),
+                ]);
+            }
+
+            // Cr: Cash / Bank — single total line
+            $voucher->lines()->create([
+                'ledger_id' => $cashOrBank->id,
+                'debit'     => 0,
+                'credit'    => round($totalAmount, 2),
+                'narration' => 'Salary disbursed via ' . $cashOrBank->name,
+            ]);
+
+            return $voucher;
         });
     }
 

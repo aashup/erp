@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -28,7 +28,11 @@ export default function PayrollRunDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const canEdit   = hasPermission('payroll.edit');
+  const canEdit = hasPermission('payroll.edit');
+
+  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
+  const [paymentMode, setPaymentMode] = useState<'cash' | 'bank'>('bank');
+  const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['payroll-run', id],
@@ -42,8 +46,12 @@ export default function PayrollRunDetail() {
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: () => payrollApi.markPaid(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payroll-run', id] }),
+    mutationFn: (payload: { entry_ids: string[]; payment_mode: 'cash' | 'bank' }) =>
+      payrollApi.markPaid(id!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-run', id] });
+      setSelectedEntryIds(new Set());
+    },
   });
 
   const updateEntryMutation = useMutation({
@@ -85,6 +93,44 @@ export default function PayrollRunDetail() {
   const isApproved = run.status === 'approved';
   const period     = `${MONTHS[run.month - 1]} ${run.year}`;
 
+  const unpaidEntries = (run.entries ?? []).filter((e) => !e.is_paid);
+  const allSelected   = unpaidEntries.length > 0 && selectedEntryIds.size === unpaidEntries.length;
+  const someSelected  = selectedEntryIds.size > 0 && selectedEntryIds.size < unpaidEntries.length;
+
+  // Sync indeterminate state on the select-all checkbox
+  if (selectAllRef.current) {
+    selectAllRef.current.indeterminate = someSelected;
+  }
+
+  const selectedNetTotal = (run.entries ?? [])
+    .filter((e) => selectedEntryIds.has(e.id))
+    .reduce((sum, e) => sum + Number(e.net_salary), 0);
+
+  const toggleEntry = (entryId: string, checked: boolean) => {
+    setSelectedEntryIds((prev) => {
+      const next = new Set(prev);
+      checked ? next.add(entryId) : next.delete(entryId);
+      return next;
+    });
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedEntryIds(checked ? new Set(unpaidEntries.map((e) => e.id)) : new Set());
+  };
+
+  const handleConfirmPayment = () => {
+    if (selectedEntryIds.size === 0) return;
+    markPaidMutation.mutate({
+      entry_ids: Array.from(selectedEntryIds),
+      payment_mode: paymentMode,
+    });
+  };
+
+  const columnHeaders = [
+    ...(isApproved && canEdit ? [''] : []),
+    'Employee', 'Present / Working', 'Gross', 'PF (Emp)', 'ESI (Emp)', 'PT', 'TDS', 'Deductions', 'Net Salary', '',
+  ];
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -106,12 +152,6 @@ export default function PayrollRunDetail() {
             <Button onClick={() => { if (confirm('Approve payroll and post journal entry?')) approveMutation.mutate(); }} loading={approveMutation.isPending}>
               <CheckCircle className="mr-2 h-4 w-4" />
               Approve & Post
-            </Button>
-          )}
-          {isApproved && canEdit && (
-            <Button variant="secondary" onClick={() => { if (confirm('Mark payroll as paid?')) markPaidMutation.mutate(); }} loading={markPaidMutation.isPending}>
-              <CreditCard className="mr-2 h-4 w-4" />
-              Mark as Paid
             </Button>
           )}
         </div>
@@ -143,7 +183,18 @@ export default function PayrollRunDetail() {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                {['Employee', 'Present / Working', 'Gross', 'PF (Emp)', 'ESI (Emp)', 'PT', 'TDS', 'Deductions', 'Net Salary', ''].map((h) => (
+                {isApproved && canEdit && (
+                  <th className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      ref={selectAllRef}
+                      checked={allSelected}
+                      onChange={(e) => toggleAll(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 dark:border-gray-600"
+                    />
+                  </th>
+                )}
+                {columnHeaders.slice(isApproved && canEdit ? 1 : 0).map((h) => (
                   <th key={h} className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {h}
                   </th>
@@ -152,7 +203,21 @@ export default function PayrollRunDetail() {
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
               {(run.entries ?? []).map((entry) => (
-                <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                <tr key={entry.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${entry.is_paid ? 'opacity-60' : ''}`}>
+                  {isApproved && canEdit && (
+                    <td className="px-3 py-3">
+                      {entry.is_paid ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={selectedEntryIds.has(entry.id)}
+                          onChange={(e) => toggleEntry(entry.id, e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 dark:border-gray-600"
+                        />
+                      )}
+                    </td>
+                  )}
                   <td className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                     {entry.employee?.name ?? '—'}
                     <div className="text-xs text-gray-400">{entry.employee?.designation?.name}</div>
@@ -191,7 +256,12 @@ export default function PayrollRunDetail() {
                   <td className="px-3 py-3 text-sm text-red-600 dark:text-red-400">{formatCurrency(entry.professional_tax)}</td>
                   <td className="px-3 py-3 text-sm text-red-600 dark:text-red-400">{formatCurrency(entry.tds)}</td>
                   <td className="px-3 py-3 text-sm font-medium text-red-700 dark:text-red-400">{formatCurrency(entry.total_deductions)}</td>
-                  <td className="px-3 py-3 text-sm font-bold text-green-700 dark:text-green-400">{formatCurrency(entry.net_salary)}</td>
+                  <td className="px-3 py-3 text-sm">
+                    <span className="font-bold text-green-700 dark:text-green-400">{formatCurrency(entry.net_salary)}</span>
+                    {entry.is_paid && (
+                      <span className="ml-2 text-xs font-medium text-green-600 dark:text-green-400">(Paid)</span>
+                    )}
+                  </td>
                   <td className="px-3 py-3 text-sm">
                     <button
                       onClick={() => downloadPayslip(entry)}
@@ -206,6 +276,32 @@ export default function PayrollRunDetail() {
             </tbody>
           </table>
         </div>
+
+        {/* Payment confirm bar — shown when approved and entries are selected */}
+        {isApproved && canEdit && selectedEntryIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {selectedEntryIds.size} employee{selectedEntryIds.size > 1 ? 's' : ''} selected
+              &nbsp;—&nbsp;
+              <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(selectedNetTotal)}</span>
+            </span>
+            <select
+              value={paymentMode}
+              onChange={(e) => setPaymentMode(e.target.value as 'cash' | 'bank')}
+              className="rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+            >
+              <option value="bank">Bank</option>
+              <option value="cash">Cash</option>
+            </select>
+            <Button
+              onClick={handleConfirmPayment}
+              loading={markPaidMutation.isPending}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Confirm Payment ({selectedEntryIds.size})
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Journal Link */}

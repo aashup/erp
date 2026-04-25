@@ -90,6 +90,7 @@ return new class extends Migration
             $table->boolean('is_pf_applicable')->default(true);
             $table->boolean('is_esi_applicable')->default(true);
             $table->boolean('is_active')->default(true);
+            $table->foreignUuid('salary_ledger_id')->nullable()->constrained('ledgers')->nullOnDelete();
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
             $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
@@ -180,6 +181,8 @@ return new class extends Migration
             $table->decimal('pf_employer', 10, 2)->default(0);
             $table->decimal('esi_employer', 10, 2)->default(0);
             $table->json('custom_components')->nullable();
+            $table->boolean('is_paid')->default(false);
+            $table->foreignUuid('payment_voucher_id')->nullable()->constrained('vouchers')->nullOnDelete();
             $table->enum('sync_status', ['pending', 'synced', 'conflict'])->default('pending');
             $table->string('device_id', 255)->nullable();
             $table->timestamp('synced_at')->nullable();
