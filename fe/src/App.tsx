@@ -38,7 +38,6 @@ import SalesInvoiceFormPage from "@/pages/sales/SalesInvoiceFormPage";
 import SalesInvoiceFormPage2 from "@/pages/sales/SalesInvoiceFormPage2";
 import ChartOfAccounts from "@/pages/accounting/ChartOfAccounts";
 import Ledgers from "@/pages/accounting/Ledgers";
-import Payments from "@/pages/accounting/Payments";
 import VouchersHub from "@/pages/accounting/VouchersHub";
 import VoucherTypeList from "@/pages/accounting/VoucherTypeList";
 import VoucherEntryForm from "@/pages/accounting/VoucherEntryForm";
@@ -243,7 +242,6 @@ export default function App() {
               path="/accounting/vouchers/:type/new"
               element={<VoucherEntryForm />}
             />
-            <Route path="/accounting/payments" element={<Payments />} />
             <Route
               path="/accounting/trial-balance"
               element={<TrialBalance />}

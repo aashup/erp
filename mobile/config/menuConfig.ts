@@ -183,12 +183,6 @@ export const MENU_CONFIG: MenuItem[] = [
         href: '/accounting/balance-sheet',
         requiredPermission: 'accounting.view',
       },
-      {
-        id: 'payments',
-        label: 'Payments',
-        href: '/accounting/payments',
-        requiredPermission: 'accounting.view',
-      },
     ],
   },
   {

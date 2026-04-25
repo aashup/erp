@@ -40,7 +40,6 @@ class DatabaseSeeder extends Seeder
                 SalesOrderSeeder::class,
                 SalesInvoiceSeeder::class,
                 AidwayBiotechInvoiceSeeder::class,
-                PaymentReceiptSeeder::class,
                 VoucherSeeder::class,
             ]);
         }

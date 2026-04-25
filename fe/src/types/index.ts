@@ -409,23 +409,6 @@ export interface Ledger extends SyncColumns {
   group?: AccountingGroup;
 }
 
-export interface PaymentReceipt extends SyncColumns {
-  id: string;
-  company_id: string;
-  party_id: string;
-  purchase_invoice_id: string | null;
-  sales_invoice_id: string | null;
-  type: 'payment' | 'receipt';
-  receipt_number: string;
-  receipt_date: string;
-  amount: number;
-  payment_mode: 'cash' | 'bank' | 'cheque' | 'upi' | 'other';
-  reference_number: string | null;
-  bank_name: string | null;
-  notes: string | null;
-  party?: Party;
-}
-
 // Invoice Templates & Company Settings
 export interface InvoiceTemplate {
   slug: string;

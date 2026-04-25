@@ -18,7 +18,6 @@ use App\Http\Controllers\Api\V1\ItemGroupController;
 use App\Http\Controllers\Api\V1\LedgerController;
 use App\Http\Controllers\Api\V1\OcrInvoiceController;
 use App\Http\Controllers\Api\V1\PartyController;
-use App\Http\Controllers\Api\V1\PaymentReceiptController;
 use App\Http\Controllers\Api\V1\PayrollController;
 use App\Http\Controllers\Api\V1\POSController;
 use App\Http\Controllers\Api\V1\PublicInvoiceController;
@@ -148,9 +147,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ledgers/{ledger}/balance', [LedgerController::class, 'balance']);
     Route::apiResource('ledgers', LedgerController::class);
     Route::apiResource('vouchers', VoucherController::class)->except(['update']);
-    Route::get('payment-receipts/{payment_receipt}/journal', [PaymentReceiptController::class, 'journal']);
-    Route::apiResource('payment-receipts', PaymentReceiptController::class)->except(['update']);
-
     // POS
     Route::get('pos/items', [POSController::class, 'items']);
     Route::post('pos/checkout', [POSController::class, 'checkout']);
