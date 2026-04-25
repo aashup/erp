@@ -178,12 +178,16 @@ Settings (requiredPermission: branch.view)
   ├── Inventory     /settings/inventory
   ├── Units         /settings/units
   ├── Financial Years /settings/financial-years
-  └── Payroll       /settings/payroll   ← requiredPermission: payroll.view
+  ├── Payroll       /settings/payroll   ← requiredPermission: payroll.view
+  └── Tally Import  /settings/tally-import  ← requiredPermission: accounting.create
 ```
 
 ## Type Definitions (fe/src/types/index.ts)
 
 Key interfaces: Company, User, Branch, FinancialYear, Item, Batch, Godown, Party, AccountingGroup, Ledger, Voucher, VoucherLine, PaymentReceipt, StockLedgerEntry, PurchaseOrder/Invoice, SalesOrder/Invoice, Department, Designation, Employee, SalaryStructure, PayrollRun, PayrollEntry
+
+**`financial_year_id` on document types:**
+`PurchaseOrder`, `SalesOrder`, and `SalesInvoice` interfaces all include `financial_year_id: string | null`. This is resolved server-side from the document date — the frontend does not need to send it.
 
 **Payroll-specific types:**
 ```typescript
@@ -196,6 +200,51 @@ PayrollEntry               // includes custom_components?: CustomComponent[] | n
 All entities include SyncColumns: sync_status, device_id, synced_at, updated_at_local, created_at, updated_at
 
 Response wrappers: ApiResponse<T>, PaginatedResponse<T>
+
+## Tally Import Page (`fe/src/pages/settings/TallyImport.tsx`)
+
+Route: `/settings/tally-import` | Permission: `accounting.create`
+API service: `fe/src/api/tallyImport.ts`
+
+### Architecture
+Three-section page — Connection Settings, Masters, Vouchers — each fully independent.
+
+### Import Modes (`ImportMode = "xml" | "odbc" | "file"`)
+- **XML over HTTP**: sends XML envelopes to Tally's HTTP server; no driver needed
+- **ODBC Direct**: queries Tally as SQL database via PHP ODBC extension (Database Bridge)
+- **Upload File**: user exports XML from Tally manually and uploads it
+
+Both live modes (xml/odbc) share the same import backend functions — only fetch differs.
+
+### Components
+- `ModeToggle` — 3-way button group: XML over HTTP | ODBC Direct | Upload File
+- `XmlFileInput` — hidden `<input type="file" accept=".xml">` with `useRef`; reads with `file.text()`
+- `ConnectionSection` — shared URL input + Save; **both methods shown simultaneously** (two separate cards, each with own Test Connection button)
+- `LedgersTab` — preview table (Name, Parent, Type badge, GSTIN, Opening Balance); passes `mode as "xml"|"odbc"` to `fetchMutation.mutate()` and `connection_method` to `importMutation.mutate()`
+- `StockItemsTab` — preview table (Name, Group, Unit, HSN, GST%); same mode-wiring pattern as LedgersTab
+- `VouchersSection` — date range From/To (defaults to current FY start → today); passes `connection_method` in live import payload
+- `ImportResultCard` — Created (green) / Skipped (gray) / Failed (red) counts + collapsible error list
+
+### Key Design Rules
+- **Both XML and ODBC sections always visible** in ConnectionSection — never hide one when the other is selected
+- All API calls use `useMutation` (button-triggered); no `useQuery` auto-fetch on mount
+- Tally URL stored in `company_settings.tally_server_url`; loaded via `companySettingsApi.get()`
+- Recommended import sequence shown as blue info banner: Default Account Groups → Ledgers → Stock Items → Vouchers
+
+### API Service (`fe/src/api/tallyImport.ts`)
+```typescript
+export type TallyConnectionMethod = "xml" | "odbc";
+
+tallyImportApi = {
+  testConnection()                                         // GET /tally/test-connection
+  testOdbcConnection()                                     // GET /tally/test-odbc-connection
+  fetchLedgers(connectionMethod?)                          // GET /tally/fetch-ledgers?connection_method=
+  importLedgers({ mode, xml_content?, connection_method? }) // POST /tally/import-ledgers
+  fetchStockItems(connectionMethod?)                       // GET /tally/fetch-stock-items?connection_method=
+  importStockItems({ mode, xml_content?, connection_method? }) // POST /tally/import-stock-items
+  importVouchers({ mode, date_from?, date_to?, xml_content?, connection_method? }) // POST /tally/import-vouchers
+}
+```
 
 ## State Management
 - **authStore**: user, token, isAuthenticated, setAuth(), logout()

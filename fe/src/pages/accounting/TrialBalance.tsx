@@ -2,6 +2,7 @@ import { Fragment, useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi } from '@/api/accounting';
+import { useFYStore } from '@/store/fyStore';
 import type { TrialBalanceRow } from '@/types';
 import { ChevronRight, ChevronDown, Filter, X, FolderOpen, FileText, ArrowLeft } from 'lucide-react';
 
@@ -579,6 +580,8 @@ function FilterPanel({
 export default function TrialBalance() {
   usePageTitle('Trial Balance');
 
+  const selectedFY = useFYStore((s) => s.selectedFY);
+
   const [filterOpen, setFilterOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -605,7 +608,7 @@ export default function TrialBalance() {
   }, [appliedDateFrom, appliedDateTo]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['report-trial-balance', appliedDateFrom, appliedDateTo],
+    queryKey: ['report-trial-balance', appliedDateFrom, appliedDateTo, selectedFY?.id],
     queryFn: () => reportsApi.trialBalance(queryParams),
     select: (res) => res.data,
   });
@@ -613,6 +616,16 @@ export default function TrialBalance() {
   const rows = data?.data ?? [];
   const summary = data?.summary;
   const treeByType = useMemo(() => buildTree(rows), [rows]);
+
+  const hasVisibleRows = useMemo(() => {
+    for (const type of TYPE_ORDER) {
+      const nodes = treeByType.get(type);
+      if (!nodes?.length) continue;
+      const typeAgg = nodes.reduce((acc, n) => addAgg(acc, n.agg), { ...ZERO });
+      if (!hideZero || isNonZero(typeAgg)) return true;
+    }
+    return false;
+  }, [treeByType, hideZero]);
 
   // Grand totals aggregated from all tree nodes
   const grandTotals = useMemo(() => {
@@ -663,7 +676,8 @@ export default function TrialBalance() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Trial Balance</h1>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            Click groups to expand · Click ledgers to view transactions
+            {selectedFY ? <span className="font-medium text-gray-700 dark:text-gray-300">FY {selectedFY.label}</span> : null}
+            {selectedFY ? ' · ' : ''}Click groups to expand · Click ledgers to view transactions
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -720,6 +734,22 @@ export default function TrialBalance() {
           <p className="text-gray-500 dark:text-gray-400">
             No accounts found. Set up your chart of accounts and post some transactions.
           </p>
+        </div>
+      ) : !hasVisibleRows ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
+          <p className="text-gray-700 dark:text-gray-300 font-medium">
+            All accounts have zero balance
+            {selectedFY ? ` for FY ${selectedFY.label}` : ' in the selected period'}.
+          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            This may mean no transactions were posted in this period, or you are viewing the wrong Financial Year.
+          </p>
+          <button
+            onClick={() => setHideZero(false)}
+            className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            Show all accounts
+          </button>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">

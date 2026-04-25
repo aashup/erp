@@ -90,12 +90,98 @@ Types: purchase, sales, payment, receipt, journal, contra, **payroll** (prefix: 
 ## Migration Order (key tables)
 1. companies → 2. users → 3. branches → 4. financial_years → 5. accounting_groups → 6. ledgers → 7. parties → 8. items → 9. batches → 10. godowns → 11. stock_ledger → 12-16. purchase_* → 17-21. sales_* → 22. payment_receipts → 23. vouchers + voucher_lines → 24. payroll tables (in `2026_04_11_create_document_counters_table.php`)
 
+## Financial Year Linking on Documents
+
+`purchase_orders`, `sales_orders`, and `sales_invoices` all carry a `financial_year_id` nullable FK → `financial_years`.
+
+### Resolution rule (all three controllers)
+FY is **always resolved server-side from the document date** — the frontend never sends it. Pattern used in `store()`:
+
+```php
+$fy = FinancialYear::where('company_id', $user->company_id)
+    ->whereDate('start_date', '<=', $validated['document_date'])
+    ->whereDate('end_date',   '>=', $validated['document_date'])
+    ->first();
+// throws 422 if no FY matches
+$validated['financial_year_id'] = $fy->id;
+```
+
+### Backfill on confirm
+`updateStatus()` (PO, SO, SI) backfills `financial_year_id` when transitioning to `confirmed` if the column is null (handles records created before this column existed).
+
+### SalesInvoice `update()`
+Re-resolves FY when `invoice_date` changes and saves it.
+
+### Models
+`PurchaseOrder`, `SalesOrder`, `SalesInvoice` all have `financial_year_id` in `$fillable` and a `financialYear()` belongs-to relationship.
+
 ## Important Design Rules
 - UUID primary keys everywhere
 - Stock ledger & vouchers are append-only (no soft deletes, no edits)
 - Double-entry accounting: every voucher must balance (total debit = total credit)
 - All tables have sync columns for offline-first mobile support
 - `loadDefaults()` is one-time operation tracked in CompanySetting
+
+## Tally Import Module
+
+### Files
+- `app/Http/Controllers/Api/V1/TallyImportController.php` — 7 endpoints
+- `app/Services/TallyImportService.php` — XML + ODBC fetch, parse, import logic
+
+### Routes (`/tally` prefix, auth:sanctum)
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | tally/test-connection | Test XML over HTTP (5s timeout) |
+| GET | tally/test-odbc-connection | Test ODBC driver connection |
+| GET | tally/fetch-ledgers?connection_method=xml\|odbc | Preview ledgers |
+| POST | tally/import-ledgers | Import ledgers/parties |
+| GET | tally/fetch-stock-items?connection_method=xml\|odbc | Preview stock items |
+| POST | tally/import-stock-items | Import stock items |
+| POST | tally/import-vouchers | Import Day Book vouchers |
+
+### Connection Methods
+- **XML over HTTP**: POST XML envelopes to `http://<host>:9000` — no driver needed, works over LAN
+- **ODBC Direct**: `odbc_connect()` with `{Tally ODBC Driver}` (fallback: `{Tally Prime ODBC Driver}`); requires `php-odbc` extension + Tally ODBC driver on PHP server
+
+### TallyImportService Key Methods
+- `buildXmlRequest(reportName, staticVars)` — constructs Tally XML envelope
+- `postToTally(url, xml)` — HTTP POST with 30s timeout; throws `RuntimeException` on non-2xx
+- `fetchLedgers(url)` / `fetchLedgersOdbc(url)` — returns `TallyLedgerPreview[]`
+- `fetchStockItems(url)` / `fetchStockItemsOdbc(url)` — returns `TallyStockItemPreview[]`
+- `fetchVouchers(url, from, to)` / `fetchVouchersOdbc(url, from, to)` — returns parsed voucher array
+- `parseLedgersXml(xml)` / `parseStockItemsXml(xml)` / `parseVouchersXml(xml)` — for file upload mode
+- `importLedgers(companyId, userId, ledgers)` — shared by both methods; Party + Ledger creation
+- `importStockItems(companyId, userId, items)` — creates ItemGroup + Unit if missing, then Item
+- `importVouchers(companyId, userId, vouchers)` — creates Voucher + VoucherLines; validates double-entry balance
+- `groupOdbcVoucherRows(rows)` — groups flat ODBC rows by `Date||VoucherNumber` into multi-line vouchers
+
+### Import Rules
+- **Party/Ledger/Item**: skip silently if same name already exists (case-insensitive, per company)
+- **Voucher**: always create — no dedup (every Tally voucher becomes a new ERP voucher)
+- **ItemGroup/Unit**: create if missing, not an error
+- **PartyObserver**: creating a `Party` auto-creates accounting ledger — Default Account Groups must be loaded first
+- **Double-entry validation**: `abs(totalDebit - totalCredit) <= 0.02`; fails voucher if unbalanced
+- **Voucher numbering**: reuses `CompanySetting::getAndIncrementVoucherIndex()` + `Voucher::getTypePrefix()` with `source='tally_import'`
+
+### ImportResult shape
+```php
+['created' => int, 'skipped' => int, 'failed' => int, 'errors' => [['entity','name','reason']], 'created_names' => string[]]
+```
+
+### Tally XML Report Names
+- Test connection / companies: `List of Companies`
+- Ledgers: `List of Ledgers`
+- Stock Items: `List of Stock Items`
+- Vouchers: `Day Book` (with `SVFROMDATE`/`SVTODATE` in `YYYYMMDD` format)
+
+### ODBC SQL Queries
+- Ledgers: `SELECT Name, Parent, OpeningBalance, GSTRegistrationNumber, LedMobile, Email FROM Ledger`
+- Stock Items: `SELECT Name, Parent, BaseUnits, HSNCode, GSTRate FROM StockItem`
+- Vouchers: `SELECT Date, VoucherType, VoucherNumber, Narration, LedgerName, Amount FROM DayBook WHERE Date >= '{from}' AND Date <= '{to}'`
+
+### Tally Sign Convention
+- XML opening balance: `"50000.00 Dr"` / `"50000.00 Cr"` string format
+- ODBC amount: negative = credit, positive = debit
 
 ## Payroll Module
 

@@ -41,6 +41,71 @@ There are **two completely separate printing systems**. Never mix them up.
 
 ---
 
+## Actual Project Directory Layout
+
+> The monorepo plan below is aspirational. The **real** working directories are:
+
+```
+erp/
+├── api/          # Laravel 11 backend  (not backend/)
+│   ├── app/Http/Controllers/Api/V1/
+│   ├── app/Models/
+│   ├── app/Services/          # AccountingService, InvoicePdfService, PayrollService, etc.
+│   ├── app/Policies/          # 17 policies — VoucherPolicy guards all report endpoints
+│   ├── app/Traits/            # HasUuid, HasSyncColumns, BelongsToCompany, FiltersByFinancialYear
+│   ├── database/migrations/   # Modify in-place (no new files during initial dev)
+│   └── routes/api.php         # All routes under /api/v1, auth:sanctum
+└── fe/           # React + Vite frontend  (not apps/web/)
+    └── src/
+        ├── api/               # accounting.ts, inventory.ts, sales.ts, payroll.ts, …
+        ├── components/layout/ # AppLayout, Header (FY selector lives here), Sidebar
+        ├── components/ui/     # DataTable, Modal, FilterPanel, SlideSelect, …
+        ├── hooks/             # useFinancialYear.ts, useSelectedFYId, useDebounce, …
+        ├── lib/               # axios.ts (auto-injects JWT + financial_year_id), utils.ts
+        ├── pages/accounting/  # ChartOfAccounts, Ledgers, TrialBalance, ProfitAndLoss, …
+        ├── store/             # authStore, fyStore (selectedFY → localStorage), themeStore
+        └── App.tsx            # React Router v7 routes + React Query provider
+```
+
+---
+
+## Accounting Reports — Key Patterns
+
+### Report Controller (`api/app/Http/Controllers/Api/V1/ReportController.php`)
+All report endpoints share `resolveDateRange()`:
+1. If explicit `date_from` + `date_to` params → use them
+2. Else if `financial_year_id` param → look up `FinancialYear`, return `start_date`/`end_date`
+3. Else → return `[null, null]` → no date filter (all-time)
+
+Endpoints: `trial-balance`, `profit-and-loss`, `balance-sheet`, `party-ledger`, `ledger-transactions`, `cash-book`, `bank-book`, `day-book`.
+All require `accounting.view` permission (`$this->authorize('viewAny', Voucher::class)`).
+
+### Financial Year Dates — IST→UTC Storage Gotcha
+FY dates are entered as Indian dates (e.g. April 1) but stored in MySQL `date` columns at UTC, so they land one day earlier:
+- April 1, 2026 IST → stored as `2026-03-31`
+- March 31, 2027 IST → stored as `2027-03-30`
+
+This is consistent and `whereDate()` comparisons work correctly — just don't be confused when reading raw DB values.
+
+### Financial Year — Frontend (`fe/src/store/fyStore.ts`, `fe/src/hooks/useFinancialYear.ts`)
+- `useFYStore` persists `selectedFY` to `localStorage` key `selectedFY` (JSON)
+- `useFinancialYear()` is called once in `AppLayout`; fetches all FYs and auto-selects the stored one (or `is_current` FY as fallback)
+- The `axios.ts` request interceptor auto-injects `financial_year_id` from `localStorage.selectedFY` on **every GET request** — no manual passing needed in most API calls
+- **Critical pattern for report query keys**: always include `selectedFY?.id` in the React Query key so changing the FY in the header triggers a refetch:
+  ```tsx
+  const selectedFY = useFYStore((s) => s.selectedFY);
+  queryKey: ['report-name', appliedDateFrom, appliedDateTo, selectedFY?.id]
+  ```
+
+### TrialBalance Page (`fe/src/pages/accounting/TrialBalance.tsx`)
+- Builds a tree from flat rows returned by the API (groups + ledgers with `parent_id` linking)
+- `hideZero: true` by default — rows/groups with all-zero balances are hidden
+- When `rows.length > 0` but all rows are hidden by `hideZero`, shows "All accounts have zero balance for FY X" with a "Show all accounts" button
+- FY label shown in subtitle so user always knows the active period
+- Ledger rows are clickable → opens a slide-over drill-down panel showing all voucher lines
+
+---
+
 ## Development Rules
 
 - **Do NOT start dev servers, preview, or run the application** unless the user explicitly asks to check errors or run the application.
