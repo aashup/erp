@@ -182,6 +182,7 @@ export interface Party extends SyncColumns {
 export interface PurchaseOrder extends SyncColumns {
   id: string;
   company_id: string;
+  financial_year_id: string | null;
   party_id: string;
   branch_id: string | null;
   po_number: string;

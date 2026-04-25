@@ -71,18 +71,20 @@ class PurchaseOrderController extends Controller
         ]);
 
         $po = DB::transaction(function () use ($validated, $request) {
+            // Always resolve financial year from PO date
+            $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                ->whereDate('start_date', '<=', $validated['po_date'])
+                ->whereDate('end_date', '>=', $validated['po_date'])
+                ->first();
+
+            if (! $fy) {
+                throw ValidationException::withMessages(['po_date' => 'No financial year found for the selected date']);
+            }
+
+            $validated['financial_year_id'] = $fy->id;
+
             // Auto-generate PO number if not provided
             if (empty($validated['po_number'])) {
-                // Find the financial year that contains the PO date
-                $fy = FinancialYear::where('company_id', $request->user()->company_id)
-                    ->whereDate('start_date', '<=', $validated['po_date'])
-                    ->whereDate('end_date', '>=', $validated['po_date'])
-                    ->first();
-
-                if (! $fy) {
-                    throw ValidationException::withMessages(['po_date' => 'No financial year found for the selected date']);
-                }
-
                 $counter = DocumentCounter::where('company_id', $request->user()->company_id)
                     ->where('financial_year_id', $fy->id)
                     ->where('document_type', 'purchase_order')
@@ -98,7 +100,6 @@ class PurchaseOrderController extends Controller
                     'purchase_order'
                 );
                 $validated['po_number'] = $counter->prefix.'-'.str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-                $validated['financial_year_id'] = $fy->id;
             }
 
             $po = PurchaseOrder::create([
@@ -198,10 +199,24 @@ class PurchaseOrderController extends Controller
             ]);
         }
 
-        $purchaseOrder->update([
+        $updateData = [
             'status' => $newStatus,
             'updated_by' => $request->user()->id,
-        ]);
+        ];
+
+        // Backfill financial_year_id on confirm if missing (e.g. manually-numbered POs)
+        if ($newStatus === 'confirmed' && ! $purchaseOrder->financial_year_id) {
+            $fy = FinancialYear::where('company_id', $purchaseOrder->company_id)
+                ->whereDate('start_date', '<=', $purchaseOrder->po_date)
+                ->whereDate('end_date', '>=', $purchaseOrder->po_date)
+                ->first();
+
+            if ($fy) {
+                $updateData['financial_year_id'] = $fy->id;
+            }
+        }
+
+        $purchaseOrder->update($updateData);
 
         return response()->json([
             'data' => $purchaseOrder->load('lines.item', 'party', 'branch'),

@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\SalesInvoiceController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
 use App\Http\Controllers\Api\V1\StockLedgerController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\TallyImportController;
 use App\Http\Controllers\Api\V1\ThermalTemplateController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -176,6 +177,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('payroll-runs', [PayrollController::class, 'index']);
     Route::get('payroll-runs/{payrollRun}', [PayrollController::class, 'show']);
     Route::delete('payroll-runs/{payrollRun}', [PayrollController::class, 'destroy']);
+
+    // Tally Import
+    Route::prefix('tally')->group(function () {
+        Route::get('test-connection', [TallyImportController::class, 'testConnection']);
+        Route::get('test-odbc-connection', [TallyImportController::class, 'testOdbcConnection']);
+        Route::get('fetch-ledgers', [TallyImportController::class, 'fetchLedgers']);
+        Route::post('import-ledgers', [TallyImportController::class, 'importLedgers']);
+        Route::get('fetch-stock-items', [TallyImportController::class, 'fetchStockItems']);
+        Route::post('import-stock-items', [TallyImportController::class, 'importStockItems']);
+        Route::post('import-vouchers', [TallyImportController::class, 'importVouchers']);
+    });
 
     // Reports
     Route::get('reports/trial-balance', [ReportController::class, 'trialBalance']);

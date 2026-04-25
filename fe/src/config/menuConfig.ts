@@ -296,6 +296,12 @@ export const MENU_CONFIG: MenuItem[] = [
         href: "/settings/payroll",
         requiredPermission: "payroll.view",
       },
+      {
+        id: "tally-import",
+        label: "Tally Import",
+        href: "/settings/tally-import",
+        requiredPermission: "accounting.create",
+      },
     ],
   },
   {
