@@ -22,6 +22,37 @@ const statusVariant: Record<string, 'warning' | 'info' | 'success'> = {
   paid: 'success',
 };
 
+function PaymentVouchersSummary({ entries }: { entries: PayrollEntry[] }) {
+  const grouped: Record<string, { voucherNumber: string; employees: string[]; total: number }> = {};
+  for (const e of entries) {
+    if (!e.is_paid || !e.payment_voucher) continue;
+    const vnum = e.payment_voucher.voucher_number;
+    if (!grouped[vnum]) grouped[vnum] = { voucherNumber: vnum, employees: [], total: 0 };
+    grouped[vnum].employees.push(e.employee?.name ?? '—');
+    grouped[vnum].total += Number(e.net_salary);
+  }
+  const rows = Object.values(grouped);
+  if (rows.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Vouchers</p>
+      </CardHeader>
+      <div className="divide-y divide-gray-100 dark:divide-gray-700">
+        {rows.map((row) => (
+          <div key={row.voucherNumber} className="flex items-center justify-between px-4 py-3">
+            <div>
+              <span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">{row.voucherNumber}</span>
+              <span className="ml-3 text-sm text-gray-500">{row.employees.join(', ')}</span>
+            </div>
+            <span className="text-sm font-bold text-green-700 dark:text-green-400">{formatCurrency(row.total)}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export default function PayrollRunDetail() {
   usePageTitle('Payroll Run Detail');
   const { id } = useParams<{ id: string }>();
@@ -259,7 +290,12 @@ export default function PayrollRunDetail() {
                   <td className="px-3 py-3 text-sm">
                     <span className="font-bold text-green-700 dark:text-green-400">{formatCurrency(entry.net_salary)}</span>
                     {entry.is_paid && (
-                      <span className="ml-2 text-xs font-medium text-green-600 dark:text-green-400">(Paid)</span>
+                      <div className="mt-0.5">
+                        <span className="text-xs font-medium text-green-600 dark:text-green-400">Paid</span>
+                        {entry.payment_voucher?.voucher_number && (
+                          <span className="ml-1 font-mono text-xs text-gray-400">({entry.payment_voucher.voucher_number})</span>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="px-3 py-3 text-sm">
@@ -307,9 +343,12 @@ export default function PayrollRunDetail() {
       {/* Journal Link */}
       {run.voucher_id && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
-          Journal entry posted successfully. Voucher ID: <span className="font-mono">{run.voucher_id}</span>
+          Journal entry posted. Voucher: <span className="font-mono font-semibold">{run.voucher_id}</span>
         </div>
       )}
+
+      {/* Payment Vouchers Summary */}
+      <PaymentVouchersSummary entries={run.entries ?? []} />
     </div>
   );
 }

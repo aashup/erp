@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { usePermissions } from "@/hooks/usePermissions";
-import { vouchersApi, paymentReceiptsApi } from "@/api/accounting";
+import { vouchersApi } from "@/api/accounting";
 import type { Voucher, PaymentReceipt } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -14,14 +14,11 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
 import { PaymentVoucherDetailModal } from "@/components/accounting/PaymentVoucherDetailModal";
-import toast from "react-hot-toast";
 import {
   ArrowLeft,
   Plus,
   Search,
   Eye,
-  Pencil,
-  Trash2,
   ArrowLeftRight,
   CreditCard,
   HandCoins,
@@ -31,6 +28,7 @@ import {
   Filter,
 } from "lucide-react";
 import { FilterPanel } from "@/components/ui/FilterPanel";
+import { useFYStore } from "@/store/fyStore";
 
 type VoucherTab =
   | "contra"
@@ -101,20 +99,16 @@ const TYPE_CONFIG: Record<
   },
 };
 
-const PAYMENT_TYPES = new Set<VoucherTab>(["payment", "receipt"]);
-
 export default function VoucherTypeList() {
   const { type } = useParams<{ type: VoucherTab }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const canCreate = hasPermission('accounting.create');
-  const canEdit = hasPermission('accounting.edit');
-  const canDelete = hasPermission('accounting.delete');
+  const canCreate = hasPermission("accounting.create");
 
   const voucherType = (type ?? "journal") as VoucherTab;
   const config = TYPE_CONFIG[voucherType] ?? TYPE_CONFIG.journal;
-  const isPaymentType = PAYMENT_TYPES.has(voucherType);
+  // const isPaymentType = PAYMENT_TYPES.has(voucherType);
+  const selectedFY = useFYStore((s) => s.selectedFY);
 
   usePageTitle(`${config.label} Vouchers`);
 
@@ -125,24 +119,38 @@ export default function VoucherTypeList() {
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     .toISOString()
     .split("T")[0];
+  const fyStart = selectedFY?.start_date
+    ? selectedFY.start_date.split("T")[0]
+    : monthStart;
+  const fyEnd = selectedFY?.end_date
+    ? selectedFY.end_date.split("T")[0]
+    : monthEnd;
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showDetail, setShowDetail] = useState<Voucher | null>(null);
-  const [showPaymentDetail, setShowPaymentDetail] = useState<PaymentReceipt | null>(null);
+  const [showPaymentDetail, setShowPaymentDetail] =
+    useState<PaymentReceipt | null>(null);
 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const [dateFrom, setDateFrom] = useState(monthStart);
-  const [dateTo, setDateTo] = useState(monthEnd);
-  const [appliedDateFrom, setAppliedDateFrom] = useState(monthStart);
-  const [appliedDateTo, setAppliedDateTo] = useState(monthEnd);
+  const [dateFrom, setDateFrom] = useState(fyStart);
+  const [dateTo, setDateTo] = useState(fyEnd);
+  const [appliedDateFrom, setAppliedDateFrom] = useState(fyStart);
+  const [appliedDateTo, setAppliedDateTo] = useState(fyEnd);
 
-  const hasFilter = appliedDateFrom !== monthStart || appliedDateTo !== monthEnd;
+  const hasFilter = appliedDateFrom !== fyStart || appliedDateTo !== fyEnd;
 
-  // ─── Journal/Contra/Sales/Purchase list ──────────────────────────────────
+  // ─── Journal/Contra/Sales/Purchase/Payment/Receipt list ──────────────────────────────────
 
   const { data: journalData, isLoading: journalLoading } = useQuery({
-    queryKey: ["vouchers", voucherType, page, search, appliedDateFrom, appliedDateTo],
+    queryKey: [
+      "vouchers",
+      voucherType,
+      page,
+      search,
+      appliedDateFrom,
+      appliedDateTo,
+    ],
     queryFn: () =>
       vouchersApi.list({
         page: String(page),
@@ -152,31 +160,6 @@ export default function VoucherTypeList() {
         date_to: appliedDateTo,
       }),
     select: (res) => res.data,
-    enabled: !isPaymentType,
-  });
-
-  // ─── Payment/Receipt list ─────────────────────────────────────────────────
-
-  const { data: paymentData, isLoading: paymentLoading } = useQuery({
-    queryKey: ["payment-receipts", voucherType, page, search, appliedDateFrom, appliedDateTo],
-    queryFn: () =>
-      paymentReceiptsApi.list({
-        page: String(page),
-        search,
-        type: voucherType,
-        date_from: appliedDateFrom,
-        date_to: appliedDateTo,
-      }),
-    select: (res) => res.data,
-    enabled: isPaymentType,
-  });
-
-  const paymentDeleteMutation = useMutation({
-    mutationFn: (id: string) => paymentReceiptsApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payment-receipts"] });
-      toast.success("Record deleted");
-    },
   });
 
   // ─── Columns ─────────────────────────────────────────────────────────────
@@ -216,71 +199,6 @@ export default function VoucherTypeList() {
         >
           <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
         </button>
-      ),
-    },
-  ];
-
-  const paymentColumns: ColumnDef<PaymentReceipt, unknown>[] = [
-    { accessorKey: "receipt_number", header: "Number" },
-    { header: "Party", cell: ({ row }) => row.original.party?.name ?? "—" },
-    {
-      accessorKey: "receipt_date",
-      header: "Date",
-      cell: ({ getValue }) => formatDate(getValue() as string),
-    },
-    {
-      accessorKey: "amount",
-      header: "Amount",
-      cell: ({ getValue }) => formatCurrency(getValue() as number),
-    },
-    {
-      accessorKey: "payment_mode",
-      header: "Mode",
-      cell: ({ getValue }) => (
-        <Badge>{(getValue() as string).toUpperCase()}</Badge>
-      ),
-    },
-    {
-      accessorKey: "reference_number",
-      header: "Reference",
-      cell: ({ getValue }) => (getValue() as string) ?? "—",
-    },
-    {
-      id: "actions",
-      header: "",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setShowPaymentDetail(row.original)}
-            className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-            title="View journal entry"
-          >
-            <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          </button>
-          {canEdit && (
-            <button
-              onClick={() =>
-                navigate(`/accounting/vouchers/${voucherType}/new`, {
-                  state: { edit: row.original },
-                })
-              }
-              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            </button>
-          )}
-          {canDelete && (
-            <button
-              onClick={() => {
-                if (confirm("Delete this record?"))
-                  paymentDeleteMutation.mutate(row.original.id);
-              }}
-              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Trash2 className="h-4 w-4 text-red-500" />
-            </button>
-          )}
-        </div>
       ),
     },
   ];
@@ -357,39 +275,21 @@ export default function VoucherTypeList() {
           </div>
         </CardHeader>
 
-        {isPaymentType ? (
-          <>
-            <DataTable
-              columns={paymentColumns}
-              data={paymentData?.data ?? []}
-              loading={paymentLoading}
+        <>
+          <DataTable
+            columns={journalColumns}
+            data={journalData?.data ?? []}
+            loading={journalLoading}
+          />
+          {journalData && (
+            <Pagination
+              currentPage={journalData.current_page}
+              lastPage={journalData.last_page}
+              total={journalData.total}
+              onPageChange={setPage}
             />
-            {paymentData && (
-              <Pagination
-                currentPage={paymentData.current_page}
-                lastPage={paymentData.last_page}
-                total={paymentData.total}
-                onPageChange={setPage}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            <DataTable
-              columns={journalColumns}
-              data={journalData?.data ?? []}
-              loading={journalLoading}
-            />
-            {journalData && (
-              <Pagination
-                currentPage={journalData.current_page}
-                lastPage={journalData.last_page}
-                total={journalData.total}
-                onPageChange={setPage}
-              />
-            )}
-          </>
-        )}
+          )}
+        </>
       </Card>
 
       {/* Payment/Receipt Detail Modal */}
@@ -428,10 +328,10 @@ export default function VoucherTypeList() {
         <div className="flex gap-2 pt-2">
           <button
             onClick={() => {
-              setDateFrom(monthStart);
-              setDateTo(monthEnd);
-              setAppliedDateFrom(monthStart);
-              setAppliedDateTo(monthEnd);
+              setDateFrom(fyStart);
+              setDateTo(fyEnd);
+              setAppliedDateFrom(fyStart);
+              setAppliedDateTo(fyEnd);
               setShowFilterPanel(false);
             }}
             className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"

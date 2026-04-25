@@ -372,7 +372,7 @@ export interface Voucher extends SyncColumns {
   financial_year_id: string;
   voucher_number: string;
   voucher_date: string;
-  voucher_type: 'purchase' | 'sales' | 'payment' | 'receipt' | 'journal' | 'contra';
+  voucher_type: 'purchase' | 'sales' | 'payment' | 'receipt' | 'journal' | 'contra' | 'payroll';
   narration: string | null;
   source: string | null;
   is_posted: boolean;
@@ -779,6 +779,7 @@ export interface PayrollEntry extends SyncColumns {
   is_paid: boolean;
   payment_voucher_id: string | null;
   employee?: Employee;
+  payment_voucher?: Voucher;
 }
 
 export interface PayrollRun extends SyncColumns {

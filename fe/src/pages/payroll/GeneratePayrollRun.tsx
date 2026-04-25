@@ -1,37 +1,47 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { employeesApi, payrollApi } from '@/api/payroll';
-import type { Employee } from '@/types';
-import { Button } from '@/components/ui/Button';
-import { ArrowLeft, Users } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { employeesApi, payrollApi } from "@/api/payroll";
+import type { Employee } from "@/types";
+import { Button } from "@/components/ui/Button";
+import { ArrowLeft, Users } from "lucide-react";
+import toast from "react-hot-toast";
 
 const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 export default function GeneratePayrollRun() {
-  usePageTitle('Generate Payroll Run');
+  usePageTitle("Generate Payroll Run");
   const navigate = useNavigate();
   const today = new Date();
 
-  const [month, setMonth]             = useState(today.getMonth() + 1);
-  const [year, setYear]               = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth() + 1);
+  const [year, setYear] = useState(today.getFullYear());
   const [workingDays, setWorkingDays] = useState(26);
-  const [notes, setNotes]             = useState('');
+  const [notes, setNotes] = useState("");
 
   // per-employee present days overrides (keyed by employee.id)
   const [presentDays, setPresentDays] = useState<Record<string, number>>({});
-  const [selected, setSelected]       = useState<Set<string>>(new Set());
-  const [bulkDays, setBulkDays]       = useState<string>('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDays, setBulkDays] = useState<string>("");
 
   // fetch all active employees
   const { data: employees = [], isLoading: empLoading } = useQuery({
-    queryKey: ['employees-all'],
-    queryFn: () => employeesApi.list({ per_page: '500' }),
+    queryKey: ["employees-all"],
+    queryFn: () => employeesApi.list({ per_page: "500" }),
     select: (res) => (res.data.data ?? []) as Employee[],
   });
 
@@ -40,7 +50,10 @@ export default function GeneratePayrollRun() {
     setPresentDays((prev) => {
       const next: Record<string, number> = {};
       employees.forEach((e) => {
-        next[e.id] = prev[e.id] !== undefined ? Math.min(prev[e.id], workingDays) : workingDays;
+        next[e.id] =
+          prev[e.id] !== undefined
+            ? Math.min(prev[e.id], workingDays)
+            : workingDays;
       });
       return next;
     });
@@ -55,13 +68,18 @@ export default function GeneratePayrollRun() {
       });
       return next;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employees]);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
       // 1. generate run
-      const res = await payrollApi.generate({ month, year, working_days: workingDays, notes: notes || undefined });
+      const res = await payrollApi.generate({
+        month,
+        year,
+        working_days: workingDays,
+        notes: notes || undefined,
+      });
       const run = res.data.data;
 
       // 2. fetch run detail to get entry IDs
@@ -76,22 +94,27 @@ export default function GeneratePayrollRun() {
 
       await Promise.all(
         patches.map((entry) =>
-          payrollApi.updateEntry(run.id, entry.id, presentDays[entry.employee_id])
-        )
+          payrollApi.updateEntry(
+            run.id,
+            entry.id,
+            presentDays[entry.employee_id],
+          ),
+        ),
       );
 
       return run.id;
     },
     onSuccess: (runId) => {
-      toast.success('Payroll run generated');
+      toast.success("Payroll run generated");
       navigate(`/payroll/runs/${runId}`);
     },
-    onError: () => toast.error('Failed to generate payroll run'),
+    onError: () => toast.error("Failed to generate payroll run"),
   });
 
   // ── Selection helpers ─────────────────────────────────────────────────────
 
-  const allSelected = employees.length > 0 && employees.every((e) => selected.has(e.id));
+  const allSelected =
+    employees.length > 0 && employees.every((e) => selected.has(e.id));
   const someSelected = selected.size > 0;
 
   const toggleAll = () => {
@@ -113,7 +136,9 @@ export default function GeneratePayrollRun() {
     const clamped = Math.min(val, workingDays);
     setPresentDays((prev) => {
       const next = { ...prev };
-      selected.forEach((id) => { next[id] = clamped; });
+      selected.forEach((id) => {
+        next[id] = clamped;
+      });
       return next;
     });
   };
@@ -125,35 +150,48 @@ export default function GeneratePayrollRun() {
       {/* Page header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/payroll/runs')}
+          onClick={() => navigate("/payroll/runs")}
           className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Generate Payroll Run</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Generate Payroll Run
+          </h1>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            Set the period, working days, and present days per employee before generating.
+            Set the period, working days, and present days per employee before
+            generating.
           </p>
         </div>
       </div>
 
       {/* Run parameters */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Run Parameters</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          Run Parameters
+        </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Month</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Month
+            </label>
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
             >
-              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              {MONTHS.map((m, i) => (
+                <option key={i} value={i + 1}>
+                  {m}
+                </option>
+              ))}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Year
+            </label>
             <input
               type="number"
               value={year}
@@ -164,7 +202,9 @@ export default function GeneratePayrollRun() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Working Days</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Working Days
+            </label>
             <input
               type="number"
               value={workingDays}
@@ -175,7 +215,9 @@ export default function GeneratePayrollRun() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Notes (optional)
+            </label>
             <input
               type="text"
               value={notes}
@@ -195,7 +237,9 @@ export default function GeneratePayrollRun() {
             <input
               type="checkbox"
               checked={allSelected}
-              ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+              ref={(el) => {
+                if (el) el.indeterminate = someSelected && !allSelected;
+              }}
               onChange={toggleAll}
               className="h-4 w-4 rounded border-gray-300 accent-blue-600"
             />
@@ -236,20 +280,31 @@ export default function GeneratePayrollRun() {
         {empLoading ? (
           <div className="space-y-2 p-4">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-10 animate-pulse rounded bg-gray-100 dark:bg-gray-700" />
+              <div
+                key={i}
+                className="h-10 animate-pulse rounded bg-gray-100 dark:bg-gray-700"
+              />
             ))}
           </div>
         ) : employees.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">No employees found.</p>
+          <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+            No employees found.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
                   <th className="w-10 px-4 py-2.5"></th>
-                  <th className="px-4 py-2.5 text-left font-medium text-gray-600 dark:text-gray-400">Employee</th>
-                  <th className="px-4 py-2.5 text-left font-medium text-gray-600 dark:text-gray-400">Department</th>
-                  <th className="px-4 py-2.5 text-left font-medium text-gray-600 dark:text-gray-400">Designation</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-gray-600 dark:text-gray-400">
+                    Employee
+                  </th>
+                  <th className="px-4 py-2.5 text-left font-medium text-gray-600 dark:text-gray-400">
+                    Department
+                  </th>
+                  <th className="px-4 py-2.5 text-left font-medium text-gray-600 dark:text-gray-400">
+                    Designation
+                  </th>
                   <th className="w-40 px-4 py-2.5 text-center font-medium text-gray-600 dark:text-gray-400">
                     Present / {workingDays} days
                   </th>
@@ -262,7 +317,7 @@ export default function GeneratePayrollRun() {
                   return (
                     <tr
                       key={emp.id}
-                      className={`transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'}`}
+                      className={`transition-colors ${isSelected ? "bg-blue-50 dark:bg-blue-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-800/40"}`}
                     >
                       <td className="px-4 py-2.5 text-center">
                         <input
@@ -273,16 +328,22 @@ export default function GeneratePayrollRun() {
                         />
                       </td>
                       <td className="px-4 py-2.5">
-                        <div className="font-medium text-gray-900 dark:text-gray-100">{emp.name}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
+                          {emp.name}
+                        </div>
                         {emp.employee_code && (
-                          <div className="text-xs text-gray-400 dark:text-gray-500">{emp.employee_code}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            {emp.employee_code}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
-                        {(emp as Employee & { department?: { name: string } }).department?.name ?? '—'}
+                        {(emp as Employee & { department?: { name: string } })
+                          .department?.name ?? "—"}
                       </td>
                       <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
-                        {(emp as Employee & { designation?: { name: string } }).designation?.name ?? '—'}
+                        {(emp as Employee & { designation?: { name: string } })
+                          .designation?.name ?? "—"}
                       </td>
                       <td className="px-4 py-2.5 text-center">
                         <div className="flex items-center justify-center gap-1.5">
@@ -294,16 +355,21 @@ export default function GeneratePayrollRun() {
                             onChange={(e) =>
                               setPresentDays((prev) => ({
                                 ...prev,
-                                [emp.id]: Math.min(Math.max(0, Number(e.target.value)), workingDays),
+                                [emp.id]: Math.min(
+                                  Math.max(0, Number(e.target.value)),
+                                  workingDays,
+                                ),
                               }))
                             }
                             className={`w-16 rounded border px-2 py-1 text-center text-sm ${
-                              days < workingDays
-                                ? 'border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-700 dark:bg-orange-900/20 dark:text-orange-300'
-                                : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
+                              days > workingDays
+                                ? "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-700 dark:bg-orange-900/20 dark:text-orange-300"
+                                : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                             }`}
                           />
-                          <span className="text-xs text-gray-400">/ {workingDays}</span>
+                          <span className="text-xs text-gray-400">
+                            / {workingDays}
+                          </span>
                         </div>
                       </td>
                     </tr>
@@ -318,10 +384,11 @@ export default function GeneratePayrollRun() {
       {/* Footer actions */}
       <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-900">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Only employees with active salary structures will be included in the run.
+          Only employees with active salary structures will be included in the
+          run.
         </p>
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => navigate('/payroll/runs')}>
+          <Button variant="secondary" onClick={() => navigate("/payroll/runs")}>
             Cancel
           </Button>
           <Button
