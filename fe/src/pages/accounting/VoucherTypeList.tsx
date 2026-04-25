@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { usePermissions } from "@/hooks/usePermissions";
 import { vouchersApi } from "@/api/accounting";
-import type { Voucher, PaymentReceipt } from "@/types";
+import type { Voucher } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
-import { PaymentVoucherDetailModal } from "@/components/accounting/PaymentVoucherDetailModal";
 import {
   ArrowLeft,
   Plus,
@@ -129,9 +128,6 @@ export default function VoucherTypeList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showDetail, setShowDetail] = useState<Voucher | null>(null);
-  const [showPaymentDetail, setShowPaymentDetail] =
-    useState<PaymentReceipt | null>(null);
-
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [dateFrom, setDateFrom] = useState(fyStart);
   const [dateTo, setDateTo] = useState(fyEnd);
@@ -291,12 +287,6 @@ export default function VoucherTypeList() {
           )}
         </>
       </Card>
-
-      {/* Payment/Receipt Detail Modal */}
-      <PaymentVoucherDetailModal
-        record={showPaymentDetail}
-        onClose={() => setShowPaymentDetail(null)}
-      />
 
       {/* Date Range Filter Panel */}
       <FilterPanel

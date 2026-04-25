@@ -48,7 +48,7 @@ class SyncController extends Controller
         'sales_orders' => SalesOrder::class,
         'sales_invoices' => SalesInvoice::class,
         'vouchers' => Voucher::class,
-        'payment_receipts' => PaymentReceipt::class,
+        // 'payment_receipts' => PaymentReceipt::class,
     ];
 
     /**

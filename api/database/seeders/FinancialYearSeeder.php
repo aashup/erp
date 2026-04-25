@@ -5,13 +5,10 @@ namespace Database\Seeders;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use Carbon\Carbon;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class FinancialYearSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Run the database seeds.
      *

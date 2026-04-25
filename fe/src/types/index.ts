@@ -784,6 +784,17 @@ export interface PayrollRun extends SyncColumns {
   entries?: PayrollEntry[];
 }
 
+export interface DocumentCounter {
+  id: string;
+  company_id: string;
+  financial_year_id: string;
+  document_type: string;
+  prefix: string | null;
+  next_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LoginResponse {
   message: string;
   data: {

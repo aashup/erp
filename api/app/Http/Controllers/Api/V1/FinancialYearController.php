@@ -67,6 +67,21 @@ class FinancialYearController extends Controller
 
         $year = FinancialYear::create($validated);
 
+        // Seed document counters for all 11 document types
+        $docTypes = [
+            'purchase_order', 'sales_order', 'purchase_invoice', 'sales_invoice',
+            'contra', 'payment', 'receipt', 'journal', 'purchase', 'sales', 'payroll',
+        ];
+        foreach ($docTypes as $type) {
+            \App\Models\DocumentCounter::create([
+                'company_id'        => $companyId,
+                'financial_year_id' => $year->id,
+                'document_type'     => $type,
+                'prefix'            => null,
+                'next_number'       => 1,
+            ]);
+        }
+
         return response()->json(['data' => $year], 201);
     }
 

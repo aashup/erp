@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AccountingGroupController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BatchController;
+use App\Http\Controllers\Api\V1\DocumentCounterController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CompanyController;
 use App\Http\Controllers\Api\V1\CompanySettingController;
@@ -140,6 +141,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Financial Years
     Route::patch('financial-years/{financial_year}/set-current', [FinancialYearController::class, 'setCurrent']);
     Route::apiResource('financial-years', FinancialYearController::class);
+
+    // Document Counters
+    Route::get('document-counters', [DocumentCounterController::class, 'index']);
+    Route::put('document-counters/{documentCounter}', [DocumentCounterController::class, 'update']);
 
     // Accounting
     Route::post('accounting-groups/load-defaults', [AccountingGroupController::class, 'loadDefaults']);

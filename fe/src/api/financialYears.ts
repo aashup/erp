@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import type { ApiResponse, PaginatedResponse, FinancialYear } from '@/types';
+import type { ApiResponse, PaginatedResponse, FinancialYear, DocumentCounter } from '@/types';
 
 export const financialYearsApi = {
   list: (params?: Record<string, string>) =>
@@ -18,4 +18,14 @@ export const financialYearsApi = {
 
   setCurrent: (id: string) =>
     api.patch<ApiResponse<FinancialYear>>(`/financial-years/${id}/set-current`),
+};
+
+export const documentCountersApi = {
+  list: (fyId: string) =>
+    api.get<{ data: DocumentCounter[]; is_locked: boolean }>('/document-counters', {
+      params: { financial_year_id: fyId },
+    }),
+
+  update: (id: string, data: { prefix: string | null; next_number: number }) =>
+    api.put<ApiResponse<DocumentCounter>>(`/document-counters/${id}`, data),
 };

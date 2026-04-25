@@ -65,10 +65,16 @@ export function Header({
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  const fyStart = selectedFY ? selectedFY.start_date.slice(0, 10) : null;
+  const fyEnd   = selectedFY ? selectedFY.end_date.slice(0, 10)   : null;
+
   const shiftDate = (days: number) => {
     const d = new Date(selectedDate + "T00:00:00");
     d.setDate(d.getDate() + days);
-    setSelectedDate(localDateStr(d));
+    let next = localDateStr(d);
+    if (fyStart && next < fyStart) next = fyStart;
+    if (fyEnd   && next > fyEnd)   next = fyEnd;
+    setSelectedDate(next);
   };
 
   const todayStr = localDateStr(new Date());
@@ -203,6 +209,8 @@ export function Header({
                 <input
                   type="date"
                   value={selectedDate}
+                  min={fyStart ?? undefined}
+                  max={fyEnd ?? undefined}
                   onChange={(e) => {
                     if (e.target.value) {
                       setSelectedDate(e.target.value);
@@ -265,6 +273,7 @@ export function Header({
                       onClick={() => {
                         if (selectedFY?.id !== fy.id) {
                           setSelectedFY(fy);
+                          setSelectedDate(fy.start_date.slice(0, 10));
                           // Invalidate all queries so data refetches with the new FY
                           queryClient.invalidateQueries({
                             predicate: (query) =>

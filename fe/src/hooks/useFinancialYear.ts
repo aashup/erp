@@ -24,12 +24,13 @@ export function useFinancialYear() {
 
     setAllFYs(data);
 
-    // If no FY selected, or selected FY no longer exists, pick the current one
-    if (!selectedFY || !data.find((fy) => fy.id === selectedFY.id)) {
-      const current = data.find((fy) => fy.is_current) ?? data[0];
-      setSelectedFY(current);
-    }
-  }, [data, selectedFY, setAllFYs, setSelectedFY]);
+    // Read selectedFY as a snapshot (not reactive) to avoid re-run loops.
+    // If the stored FY exists in fresh data → keep it (refresh stale fields).
+    // Otherwise fall back to the current FY.
+    const { selectedFY: stored } = useFYStore.getState();
+    const match = stored ? data.find((fy) => fy.id === stored.id) : null;
+    setSelectedFY(match ?? data.find((fy) => fy.is_current) ?? data[0]);
+  }, [data, setAllFYs, setSelectedFY]);
 
   return { selectedFY, allFYs: data ?? [] };
 }
