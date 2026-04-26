@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { dashboardApi } from "@/api/dashboard";
 import { formatCurrency } from "@/lib/utils";
 import { PeriodFilter, type Period } from "./PeriodFilter";
+import { useFYStore } from "@/store/fyStore";
 
 function Row({
   label,
@@ -30,10 +31,11 @@ function Row({
 }
 
 export function TotalPurchaseWidget() {
-  const [period, setPeriod] = useState<Period>("this_month");
+  const [period, setPeriod] = useState<Period>("this_year");
+  const selectedFY = useFYStore((s) => s.selectedFY);
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["dashboard-stats-purchase", period],
+    queryKey: ["dashboard-stats-purchase", period, selectedFY?.id],
     queryFn: () => dashboardApi.stats(period),
     select: (res) => res.data.data,
   });

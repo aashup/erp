@@ -14,6 +14,7 @@ import {
 import { Bar, Line } from "react-chartjs-2";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { dashboardApi } from "@/api/dashboard";
+import { useFYStore } from "@/store/fyStore";
 
 ChartJS.register(
   CategoryScale,
@@ -49,9 +50,10 @@ const COLORS = {
 export function SalesPurchaseChart() {
   const [months, setMonths] = useState(12);
   const [chartType, setChartType] = useState<ChartType>("area");
+  const selectedFY = useFYStore((s) => s.selectedFY);
 
   const { data: chartData, isLoading } = useQuery({
-    queryKey: ["dashboard-chart", months],
+    queryKey: ["dashboard-chart", months, selectedFY?.id],
     queryFn: () => dashboardApi.chart(months),
     select: (res) => res.data.data,
   });

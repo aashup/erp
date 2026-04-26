@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { reportsApi } from "@/api/accounting";
 import { formatCurrency } from "@/lib/utils";
 import { PeriodFilter, type Period } from "./PeriodFilter";
+import { useFYStore } from "@/store/fyStore";
 
 /**
  * Converts a dashboard period to an ISO date range (matching Carbon's
@@ -45,19 +46,24 @@ function periodToDateRange(period: Period): { date_from: string; date_to: string
 }
 
 export function ProfitLossWidget() {
-  const [period, setPeriod] = useState<Period>("this_month");
-  const { date_from, date_to } = periodToDateRange(period);
+  const [period, setPeriod] = useState<Period>("this_year");
+  const selectedFY = useFYStore((s) => s.selectedFY);
 
-  // Use the same P&L report API (voucher-line based) so the number always
-  // matches the Profit & Loss report page exactly.
+  // "this_year" sends no explicit dates so the backend uses financial_year_id
+  // (auto-injected by axios), producing the same result as the P&L report page.
+  const isFY = period === "this_year";
+  const dateParams = isFY ? {} : periodToDateRange(period);
+  const { date_from, date_to } = isFY ? { date_from: "", date_to: "" } : periodToDateRange(period);
+
   const { data: summary, isLoading } = useQuery({
-    queryKey: ["dashboard-pnl", period],
-    queryFn: () => reportsApi.profitAndLoss({ date_from, date_to }),
+    queryKey: ["dashboard-pnl", period, selectedFY?.id],
+    queryFn: () => reportsApi.profitAndLoss(dateParams),
     select: (res) => res.data.summary,
   });
 
   const isProfit = summary?.is_profit ?? true;
   const netValue = summary?.net_profit_loss ?? 0;
+  const dateLabel = isFY ? (selectedFY?.name ?? "Full Year") : `${date_from} — ${date_to}`;
 
   return (
     <Card>
@@ -111,7 +117,7 @@ export function ProfitLossWidget() {
             </>
           )}
           <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-            {date_from} — {date_to}
+            {dateLabel}
           </p>
         </div>
       </CardContent>

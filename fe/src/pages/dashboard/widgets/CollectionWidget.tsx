@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { dashboardApi } from "@/api/dashboard";
 import { formatCurrency } from "@/lib/utils";
 import { PeriodFilter, type Period } from "./PeriodFilter";
+import { useFYStore } from "@/store/fyStore";
 
 function Row({ label, value }: { label: string; value: number }) {
   return (
@@ -17,9 +18,10 @@ function Row({ label, value }: { label: string; value: number }) {
 
 export function CollectionWidget() {
   const [period, setPeriod] = useState<Period>("today");
+  const selectedFY = useFYStore((s) => s.selectedFY);
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["dashboard-collection", period],
+    queryKey: ["dashboard-collection", period, selectedFY?.id],
     queryFn: () => dashboardApi.collection(period),
     select: (res) => res.data.data,
   });
