@@ -5,6 +5,7 @@ import type {
   AccountingGroup,
   Voucher,
   Ledger,
+  PaymentReceipt,
   TrialBalanceResponse,
   ProfitAndLossResponse,
   BalanceSheetResponse,
@@ -87,3 +88,18 @@ export const reportsApi = {
     api.get<DayBookResponse>('/reports/day-book', { params }),
 };
 
+export const paymentReceiptsApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<PaymentReceipt>>('/payment-receipts', { params }),
+
+  get: (id: string) =>
+    api.get<ApiResponse<PaymentReceipt>>(`/payment-receipts/${id}`),
+
+  journal: (id: string) =>
+    api.get<ApiResponse<Voucher | null>>(`/payment-receipts/${id}/journal`),
+
+  create: (data: Partial<PaymentReceipt>) =>
+    api.post<ApiResponse<PaymentReceipt>>('/payment-receipts', data),
+
+  delete: (id: string) => api.delete(`/payment-receipts/${id}`),
+};
