@@ -1,13 +1,16 @@
+import { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import toast from 'react-hot-toast';
 
 import { paymentReceiptsApi } from '@/api/accounting';
 import { partiesApi } from '@/api/parties';
 import type { PaymentReceipt } from '@/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useFYBounds } from '@/hooks/useFinancialYear';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -27,7 +30,17 @@ export function PaymentReceiptForm({ voucherType }: PaymentReceiptFormProps) {
   const location = useLocation();
   const queryClient = useQueryClient();
   const config = TYPE_CONFIG[voucherType];
+  const fyBounds = useFYBounds();
   const { selectedDate } = useDateStore();
+
+  const validatedSchema = useMemo(() => {
+    if (!fyBounds) return paymentSchema;
+    return paymentSchema.superRefine((data, ctx) => {
+      if (data.receipt_date && (data.receipt_date < fyBounds.start || data.receipt_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ['receipt_date'] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
 
   const editRecord = (location.state as { edit?: PaymentReceipt } | null)?.edit ?? null;
   const isEdit = !!editRecord;
@@ -48,7 +61,7 @@ export function PaymentReceiptForm({ voucherType }: PaymentReceiptFormProps) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<PaymentForm>({
-    resolver: zodResolver(paymentSchema) as any,
+    resolver: zodResolver(validatedSchema) as any,
     defaultValues: editRecord
       ? {
           party_id:         editRecord.party_id,

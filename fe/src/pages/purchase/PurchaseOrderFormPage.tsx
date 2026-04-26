@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useFYBounds } from "@/hooks/useFinancialYear";
 import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
 import { itemsApi } from "@/api/inventory";
@@ -53,7 +54,17 @@ export default function PurchaseOrderFormPage() {
   const isEditMode = Boolean(orderId);
   const queryClient = useQueryClient();
   const { selectedDate } = useDateStore();
+  const fyBounds = useFYBounds();
   const [showAddVendor, setShowAddVendor] = useState(false);
+
+  const validatedSchema = useMemo(() => {
+    if (!fyBounds) return poSchema;
+    return poSchema.superRefine((data, ctx) => {
+      if (data.po_date && (data.po_date < fyBounds.start || data.po_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ["po_date"] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
 
   const { data: vendorsData } = useQuery({
     queryKey: ["parties-vendors"],
@@ -84,7 +95,7 @@ export default function PurchaseOrderFormPage() {
     setValue,
     formState: { errors },
   } = useForm<PoForm>({
-    resolver: zodResolver(poSchema) as any,
+    resolver: zodResolver(validatedSchema) as any,
     defaultValues: {
       po_number: "",
       party_id: "",

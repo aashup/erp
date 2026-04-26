@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +9,7 @@ import { vouchersApi, ledgersApi, paymentReceiptsApi } from "@/api/accounting";
 import { partiesApi } from "@/api/parties";
 import type { Voucher, PaymentReceipt } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { useSelectedFYId } from "@/hooks/useFinancialYear";
+import { useSelectedFYId, useFYBounds } from "@/hooks/useFinancialYear";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -196,8 +196,27 @@ export default function VouchersEntry() {
   usePageTitle("Vouchers Entry");
   const queryClient = useQueryClient();
   const fyId = useSelectedFYId();
+  const fyBounds = useFYBounds();
   const { selectedDate } = useDateStore();
   const [activeTab, setActiveTab] = useState<VoucherTab>("journal");
+
+  const validatedJournalSchema = useMemo(() => {
+    if (!fyBounds) return journalSchema;
+    return journalSchema.superRefine((data, ctx) => {
+      if (data.voucher_date && (data.voucher_date < fyBounds.start || data.voucher_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ["voucher_date"] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
+
+  const validatedPaymentSchema = useMemo(() => {
+    if (!fyBounds) return paymentSchema;
+    return paymentSchema.superRefine((data, ctx) => {
+      if (data.receipt_date && (data.receipt_date < fyBounds.start || data.receipt_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ["receipt_date"] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
 
   // Whether the active tab is a "payment/receipt" type (uses PaymentReceipt CRUD)
   const isPaymentTab = activeTab === "payment" || activeTab === "receipt";
@@ -269,7 +288,7 @@ export default function VouchersEntry() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const journalForm = useForm<JournalForm>({
-    resolver: zodResolver(journalSchema) as any,
+    resolver: zodResolver(validatedJournalSchema) as any,
     defaultValues: {
       voucher_type: "journal",
       lines: [
@@ -392,7 +411,7 @@ export default function VouchersEntry() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const paymentForm = useForm<PaymentForm>({
-    resolver: zodResolver(paymentSchema) as any,
+    resolver: zodResolver(validatedPaymentSchema) as any,
   });
 
   const openPaymentCreate = () => {

@@ -26,13 +26,18 @@ class FinancialYearObserver
             ['type' => 'purchase', 'prefix' => 'PUR'],
             ['type' => 'sales', 'prefix' => 'SAL'],
         ];
+        // Split the string
+        [$start, $end] = explode('-', $fy->label);
+
+        // Take last 2 digits of start year
+        $startShort = substr($start, -2);
 
         foreach ($documentTypes as $doc) {
             DocumentCounter::create([
                 'company_id' => $fy->company_id,
                 'financial_year_id' => $fy->id,
                 'document_type' => $doc['type'],
-                'prefix' => $doc['prefix'],
+                'prefix' => $doc['prefix'].$startShort.$end,
                 'next_number' => 1,
             ]);
         }

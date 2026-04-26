@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useFYBounds } from "@/hooks/useFinancialYear";
 import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
 import { itemsApi } from "@/api/inventory";
@@ -53,7 +54,17 @@ export default function SalesOrderFormPage() {
   const isEditMode = Boolean(orderId);
   const queryClient = useQueryClient();
   const { selectedDate } = useDateStore();
+  const fyBounds = useFYBounds();
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+
+  const validatedSchema = useMemo(() => {
+    if (!fyBounds) return soSchema;
+    return soSchema.superRefine((data, ctx) => {
+      if (data.so_date && (data.so_date < fyBounds.start || data.so_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ["so_date"] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
 
   const { data: customersData } = useQuery({
     queryKey: ["parties-customers"],
@@ -84,7 +95,7 @@ export default function SalesOrderFormPage() {
     setValue,
     formState: { errors },
   } = useForm<SoForm>({
-    resolver: zodResolver(soSchema) as any,
+    resolver: zodResolver(validatedSchema) as any,
     defaultValues: {
       so_number: "",
       party_id: "",

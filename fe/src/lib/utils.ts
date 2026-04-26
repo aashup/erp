@@ -50,3 +50,10 @@ export function calcRoundOff(total: number): { roundOff: number; netPayable: num
   const netPayable = fraction > 0.6 ? Math.ceil(total) : Math.floor(total);
   return { roundOff: +(netPayable - total).toFixed(2), netPayable };
 }
+
+export function fyDateBounds(fy: { start_date: string; end_date: string }): { start: string; end: string } {
+  return {
+    start: fy.start_date.split('T')[0],
+    end: fy.end_date.split('T')[0],
+  };
+}

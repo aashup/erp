@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useFYBounds } from '@/hooks/useFinancialYear';
 import { useAuthStore } from '@/store/authStore';
 import { useFYStore } from '@/store/fyStore';
 import { useDateStore } from '@/store/dateStore';
@@ -70,6 +71,16 @@ export default function PurchaseInvoiceFormPage() {
 
   const selectedFYId = useFYStore((state) => state.selectedFY?.id ?? '');
   const { selectedDate } = useDateStore();
+  const fyBounds = useFYBounds();
+
+  const validatedSchema = useMemo(() => {
+    if (!fyBounds) return invoiceSchema;
+    return invoiceSchema.superRefine((data, ctx) => {
+      if (data.invoice_date && (data.invoice_date < fyBounds.start || data.invoice_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ['invoice_date'] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
 
   const { data: vendorsData } = useQuery({
     queryKey: ['parties-vendors'],
@@ -103,7 +114,7 @@ export default function PurchaseInvoiceFormPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<InvoiceForm>({
-    resolver: zodResolver(invoiceSchema) as any,
+    resolver: zodResolver(validatedSchema) as any,
     defaultValues: {
       financial_year_id: selectedFYId,
       invoice_number: '',

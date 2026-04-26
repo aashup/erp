@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { vouchersApi, ledgersApi } from '@/api/accounting';
 import type { Voucher } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { useSelectedFYId } from '@/hooks/useFinancialYear';
+import { useSelectedFYId, useFYBounds } from '@/hooks/useFinancialYear';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -75,10 +75,20 @@ export default function JournalEntries() {
   });
 
   const fyId = useSelectedFYId();
+  const fyBounds = useFYBounds();
+
+  const validatedSchema = useMemo(() => {
+    if (!fyBounds) return journalSchema;
+    return journalSchema.superRefine((data, ctx) => {
+      if (data.voucher_date && (data.voucher_date < fyBounds.start || data.voucher_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ['voucher_date'] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<JournalForm>({
-    resolver: zodResolver(journalSchema) as any,
+    resolver: zodResolver(validatedSchema) as any,
     defaultValues: {
       voucher_type: 'journal',
       lines: [

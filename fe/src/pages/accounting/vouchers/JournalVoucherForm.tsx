@@ -1,13 +1,15 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { vouchersApi, ledgersApi } from '@/api/accounting';
 import { formatCurrency } from '@/lib/utils';
-import { useSelectedFYId } from '@/hooks/useFinancialYear';
+import { useSelectedFYId, useFYBounds } from '@/hooks/useFinancialYear';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -29,8 +31,18 @@ export function JournalVoucherForm({ voucherType }: JournalVoucherFormProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fyId = useSelectedFYId();
+  const fyBounds = useFYBounds();
   const config = TYPE_CONFIG[voucherType];
   const { selectedDate } = useDateStore();
+
+  const validatedSchema = useMemo(() => {
+    if (!fyBounds) return journalSchema;
+    return journalSchema.superRefine((data, ctx) => {
+      if (data.voucher_date && (data.voucher_date < fyBounds.start || data.voucher_date > fyBounds.end)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Date must be within FY ${fyBounds.label}`, path: ['voucher_date'] });
+      }
+    });
+  }, [fyBounds?.start, fyBounds?.end, fyBounds?.label]);
 
   usePageTitle(`New ${config.label} Voucher`);
 
@@ -48,7 +60,7 @@ export function JournalVoucherForm({ voucherType }: JournalVoucherFormProps) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<JournalForm>({
-    resolver: zodResolver(journalSchema) as any,
+    resolver: zodResolver(validatedSchema) as any,
     defaultValues: {
       voucher_date: selectedDate,
       voucher_type: voucherType,
