@@ -223,9 +223,9 @@ class ReportController extends Controller
                 ->where('sl.company_id', $companyId);
 
             if ($beforeDate) {
-                $query->whereDate('sl.created_at', '<', $beforeDate);
+                $query->whereDate('sl.date', '<', $beforeDate);
             } elseif ($upToDate) {
-                $query->whereDate('sl.created_at', '<=', $upToDate);
+                $query->whereDate('sl.date', '<=', $upToDate);
             }
 
             $rows = $query

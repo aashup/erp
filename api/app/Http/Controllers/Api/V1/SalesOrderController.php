@@ -321,6 +321,7 @@ class SalesOrderController extends Controller
                 'value' => $soLine->quantity * $soLine->rate,
                 'narration' => "Auto from SO #{$so->so_number}",
                 'created_by' => $request->user()->id,
+                'date' => $so->so_date,
             ]);
 
             // Mark SO line as fully delivered

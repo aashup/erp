@@ -329,6 +329,7 @@ class PurchaseOrderController extends Controller
                     'item_id' => $poLine->item_id,
                     'godown_id' => $defaultGodown?->id,
                     'type' => 'purchase',
+                    'date' => $receiptDate,
                     'reference_type' => PurchaseInvoice::class,
                     'reference_id' => $invoice->id,
                     'quantity' => $qty,

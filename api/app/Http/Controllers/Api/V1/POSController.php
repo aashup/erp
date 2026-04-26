@@ -200,6 +200,7 @@ class POSController extends Controller
                     'batch_id' => $line['batch_id'] ?? null,
                     'godown_id' => $validated['godown_id'],
                     'type' => 'sale',
+                    'date' => $validated['invoice_date'],
                     'reference_type' => SalesInvoice::class,
                     'reference_id' => $invoice->id,
                     'quantity' => -$baseQuantity,

@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -10,18 +13,317 @@ import { companySettingsApi } from '@/api/settings';
 import { thermalTemplatesApi } from '@/api/thermalTemplates';
 import { useAuthStore } from '@/store/authStore';
 import { render, openThermalPrintWindow } from '@/lib/thermalTemplateRenderer';
+import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { SalesInvoice, Party, ThermalTemplate } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown, Eye } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown, Eye, Banknote, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useDateStore } from '@/store/dateStore';
+
+const receiptSchema = z.object({
+  account_ledger_id: z.string().min(1, 'Account is required'),
+  amount: z.coerce.number().positive('Amount must be positive'),
+  payment_mode: z.enum(['cash', 'bank', 'cheque', 'upi', 'other']),
+  payment_date: z.string().min(1, 'Date is required'),
+  reference_number: z.string().optional(),
+  bank_name: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type ReceiptForm = z.infer<typeof receiptSchema>;
+
+function generateReceiptNumber() {
+  const d = new Date();
+  const yyyymmdd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const rand = Math.floor(Math.random() * 9000 + 1000);
+  return `REC-${yyyymmdd}-${rand}`;
+}
+
+interface ReceiptDialogProps {
+  invoice: SalesInvoice;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function ReceiptDialog({ invoice, onClose, onSuccess }: ReceiptDialogProps) {
+  const { selectedDate } = useDateStore();
+  const { data: partyLedgerData, isLoading: ledgerLoading } = useQuery({
+    queryKey: ['party-ledger-balance', invoice.party_id],
+    queryFn: () => reportsApi.partyLedger({ party_id: invoice.party_id }),
+    select: (res) => res.data,
+  });
+
+  const { data: accountLedgers, isLoading: accountsLoading } = useQuery({
+    queryKey: ['cash-bank-ledgers'],
+    queryFn: () => ledgersApi.list({ group_system_key: 'cash_account,bank_account', per_page: '100' }),
+    select: (res) => res.data,
+  });
+
+  const createReceipt = useMutation({
+    mutationFn: (data: {
+      party_id: string;
+      type: 'receipt';
+      receipt_number: string;
+      receipt_date: string;
+      amount: number;
+      payment_mode: 'cash' | 'bank' | 'cheque' | 'upi' | 'other';
+      sales_invoice_id: string;
+      reference_number?: string;
+      bank_name?: string;
+      notes?: string;
+    }) => paymentReceiptsApi.create(data),
+    onSuccess: () => {
+      toast.success('Receipt recorded successfully');
+      onSuccess();
+      onClose();
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Receipt failed';
+      toast.error(msg);
+    },
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ReceiptForm>({
+    resolver: zodResolver(receiptSchema) as any,
+    defaultValues: {
+      amount: invoice.balance_due,
+      payment_mode: 'cash',
+      payment_date: selectedDate,
+      reference_number: '',
+      bank_name: '',
+      notes: `Receipt for invoice ${invoice.invoice_number}`,
+    },
+  });
+
+  const paymentMode = watch('payment_mode');
+  const amount = watch('amount');
+
+  const accountOptions = (accountLedgers?.data ?? []).map((l) => ({
+    value: l.id,
+    label: `${l.name}${l.group ? ` (${l.group.name})` : ''}`,
+  }));
+
+  const onSubmit = (formData: ReceiptForm) => {
+    if (formData.amount > invoice.balance_due) {
+      toast.error(`Amount cannot exceed balance due of ${formatCurrency(invoice.balance_due)}`);
+      return;
+    }
+    createReceipt.mutate({
+      party_id: invoice.party_id,
+      type: 'receipt',
+      receipt_number: generateReceiptNumber(),
+      receipt_date: formData.payment_date,
+      amount: formData.amount,
+      payment_mode: formData.payment_mode,
+      sales_invoice_id: invoice.id,
+      reference_number: formData.reference_number || undefined,
+      bank_name: formData.bank_name || undefined,
+      notes: formData.notes || undefined,
+    });
+  };
+
+  const partyName = invoice.party?.name ?? 'Customer';
+  const closingBalance = partyLedgerData?.closing_balance ?? 0;
+  const recentTxns = (partyLedgerData?.data ?? []).slice(-5).reverse();
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* Invoice summary */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-gray-50 dark:bg-gray-750 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Invoice</span>
+        </div>
+        <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <div className="text-gray-500 dark:text-gray-400">Invoice #</div>
+          <div className="font-medium text-gray-900 dark:text-gray-100">{invoice.invoice_number}</div>
+          <div className="text-gray-500 dark:text-gray-400">Customer</div>
+          <div className="font-medium text-gray-900 dark:text-gray-100">{partyName}</div>
+          <div className="text-gray-500 dark:text-gray-400">Date</div>
+          <div className="text-gray-900 dark:text-gray-100">{formatDate(invoice.invoice_date)}</div>
+          <div className="text-gray-500 dark:text-gray-400">Invoice Total</div>
+          <div className="text-gray-900 dark:text-gray-100">{formatCurrency(invoice.grand_total)}</div>
+          <div className="text-gray-500 dark:text-gray-400">Amount Received</div>
+          <div className="text-green-600 dark:text-green-400 font-medium">{formatCurrency(invoice.amount_paid)}</div>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800 px-4 py-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" /> Invoice Balance Due
+          </span>
+          <span className="text-lg font-bold text-blue-700 dark:text-blue-300">{formatCurrency(invoice.balance_due)}</span>
+        </div>
+      </div>
+
+      {/* Customer outstanding balance */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-gray-50 dark:bg-gray-750 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {partyName} — Outstanding Balance
+          </span>
+          {ledgerLoading && <span className="text-xs text-gray-400">Loading…</span>}
+          {!ledgerLoading && (
+            <span className={`text-sm font-bold ${closingBalance > 0 ? 'text-blue-600 dark:text-blue-400' : closingBalance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'}`}>
+              {formatCurrency(Math.abs(closingBalance))} {closingBalance > 0 ? 'Dr (Receivable)' : closingBalance < 0 ? 'Cr (Advance)' : 'Nil'}
+            </span>
+          )}
+        </div>
+        {recentTxns.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-700">
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Date</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Voucher</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Dr</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Cr</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTxns.map((row, i) => (
+                  <tr key={i} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
+                    <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{formatDate(row.voucher_date)}</td>
+                    <td className="px-3 py-1.5 text-gray-700 dark:text-gray-300 max-w-[140px] truncate" title={row.narration}>{row.voucher_number}</td>
+                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{row.debit > 0 ? formatCurrency(row.debit) : '—'}</td>
+                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{row.credit > 0 ? formatCurrency(row.credit) : '—'}</td>
+                    <td className="px-3 py-1.5 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Math.abs(row.balance))} {row.balance > 0 ? 'Dr' : row.balance < 0 ? 'Cr' : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!ledgerLoading && recentTxns.length === 0 && (
+          <div className="px-4 py-3 text-xs text-gray-400 text-center">No transactions found</div>
+        )}
+      </div>
+
+      {/* Receipt form */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-gray-50 dark:bg-gray-750 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Receipt Details</span>
+        </div>
+        <div className="px-4 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <SlideSelect
+                name="account_ledger_id"
+                label="Deposit Account"
+                placeholder={accountsLoading ? 'Loading accounts…' : 'Select cash / bank account'}
+                panelTitle="Select Deposit Account"
+                options={accountOptions}
+                value={watch('account_ledger_id')}
+                onChange={(val) => {
+                  setValue('account_ledger_id', val, { shouldValidate: true });
+                  const ledger = (accountLedgers?.data ?? []).find((l) => l.id === val);
+                  if (ledger?.group?.name?.toLowerCase().includes('bank')) {
+                    setValue('payment_mode', 'bank');
+                  } else {
+                    setValue('payment_mode', 'cash');
+                  }
+                }}
+                error={errors.account_ledger_id?.message}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Mode</label>
+              <select
+                {...register('payment_mode')}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              >
+                <option value="cash">Cash</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+                <option value="upi">UPI</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <Input
+              id="payment_date"
+              label="Receipt Date"
+              type="date"
+              error={errors.payment_date?.message}
+              {...register('payment_date')}
+            />
+
+            <div className="col-span-2">
+              <Input
+                id="amount"
+                label={`Amount (₹) — max ${formatCurrency(invoice.balance_due)}`}
+                type="number"
+                step="0.01"
+                min={0.01}
+                max={invoice.balance_due}
+                error={errors.amount?.message}
+                {...register('amount')}
+              />
+              {amount > 0 && amount < invoice.balance_due && (
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  Partial receipt — remaining balance will be {formatCurrency(invoice.balance_due - Number(amount))}
+                </p>
+              )}
+            </div>
+
+            {(paymentMode === 'bank' || paymentMode === 'cheque') && (
+              <>
+                <Input
+                  id="bank_name"
+                  label="Bank Name"
+                  error={errors.bank_name?.message}
+                  {...register('bank_name')}
+                />
+                <Input
+                  id="reference_number"
+                  label={paymentMode === 'cheque' ? 'Cheque Number' : 'Transaction Ref #'}
+                  error={errors.reference_number?.message}
+                  {...register('reference_number')}
+                />
+              </>
+            )}
+
+            {paymentMode === 'upi' && (
+              <div className="col-span-2">
+                <Input
+                  id="reference_number"
+                  label="UPI Reference / Transaction ID"
+                  error={errors.reference_number?.message}
+                  {...register('reference_number')}
+                />
+              </div>
+            )}
+
+            <div className="col-span-2">
+              <Input
+                id="notes"
+                label="Narration / Notes"
+                error={errors.notes?.message}
+                {...register('notes')}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button type="submit" loading={createReceipt.isPending}>
+          <Banknote className="mr-2 h-4 w-4" /> Receive Payment
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
   draft: 'default',
@@ -56,6 +358,7 @@ export default function SalesInvoices() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [receiptInvoice, setReceiptInvoice] = useState<SalesInvoice | null>(null);
 
   const { data: companySettings } = useQuery({
     queryKey: ['company-settings'],
@@ -454,6 +757,14 @@ export default function SalesInvoices() {
                 <Trash2 className="h-4 w-4 text-red-500" />
               </button>
             )}
+            <button
+              onClick={() => setReceiptInvoice(row.original)}
+              className="rounded p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              title={row.original.balance_due > 0 ? 'Receive Payment' : 'Fully received'}
+              disabled={row.original.balance_due <= 0}
+            >
+              <Banknote className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </button>
           </div>
         );
       },
@@ -636,6 +947,21 @@ export default function SalesInvoices() {
         </button>
       </FilterPanel>
 
+      {/* Receive Payment Modal */}
+      {receiptInvoice && (
+        <Modal
+          open={!!receiptInvoice}
+          onClose={() => setReceiptInvoice(null)}
+          title={`Receive Payment — ${receiptInvoice.invoice_number}`}
+          size="lg"
+        >
+          <ReceiptDialog
+            invoice={receiptInvoice}
+            onClose={() => setReceiptInvoice(null)}
+            onSuccess={() => queryClient.invalidateQueries({ queryKey: ['sales-invoices'] })}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

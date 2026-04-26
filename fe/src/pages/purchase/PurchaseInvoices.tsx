@@ -1,23 +1,265 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { usePermissions } from '@/hooks/usePermissions';
 import { purchaseInvoicesApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
+import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { PurchaseInvoice } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
+import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, Upload } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, Upload, CreditCard, TrendingDown } from 'lucide-react';
 import { OcrUploadDialog } from './OcrUploadDialog';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import toast from 'react-hot-toast';
+import { useDateStore } from '@/store/dateStore';
+
+const paymentSchema = z.object({
+  account_ledger_id: z.string().min(1, 'Account is required'),
+  amount: z.coerce.number().positive('Amount must be positive'),
+  payment_date: z.string().min(1, 'Date is required'),
+  notes: z.string().optional(),
+});
+
+type PaymentForm = z.infer<typeof paymentSchema>;
+
+function generatePaymentNumber() {
+  const d = new Date();
+  const yyyymmdd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const rand = Math.floor(Math.random() * 9000 + 1000);
+  return `PAY-${yyyymmdd}-${rand}`;
+}
+
+interface PaymentDialogProps {
+  invoice: PurchaseInvoice;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function PaymentDialog({ invoice, onClose, onSuccess }: PaymentDialogProps) {
+  const { selectedDate } = useDateStore();
+  const { data: partyLedgerData, isLoading: ledgerLoading } = useQuery({
+    queryKey: ['party-ledger-balance', invoice.party_id],
+    queryFn: () => reportsApi.partyLedger({ party_id: invoice.party_id }),
+    select: (res) => res.data,
+  });
+
+  const { data: accountLedgers, isLoading: accountsLoading } = useQuery({
+    queryKey: ['cash-bank-ledgers'],
+    queryFn: () => ledgersApi.list({ group_system_key: 'cash_account,bank_account', per_page: '100' }),
+    select: (res) => res.data,
+  });
+
+  const createPayment = useMutation({
+    mutationFn: (data: {
+      party_id: string;
+      type: 'payment';
+      receipt_number: string;
+      receipt_date: string;
+      amount: number;
+      payment_mode: 'cash';
+      purchase_invoice_id: string;
+      notes?: string;
+    }) => paymentReceiptsApi.create(data),
+    onSuccess: () => {
+      toast.success('Payment recorded successfully');
+      onSuccess();
+      onClose();
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Payment failed';
+      toast.error(msg);
+    },
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<PaymentForm>({
+    resolver: zodResolver(paymentSchema) as any,
+    defaultValues: {
+      amount: invoice.balance_due,
+      payment_date: selectedDate,
+      notes: `Payment for invoice ${invoice.invoice_number}`,
+    },
+  });
+
+  const amount = watch('amount');
+
+  const accountOptions = (accountLedgers?.data ?? []).map((l) => ({
+    value: l.id,
+    label: `${l.name}${l.group ? ` (${l.group.name})` : ''}`,
+  }));
+
+  const onSubmit = (formData: PaymentForm) => {
+    if (formData.amount > invoice.balance_due) {
+      toast.error(`Amount cannot exceed balance due of ${formatCurrency(invoice.balance_due)}`);
+      return;
+    }
+    createPayment.mutate({
+      party_id: invoice.party_id,
+      type: 'payment',
+      receipt_number: generatePaymentNumber(),
+      receipt_date: formData.payment_date,
+      amount: formData.amount,
+      payment_mode: 'cash',
+      purchase_invoice_id: invoice.id,
+      notes: formData.notes || undefined,
+    });
+  };
+
+  const partyName = invoice.party?.name ?? 'Vendor';
+  const closingBalance = partyLedgerData?.closing_balance ?? 0;
+  const recentTxns = (partyLedgerData?.data ?? []).slice(-5).reverse();
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* Invoice summary */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-gray-50 dark:bg-gray-750 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Invoice</span>
+        </div>
+        <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <div className="text-gray-500 dark:text-gray-400">Invoice #</div>
+          <div className="font-medium text-gray-900 dark:text-gray-100">{invoice.invoice_number}</div>
+          <div className="text-gray-500 dark:text-gray-400">Vendor</div>
+          <div className="font-medium text-gray-900 dark:text-gray-100">{partyName}</div>
+          <div className="text-gray-500 dark:text-gray-400">Date</div>
+          <div className="text-gray-900 dark:text-gray-100">{formatDate(invoice.invoice_date)}</div>
+          <div className="text-gray-500 dark:text-gray-400">Invoice Total</div>
+          <div className="text-gray-900 dark:text-gray-100">{formatCurrency(invoice.grand_total)}</div>
+          <div className="text-gray-500 dark:text-gray-400">Amount Paid</div>
+          <div className="text-green-600 dark:text-green-400 font-medium">{formatCurrency(invoice.amount_paid)}</div>
+        </div>
+        <div className="bg-orange-50 dark:bg-orange-900/20 border-t border-orange-200 dark:border-orange-800 px-4 py-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-orange-700 dark:text-orange-300 flex items-center gap-2">
+            <TrendingDown className="h-4 w-4" /> Invoice Balance Due
+          </span>
+          <span className="text-lg font-bold text-orange-700 dark:text-orange-300">{formatCurrency(invoice.balance_due)}</span>
+        </div>
+      </div>
+
+      {/* Vendor outstanding balance */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-gray-50 dark:bg-gray-750 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {partyName} — Outstanding Balance
+          </span>
+          {ledgerLoading && <span className="text-xs text-gray-400">Loading…</span>}
+          {!ledgerLoading && (
+            <span className={`text-sm font-bold ${closingBalance > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+              {formatCurrency(Math.abs(closingBalance))} {closingBalance > 0 ? 'Cr (You Owe)' : closingBalance < 0 ? 'Dr (Advance)' : 'Nil'}
+            </span>
+          )}
+        </div>
+        {recentTxns.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-700">
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Date</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Voucher</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Dr</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Cr</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-400">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTxns.map((row, i) => (
+                  <tr key={i} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
+                    <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{formatDate(row.voucher_date)}</td>
+                    <td className="px-3 py-1.5 text-gray-700 dark:text-gray-300 max-w-[140px] truncate" title={row.narration}>{row.voucher_number}</td>
+                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{row.debit > 0 ? formatCurrency(row.debit) : '—'}</td>
+                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{row.credit > 0 ? formatCurrency(row.credit) : '—'}</td>
+                    <td className="px-3 py-1.5 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Math.abs(row.balance))} {row.balance > 0 ? 'Cr' : row.balance < 0 ? 'Dr' : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!ledgerLoading && recentTxns.length === 0 && (
+          <div className="px-4 py-3 text-xs text-gray-400 text-center">No transactions found</div>
+        )}
+      </div>
+
+      {/* Payment form */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-gray-50 dark:bg-gray-750 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Payment Details</span>
+        </div>
+        <div className="px-4 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <SlideSelect
+                name="account_ledger_id"
+                label="Payment Account"
+                placeholder={accountsLoading ? 'Loading accounts…' : 'Select cash / bank account'}
+                panelTitle="Select Payment Account"
+                options={accountOptions}
+                value={watch('account_ledger_id')}
+                onChange={(val) => setValue('account_ledger_id', val, { shouldValidate: true })}
+                error={errors.account_ledger_id?.message}
+              />
+            </div>
+
+            <Input
+              id="payment_date"
+              label="Payment Date"
+              type="date"
+              error={errors.payment_date?.message}
+              {...register('payment_date')}
+            />
+
+            <div className="col-span-2">
+              <Input
+                id="amount"
+                label={`Amount (₹) — max ${formatCurrency(invoice.balance_due)}`}
+                type="number"
+                step="0.01"
+                min={0.01}
+                max={invoice.balance_due}
+                error={errors.amount?.message}
+                {...register('amount')}
+              />
+              {amount > 0 && amount < invoice.balance_due && (
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  Partial payment — remaining balance will be {formatCurrency(invoice.balance_due - Number(amount))}
+                </p>
+              )}
+            </div>
+
+            <div className="col-span-2">
+              <Input
+                id="notes"
+                label="Narration / Notes"
+                error={errors.notes?.message}
+                {...register('notes')}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button type="submit" loading={createPayment.isPending}>
+          <CreditCard className="mr-2 h-4 w-4" /> Make Payment
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 const statusVariant: Record<string, 'default' | 'success' | 'danger'> = {
   draft: 'default',
@@ -44,6 +286,7 @@ export default function PurchaseInvoices() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [paymentInvoice, setPaymentInvoice] = useState<PurchaseInvoice | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['purchase-invoices', page, search, dateFrom, dateTo, vendorFilter, statusFilter, sortBy, sortOrder],
@@ -270,6 +513,14 @@ export default function PurchaseInvoices() {
                 <Trash2 className="h-4 w-4 text-red-500" />
               </button>
             )}
+            <button
+              onClick={() => setPaymentInvoice(inv)}
+              className="rounded p-1 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              title={inv.balance_due > 0 ? 'Make a Payment' : 'Fully paid'}
+              disabled={inv.balance_due <= 0}
+            >
+              <CreditCard className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </button>
           </div>
         );
       },
@@ -446,6 +697,21 @@ export default function PurchaseInvoices() {
         onClose={() => setShowOcrUpload(false)}
       />
 
+      {/* Make Payment Modal */}
+      {paymentInvoice && (
+        <Modal
+          open={!!paymentInvoice}
+          onClose={() => setPaymentInvoice(null)}
+          title={`Make Payment — ${paymentInvoice.invoice_number}`}
+          size="lg"
+        >
+          <PaymentDialog
+            invoice={paymentInvoice}
+            onClose={() => setPaymentInvoice(null)}
+            onSuccess={() => queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] })}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

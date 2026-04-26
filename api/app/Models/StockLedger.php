@@ -20,6 +20,7 @@ class StockLedger extends Model
         'batch_id',
         'godown_id',
         'type',
+        'date',
         'reference_type',
         'reference_id',
         'quantity',
@@ -32,6 +33,7 @@ class StockLedger extends Model
     protected function casts(): array
     {
         return [
+            'date' => 'date',
             'quantity' => 'decimal:3',
             'rate' => 'decimal:2',
             'value' => 'decimal:2',
