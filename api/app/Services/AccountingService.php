@@ -36,7 +36,7 @@ class AccountingService
             return null;
         }
 
-        $fy = $this->getCurrentFY($companyId, $invoice->invoice_date);
+        $fy = $invoice->financialYear;
         if (! $fy) {
             return null;
         }
@@ -127,7 +127,7 @@ class AccountingService
             return null;
         }
 
-        $fy = $this->getCurrentFY($companyId, $invoice->invoice_date);
+        $fy = $invoice->financialYear;
         if (! $fy) {
             return null;
         }

@@ -255,7 +255,7 @@ class PurchaseOrderController extends Controller
             $isInterState = $companyStateCode && $partyStateCode && $companyStateCode !== $partyStateCode;
 
             // Resolve financial year for receipt date
-            $receiptDate = $validated['receipt_date'] ?? now()->toDateString();
+            $receiptDate = $validated['receipt_date'] ?? $purchaseOrder->po_date;
 
             $defaultGodown = Godown::where('company_id', $purchaseOrder->company_id)
                 ->where('is_default', true)

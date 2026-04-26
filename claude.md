@@ -69,6 +69,38 @@ erp/
 
 ---
 
+## Auto-Voucher Financial Year Rules
+
+When a sales or purchase invoice is saved, `AccountingService` auto-creates a journal voucher. The FY on the voucher **must match** the FY on the invoice — otherwise the voucher appears in a different FY period from the invoice.
+
+### Rule: FY is always server-resolved from `invoice_date`
+
+**SalesInvoiceController** (`store` + `update`):
+- Resolves FY via `whereDate('start_date', '<=', invoice_date) AND whereDate('end_date', '>=', invoice_date)`
+- Throws 422 if no FY covers the date
+- Never trusts `financial_year_id` from the frontend
+
+**PurchaseInvoiceController** (`store` + `update`):
+- Same pattern as SalesInvoiceController (fixed April 2026)
+- `financial_year_id` is NOT sent by the frontend form — it is removed from the zod schema
+- Previously used `FinancialYear::find($validated['financial_year_id'])` (from header selector) which caused FY mismatch
+
+### Rule: Auto-voucher inherits FY from the invoice
+
+In `AccountingService::postSalesInvoice()` and `postPurchaseInvoice()`:
+```php
+$fy = $invoice->financialYear;  // NOT getCurrentFY($companyId, $invoice->invoice_date)
+```
+Using the invoice's already-assigned FY ensures invoice and voucher are always in the same period.
+
+`getCurrentFY()` is still used for `postPayment()`, `postReceipt()`, `postPayroll()`, `postPayrollPayment()` — those receive a raw date string with no parent document to inherit from.
+
+### Frontend: PurchaseInvoiceFormPage
+- `financial_year_id` is absent from the zod schema and form payload
+- `useFYStore` / `selectedFYId` are not used in this form
+
+---
+
 ## Accounting Reports — Key Patterns
 
 ### Report Controller (`api/app/Http/Controllers/Api/V1/ReportController.php`)

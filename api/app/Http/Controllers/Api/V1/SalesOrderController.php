@@ -281,7 +281,7 @@ class SalesOrderController extends Controller
             'sales_order_id' => $so->id,
             'godown_id' => $defaultGodown?->id,
             'invoice_number' => $invoiceNumber,
-            'invoice_date' => now()->toDateString(),
+            'invoice_date' => $so->so_date,
             'is_inter_state' => $isInterState,
             'status' => 'confirmed',
             'created_by' => $request->user()->id,
