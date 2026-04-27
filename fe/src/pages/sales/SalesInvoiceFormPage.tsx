@@ -110,7 +110,7 @@ export default function SalesInvoiceFormPage() {
       invoice_number: '',
       party_id: '',
       invoice_date: selectedDate,
-      due_date: '',
+      due_date: selectedDate,
       is_inter_state: false,
       notes: '',
       lines: [makeEmptyLine()],

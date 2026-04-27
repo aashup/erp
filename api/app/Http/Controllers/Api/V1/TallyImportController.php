@@ -28,6 +28,20 @@ class TallyImportController extends Controller
         return response()->json($this->tallyService->testOdbcConnection($url));
     }
 
+    public function fetchGroups(Request $request): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        $url = CompanySetting::getValue($companyId, 'tally_server_url', 'http://localhost:9000');
+
+        try {
+            $groups = $this->tallyService->fetchGroups($url);
+
+            return response()->json(['data' => $groups, 'count' => count($groups)]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
     public function fetchLedgers(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;

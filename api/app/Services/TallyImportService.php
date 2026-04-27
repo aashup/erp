@@ -22,13 +22,26 @@ class TallyImportService
     public function testConnection(string $url): array
     {
         try {
-            $xml = $this->buildXmlRequest('List of Companies');
+            // Use Day Book — works on Tally Prime and ERP 9; also reveals company name
+            $xml = $this->buildXmlRequest('Day Book');
             $response = Http::timeout(5)
                 ->withHeaders(['Content-Type' => 'text/xml'])
                 ->send('POST', $url, ['body' => $xml]);
 
             if ($response->successful()) {
-                return ['connected' => true, 'url' => $url, 'message' => 'Connected to Tally successfully'];
+                $body = $response->body();
+                // Extract company name from Tally Prime response header
+                $company = null;
+                if (preg_match('/<SVCURRENTCOMPANY>([^<]+)<\/SVCURRENTCOMPANY>/', $body, $m)) {
+                    $company = trim($m[1]);
+                }
+                return [
+                    'connected' => true,
+                    'url'       => $url,
+                    'message'   => 'Connected to Tally successfully',
+                    'company'   => $company,
+                    'dev'       => ['response_snippet' => substr($body, 0, 200)],
+                ];
             }
 
             return ['connected' => false, 'url' => $url, 'message' => 'Tally returned HTTP ' . $response->status()];
@@ -37,9 +50,18 @@ class TallyImportService
         }
     }
 
+    public function fetchGroups(string $url): array
+    {
+        $xml  = $this->buildXmlRequest('List of Accounts');
+        $body = $this->postToTally($url, $xml);
+
+        return $this->parseGroupsXml($body);
+    }
+
     public function fetchLedgers(string $url): array
     {
-        $xml = $this->buildXmlRequest('List of Ledgers');
+        // Tally Prime uses "List of Accounts"; ERP 9 used "List of Ledgers"
+        $xml = $this->buildXmlRequest('List of Accounts');
         $body = $this->postToTally($url, $xml);
 
         return $this->parseLedgersXml($body);
@@ -47,10 +69,12 @@ class TallyImportService
 
     public function fetchStockItems(string $url): array
     {
-        $xml = $this->buildXmlRequest('List of Stock Items');
-        $body = $this->postToTally($url, $xml);
-
-        return $this->parseStockItemsXml($body);
+        // Tally Prime does not expose stock items via HTTP XML export.
+        // Use ODBC mode or file upload instead.
+        throw new \RuntimeException(
+            'Stock item export via XML is not supported in Tally Prime. ' .
+            'Use ODBC connection mode or export XML from Tally manually and use File Upload.'
+        );
     }
 
     public function fetchVouchers(string $url, string $dateFrom, string $dateTo): array
@@ -351,40 +375,134 @@ XML;
 
     // ─── XML Parsers ─────────────────────────────────────────────────────────
 
-    public function parseLedgersXml(string $xmlString): array
+    /**
+     * Tally XML contains &#N; references to control characters (e.g. &#4;)
+     * which are invalid in XML 1.0. Strip them before parsing.
+     */
+    private function sanitizeXml(string $xml): string
+    {
+        // Replace &#N; where N is a control char (< 32) except tab(9), LF(10), CR(13)
+        return preg_replace_callback('/&#(\d+);/', function ($m) {
+            $code = (int) $m[1];
+            return ($code < 32 && ! in_array($code, [9, 10, 13])) ? '' : $m[0];
+        }, $xml);
+    }
+
+    public function parseGroupsXml(string $xmlString): array
     {
         libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($xmlString, 'SimpleXMLElement', LIBXML_NOCDATA);
+        $xml = simplexml_load_string($this->sanitizeXml($xmlString), 'SimpleXMLElement', LIBXML_NOCDATA);
 
         if ($xml === false) {
             throw new \RuntimeException('Invalid XML received from Tally');
         }
 
-        $ledgers = [];
+        $groupNodes = [];
 
-        // Tally XML structure can vary; try both common paths
-        $nodes = $xml->BODY->DATA->TALLYMESSAGE->LEDGER ?? [];
-        if (empty((array) $nodes)) {
-            $nodes = $xml->BODY->DATA->COLLECTION->LEDGER ?? [];
+        // Tally Prime: BODY > IMPORTDATA > REQUESTDATA > TALLYMESSAGE (one GROUP per message)
+        $messages = $xml->BODY->IMPORTDATA->REQUESTDATA->TALLYMESSAGE ?? null;
+        if ($messages && count($messages) > 0) {
+            foreach ($messages as $msg) {
+                foreach ($msg->GROUP as $g) {
+                    $groupNodes[] = $g;
+                }
+            }
         }
 
-        foreach ($nodes as $ledger) {
+        // ERP 9 fallback
+        if (empty($groupNodes)) {
+            foreach ($xml->BODY->DATA->TALLYMESSAGE->GROUP ?? [] as $g) {
+                $groupNodes[] = $g;
+            }
+        }
+
+        $groups = [];
+        foreach ($groupNodes as $group) {
+            $name = trim((string) ($group['NAME'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $parent = trim((string) ($group->PARENT ?? '')) ?: null;
+
+            $groups[] = [
+                'name'   => html_entity_decode($name,   ENT_XML1 | ENT_QUOTES, 'UTF-8'),
+                'parent' => $parent ? html_entity_decode($parent, ENT_XML1 | ENT_QUOTES, 'UTF-8') : null,
+            ];
+        }
+
+        // Build tree: attach children to parents
+        $map = [];
+        foreach ($groups as &$g) {
+            $map[$g['name']] = &$g;
+            $g['children']   = [];
+        }
+        unset($g);
+
+        $roots = [];
+        foreach ($groups as &$g) {
+            if ($g['parent'] !== null && isset($map[$g['parent']])) {
+                $map[$g['parent']]['children'][] = &$g;
+            } else {
+                $roots[] = &$g;
+            }
+        }
+        unset($g);
+
+        return $roots;
+    }
+
+    public function parseLedgersXml(string $xmlString): array
+    {
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($this->sanitizeXml($xmlString), 'SimpleXMLElement', LIBXML_NOCDATA);
+
+        if ($xml === false) {
+            throw new \RuntimeException('Invalid XML received from Tally');
+        }
+
+        $ledgerNodes = [];
+
+        // Tally Prime: BODY > IMPORTDATA > REQUESTDATA > TALLYMESSAGE (one LEDGER per message)
+        $messages = $xml->BODY->IMPORTDATA->REQUESTDATA->TALLYMESSAGE ?? null;
+        if ($messages && count($messages) > 0) {
+            foreach ($messages as $msg) {
+                foreach ($msg->LEDGER as $l) {
+                    $ledgerNodes[] = $l;
+                }
+            }
+        }
+
+        // Tally ERP 9 fallback: BODY > DATA > TALLYMESSAGE > LEDGER (all in one message)
+        if (empty($ledgerNodes)) {
+            $nodes = $xml->BODY->DATA->TALLYMESSAGE->LEDGER ?? [];
+            foreach ($nodes as $l) {
+                $ledgerNodes[] = $l;
+            }
+        }
+        if (empty($ledgerNodes)) {
+            $nodes = $xml->BODY->DATA->COLLECTION->LEDGER ?? [];
+            foreach ($nodes as $l) {
+                $ledgerNodes[] = $l;
+            }
+        }
+
+        $ledgers = [];
+        foreach ($ledgerNodes as $ledger) {
             $name = trim((string) ($ledger['NAME'] ?? ''));
             if ($name === '') {
                 continue;
             }
 
-            $parent = trim((string) ($ledger->PARENT ?? ''));
+            $parent     = trim((string) ($ledger->PARENT ?? ''));
             $openingRaw = trim((string) ($ledger->OPENINGBALANCE ?? ''));
 
             $openingBalance = 0.0;
-            $balanceType = 'dr';
-            if (preg_match('/^([\d.,]+)\s*(Dr|Cr)?/i', str_replace(',', '', $openingRaw), $m)) {
-                $openingBalance = (float) $m[1];
-                $balanceType = strtolower($m[2] ?? 'dr') ?: 'dr';
-                // Tally sometimes uses negative for Cr
-                if ($openingBalance < 0) {
-                    $openingBalance = abs($openingBalance);
+            $balanceType    = 'dr';
+            if (preg_match('/^(-?[\d.,]+)\s*(Dr|Cr)?/i', str_replace(',', '', $openingRaw), $m)) {
+                $openingBalance = abs((float) $m[1]);
+                $balanceType    = strtolower($m[2] ?? 'dr') ?: 'dr';
+                if ((float) $m[1] < 0) {
                     $balanceType = 'cr';
                 }
             }
@@ -396,8 +514,10 @@ XML;
                 $partyType = 'vendor';
             }
 
-            $gstin = trim((string) ($ledger->PARTYGSTIN ?? $ledger->GSTREGISTRATIONNUMBER ?? ''));
-            $phone = trim((string) ($ledger->LEDMOBILE ?? $ledger->PHONENUMBER ?? ''));
+            // Tally Prime uses LEDGSTIN; ERP 9 uses PARTYGSTIN / GSTREGISTRATIONNUMBER
+            $gstin = trim((string) ($ledger->LEDGSTIN ?? $ledger->PARTYGSTIN ?? $ledger->GSTREGISTRATIONNUMBER ?? ''));
+            // Tally Prime uses LEDGERMOBILE; ERP 9 uses LEDMOBILE / PHONENUMBER
+            $phone = trim((string) ($ledger->LEDGERMOBILE ?? $ledger->LEDMOBILE ?? $ledger->PHONENUMBER ?? ''));
             $email = trim((string) ($ledger->EMAIL ?? $ledger->EMAILID ?? ''));
 
             $ledgers[] = [
@@ -418,20 +538,36 @@ XML;
     public function parseStockItemsXml(string $xmlString): array
     {
         libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($xmlString, 'SimpleXMLElement', LIBXML_NOCDATA);
+        $xml = simplexml_load_string($this->sanitizeXml($xmlString), 'SimpleXMLElement', LIBXML_NOCDATA);
 
         if ($xml === false) {
             throw new \RuntimeException('Invalid XML received from Tally');
         }
 
-        $items = [];
+        $itemNodes = [];
 
-        $nodes = $xml->BODY->DATA->TALLYMESSAGE->STOCKITEM ?? [];
-        if (empty((array) $nodes)) {
-            $nodes = $xml->BODY->DATA->COLLECTION->STOCKITEM ?? [];
+        // Tally Prime: multiple TALLYMESSAGE, one STOCKITEM per message
+        $messages = $xml->BODY->IMPORTDATA->REQUESTDATA->TALLYMESSAGE ?? null;
+        if ($messages && count($messages) > 0) {
+            foreach ($messages as $msg) {
+                foreach ($msg->STOCKITEM as $i) {
+                    $itemNodes[] = $i;
+                }
+            }
         }
 
-        foreach ($nodes as $item) {
+        // ERP 9 fallback: single TALLYMESSAGE or COLLECTION with multiple STOCKITEMs
+        if (empty($itemNodes)) {
+            $nodes = $xml->BODY->DATA->TALLYMESSAGE->STOCKITEM ?? [];
+            foreach ($nodes as $i) { $itemNodes[] = $i; }
+        }
+        if (empty($itemNodes)) {
+            $nodes = $xml->BODY->DATA->COLLECTION->STOCKITEM ?? [];
+            foreach ($nodes as $i) { $itemNodes[] = $i; }
+        }
+
+        $items = [];
+        foreach ($itemNodes as $item) {
             $name = trim((string) ($item['NAME'] ?? ''));
             if ($name === '') {
                 continue;
@@ -474,36 +610,51 @@ XML;
     public function parseVouchersXml(string $xmlString): array
     {
         libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($xmlString, 'SimpleXMLElement', LIBXML_NOCDATA);
+        $xml = simplexml_load_string($this->sanitizeXml($xmlString), 'SimpleXMLElement', LIBXML_NOCDATA);
 
         if ($xml === false) {
             throw new \RuntimeException('Invalid XML received from Tally');
         }
 
-        $vouchers = [];
-
-        $nodes = $xml->BODY->DATA->TALLYMESSAGE->VOUCHER ?? [];
-        if (empty((array) $nodes)) {
-            $nodes = $xml->BODY->DATA->COLLECTION->VOUCHER ?? [];
-        }
-
         $typeMap = [
-            'sales'    => 'sales',
-            'purchase' => 'purchase',
-            'payment'  => 'payment',
-            'receipt'  => 'receipt',
-            'journal'  => 'journal',
-            'contra'   => 'contra',
+            'sales'       => 'sales',
+            'purchase'    => 'purchase',
+            'payment'     => 'payment',
+            'receipt'     => 'receipt',
+            'journal'     => 'journal',
+            'contra'      => 'contra',
             'debit note'  => 'journal',
             'credit note' => 'journal',
         ];
 
-        foreach ($nodes as $v) {
+        $voucherNodes = [];
+
+        // Tally Prime: BODY > IMPORTDATA > REQUESTDATA > TALLYMESSAGE (one VOUCHER per message)
+        $messages = $xml->BODY->IMPORTDATA->REQUESTDATA->TALLYMESSAGE ?? null;
+        if ($messages && count($messages) > 0) {
+            foreach ($messages as $msg) {
+                foreach ($msg->VOUCHER as $v) {
+                    $voucherNodes[] = $v;
+                }
+            }
+        }
+
+        // ERP 9 fallback
+        if (empty($voucherNodes)) {
+            $nodes = $xml->BODY->DATA->TALLYMESSAGE->VOUCHER ?? [];
+            foreach ($nodes as $v) { $voucherNodes[] = $v; }
+        }
+        if (empty($voucherNodes)) {
+            $nodes = $xml->BODY->DATA->COLLECTION->VOUCHER ?? [];
+            foreach ($nodes as $v) { $voucherNodes[] = $v; }
+        }
+
+        $vouchers = [];
+        foreach ($voucherNodes as $v) {
             $vchType = strtolower(trim((string) ($v['VCHTYPE'] ?? '')));
             $erpType = $typeMap[$vchType] ?? 'journal';
 
             $dateRaw = trim((string) ($v->DATE ?? ''));
-            // Convert YYYYMMDD to YYYY-MM-DD
             $date = strlen($dateRaw) === 8
                 ? substr($dateRaw, 0, 4) . '-' . substr($dateRaw, 4, 2) . '-' . substr($dateRaw, 6, 2)
                 : $dateRaw;
@@ -511,7 +662,7 @@ XML;
             $number    = trim((string) ($v->VOUCHERNUMBER ?? ''));
             $narration = trim((string) ($v->NARRATION ?? ''));
 
-            $lines = [];
+            $lines      = [];
             $entryNodes = $v->{'ALLLEDGERENTRIES.LIST'} ?? [];
             if (empty((array) $entryNodes)) {
                 $entryNodes = $v->{'LEDGERENTRIES.LIST'} ?? [];
@@ -523,16 +674,16 @@ XML;
                     continue;
                 }
                 $amount = (float) str_replace(',', '', (string) ($entry->AMOUNT ?? 0));
-                // Tally: negative = credit, positive = debit
+                // Tally Prime sign convention: negative amount = Debit, positive amount = Credit
                 $lines[] = [
                     'ledger_name' => $ledgerName,
-                    'debit'       => $amount > 0 ? round($amount, 2) : 0,
-                    'credit'      => $amount < 0 ? round(abs($amount), 2) : 0,
+                    'debit'       => $amount < 0 ? round(abs($amount), 2) : 0,
+                    'credit'      => $amount > 0 ? round($amount, 2) : 0,
                 ];
             }
 
             if (count($lines) < 2) {
-                continue; // skip malformed vouchers
+                continue;
             }
 
             $vouchers[] = [

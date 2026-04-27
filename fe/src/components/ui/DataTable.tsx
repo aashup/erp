@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
   flexRender,
   type ColumnDef,
+  type SortingState,
 } from '@tanstack/react-table';
 
 interface DataTableProps<T> {
@@ -13,10 +16,15 @@ interface DataTableProps<T> {
 }
 
 export function DataTable<T>({ data, columns, loading, onRowClick }: DataTableProps<T>) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { sorting },
+    onSortingChange: setSorting,
   });
 
   if (loading) {
@@ -39,11 +47,17 @@ export function DataTable<T>({ data, columns, loading, onRowClick }: DataTablePr
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300"
+                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300${header.column.getCanSort() ? ' cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-100' : ''}`}
+                  onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                 >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
+                  <span className="inline-flex items-center gap-1">
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.column.getCanSort() && (
+                      <span className="text-gray-400">
+                        {header.column.getIsSorted() === 'asc' ? '↑' : header.column.getIsSorted() === 'desc' ? '↓' : '↕'}
+                      </span>
+                    )}
+                  </span>
                 </th>
               ))}
             </tr>

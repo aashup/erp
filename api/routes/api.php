@@ -186,6 +186,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('tally')->group(function () {
         Route::get('test-connection', [TallyImportController::class, 'testConnection']);
         Route::get('test-odbc-connection', [TallyImportController::class, 'testOdbcConnection']);
+        Route::get('fetch-groups', [TallyImportController::class, 'fetchGroups']);
         Route::get('fetch-ledgers', [TallyImportController::class, 'fetchLedgers']);
         Route::post('import-ledgers', [TallyImportController::class, 'importLedgers']);
         Route::get('fetch-stock-items', [TallyImportController::class, 'fetchStockItems']);

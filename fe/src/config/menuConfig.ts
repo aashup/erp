@@ -190,12 +190,12 @@ export const MENU_CONFIG: MenuItem[] = [
         href: "/payroll/employees",
         requiredPermission: "payroll.view",
       },
-      {
-        id: "payroll-departments",
-        label: "Departments",
-        href: "/payroll/departments",
-        requiredPermission: "payroll.view",
-      },
+      // {
+      //   id: "payroll-departments",
+      //   label: "Departments",
+      //   href: "/payroll/departments",
+      //   requiredPermission: "payroll.view",
+      // },
       {
         id: "payroll-runs",
         label: "Payroll Runs",

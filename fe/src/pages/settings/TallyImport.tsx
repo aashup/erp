@@ -5,6 +5,7 @@ import { tallyImportApi } from "@/api/tallyImport";
 import type {
   TallyLedgerPreview,
   TallyStockItemPreview,
+  TallyGroupPreview,
   ImportResult,
   ImportError,
 } from "@/api/tallyImport";
@@ -21,7 +22,10 @@ import {
   Database,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   AlertTriangle,
+  FolderOpen,
+  Folder,
 } from "lucide-react";
 import type { TallyConnectionMethod } from "@/api/tallyImport";
 import toast from "react-hot-toast";
@@ -642,6 +646,122 @@ function StockItemsTab() {
   );
 }
 
+// ─── Section 2c: Groups ──────────────────────────────────────────────────────
+
+function GroupTreeNode({
+  group,
+  depth = 0,
+}: {
+  group: TallyGroupPreview;
+  depth?: number;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const hasChildren = group.children.length > 0;
+
+  return (
+    <div>
+      <div
+        className="flex items-center gap-1 py-1 px-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 cursor-default"
+        style={{ paddingLeft: `${depth * 20 + 8}px` }}
+      >
+        {hasChildren ? (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            {expanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </button>
+        ) : (
+          <span className="w-3.5 shrink-0" />
+        )}
+        {hasChildren ? (
+          <FolderOpen className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+        ) : (
+          <Folder className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+        )}
+        <span className="ml-1 text-sm text-gray-800 dark:text-gray-200">
+          {group.name}
+        </span>
+        {group.parent && depth === 0 && (
+          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+            under {group.parent}
+          </span>
+        )}
+        {hasChildren && (
+          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+            ({group.children.length})
+          </span>
+        )}
+      </div>
+      {expanded && hasChildren && (
+        <div>
+          {group.children.map((child, i) => (
+            <GroupTreeNode key={i} group={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GroupsTab() {
+  const [groups, setGroups] = useState<TallyGroupPreview[] | null>(null);
+
+  const fetchMutation = useMutation({
+    mutationFn: tallyImportApi.fetchGroups,
+    onSuccess: (res) => setGroups(res.data.data),
+    onError: () => toast.error("Failed to fetch groups from Tally"),
+  });
+
+  const totalCount = (nodes: TallyGroupPreview[]): number =>
+    nodes.reduce((n, g) => n + 1 + totalCount(g.children), 0);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Fetches all accounting groups and sub-groups from Tally via XML. Read-only preview — groups are not imported (use{" "}
+        <strong>Load Default Account Groups</strong> in Company Settings instead).
+      </p>
+
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => fetchMutation.mutate()}
+        disabled={fetchMutation.isPending}
+      >
+        {fetchMutation.isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+        ) : null}
+        {fetchMutation.isPending ? "Fetching groups…" : "Fetch Groups from Tally"}
+      </Button>
+
+      {fetchMutation.isError && (
+        <p className="text-sm text-red-600 dark:text-red-400">
+          Failed to fetch groups. Check connection settings.
+        </p>
+      )}
+
+      {groups !== null && (
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            Found <strong>{totalCount(groups)}</strong> groups (
+            <strong>{groups.length}</strong> root groups)
+          </p>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 max-h-96 overflow-y-auto p-2">
+            {groups.map((g, i) => (
+              <GroupTreeNode key={i} group={g} depth={0} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Section 3: Vouchers ─────────────────────────────────────────────────────
 
 function VouchersSection() {
@@ -755,7 +875,7 @@ function VouchersSection() {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
-type MasterTab = "ledgers" | "stock-items";
+type MasterTab = "ledgers" | "stock-items" | "groups";
 
 export default function TallyImport() {
   usePageTitle("Tally Import");
@@ -796,7 +916,7 @@ export default function TallyImport() {
         <CardContent className="space-y-4">
           {/* Tab bar */}
           <div className="flex border-b border-gray-200 dark:border-gray-700">
-            {(["ledgers", "stock-items"] as MasterTab[]).map((tab) => (
+            {(["ledgers", "stock-items", "groups"] as MasterTab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setMasterTab(tab)}
@@ -806,12 +926,18 @@ export default function TallyImport() {
                     : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
               >
-                {tab === "ledgers" ? "Ledgers & Parties" : "Stock Items"}
+                {tab === "ledgers" ? "Ledgers & Parties" : tab === "stock-items" ? "Stock Items" : "Account Groups"}
               </button>
             ))}
           </div>
 
-          {masterTab === "ledgers" ? <LedgersTab /> : <StockItemsTab />}
+          {masterTab === "ledgers" ? (
+            <LedgersTab />
+          ) : masterTab === "stock-items" ? (
+            <StockItemsTab />
+          ) : (
+            <GroupsTab />
+          )}
         </CardContent>
       </Card>
 

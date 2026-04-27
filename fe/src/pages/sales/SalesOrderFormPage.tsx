@@ -8,7 +8,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { useFYBounds } from "@/hooks/useFinancialYear";
 import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
-import { itemsApi } from "@/api/inventory";
+import { itemsApi, stockLedgerApi } from "@/api/inventory";
 import { salesOrdersApi } from "@/api/sales";
 import { formatCurrency, calcGST } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -78,6 +78,12 @@ export default function SalesOrderFormPage() {
     select: (res) => res.data,
   });
 
+  const { data: stockSummaryData } = useQuery({
+    queryKey: ['stock-summary-all'],
+    queryFn: () => stockLedgerApi.summary({ per_page: '999' }),
+    select: (res) => res.data,
+  });
+
   const { data: existingSO } = useQuery({
     queryKey: ["sales-order", orderId],
     queryFn: () => salesOrdersApi.get(orderId!),
@@ -135,6 +141,14 @@ export default function SalesOrderFormPage() {
     () => new Map((itemsData?.data ?? []).map((i) => [i.id, i])),
     [itemsData?.data]
   );
+
+  const stockByItemMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (stockSummaryData?.data ?? []).forEach((row) => {
+      map.set(row.item_id, (map.get(row.item_id) ?? 0) + (row.current_stock ?? 0));
+    });
+    return map;
+  }, [stockSummaryData?.data]);
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => salesOrdersApi.create(data),
@@ -217,6 +231,15 @@ export default function SalesOrderFormPage() {
       return `IGST ${gstRate}% = ${formatCurrency(gst.igst)}`;
     }
     return `CGST ${gstRate / 2}% = ${formatCurrency(gst.cgst)} · SGST ${gstRate / 2}% = ${formatCurrency(gst.sgst)}`;
+  };
+
+  const getLineAvailableQty = (lineIndex: number) => {
+    const line = watchedLines?.[lineIndex];
+    if (!line?.item_id) return null;
+    const qty = stockByItemMap.get(line.item_id) ?? 0;
+    const item = itemMap.get(line.item_id);
+    const baseUnit = item?.unit ?? '';
+    return `${qty} ${baseUnit} (stock)`;
   };
 
   const customerOptions = (customersData?.data ?? []).map((p) => ({
@@ -433,12 +456,19 @@ export default function SalesOrderFormPage() {
                       )}
                     </div>
                   </div>
-                  {/* Per-line GST info */}
-                  {getLineGSTInfo(index) && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 pl-1">
-                      {getLineGSTInfo(index)}
-                    </p>
-                  )}
+                  {/* Per-line stock + GST info */}
+                  <div className="flex items-center justify-between pl-1">
+                    {getLineGSTInfo(index) ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {getLineGSTInfo(index)}
+                      </p>
+                    ) : <span />}
+                    {getLineAvailableQty(index) && (
+                      <span className="bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded text-blue-900 dark:text-blue-200 font-semibold text-xs">
+                        Available: {getLineAvailableQty(index)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
