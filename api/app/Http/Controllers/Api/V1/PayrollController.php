@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\Ledger;
 use App\Models\PayrollEntry;
 use App\Models\PayrollRun;
 use App\Services\AccountingService;
@@ -129,11 +130,17 @@ class PayrollController extends Controller
             return response()->json(['message' => 'Only approved runs can be marked as paid.'], 422);
         }
 
+        $companyId = auth()->user()->company_id;
+
         $validated = $request->validate([
-            'entry_ids'    => 'required|array|min:1',
-            'entry_ids.*'  => 'required|string|exists:payroll_entries,id',
-            'payment_mode' => 'required|in:cash,bank',
+            'entry_ids'          => 'required|array|min:1',
+            'entry_ids.*'        => 'required|string|exists:payroll_entries,id',
+            'payment_ledger_id'  => 'required|string|exists:ledgers,id',
         ]);
+
+        $paymentLedger = Ledger::where('id', $validated['payment_ledger_id'])
+            ->where('company_id', $companyId)
+            ->firstOrFail();
 
         $entries = PayrollEntry::whereIn('id', $validated['entry_ids'])
             ->where('payroll_run_id', $payrollRun->id)
@@ -148,7 +155,7 @@ class PayrollController extends Controller
         $voucher = $this->accountingService->postPayrollPayment(
             $payrollRun,
             $entries->all(),
-            $validated['payment_mode'],
+            $paymentLedger,
             auth()->id()
         );
 

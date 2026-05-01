@@ -170,6 +170,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('designations', DesignationController::class);
     Route::get('employees/{employee}/salary-structure', [EmployeeController::class, 'salaryStructure']);
     Route::post('employees/{employee}/salary-structure', [SalaryStructureController::class, 'storeForEmployee']);
+    Route::get('employees/{employee}/advance-balance', [EmployeeController::class, 'advanceBalance']);
+    Route::post('employees/{employee}/advance', [EmployeeController::class, 'payAdvance']);
     Route::apiResource('salary-structures', SalaryStructureController::class)->only(['show', 'update', 'destroy']);
     Route::apiResource('salary-component-definitions', SalaryComponentDefinitionController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('employees', EmployeeController::class);

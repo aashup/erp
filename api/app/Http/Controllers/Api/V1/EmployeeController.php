@@ -5,12 +5,16 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\CompanySetting;
 use App\Models\Employee;
+use App\Models\Ledger;
+use App\Models\Voucher;
+use App\Services\AccountingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class EmployeeController extends Controller
 {
+    public function __construct(private AccountingService $accountingService) {}
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Employee::class);
@@ -146,5 +150,78 @@ class EmployeeController extends Controller
         $structure = $employee->salaryStructure;
 
         return response()->json(['data' => $structure]);
+    }
+
+    public function payAdvance(Request $request, Employee $employee): JsonResponse
+    {
+        $this->authorize('update', $employee);
+
+        $companyId = auth()->user()->company_id;
+
+        $validated = $request->validate([
+            'payment_ledger_id' => 'required|string|exists:ledgers,id',
+            'amount'            => 'required|numeric|min:0.01',
+            'advance_date'      => 'required|date',
+            'description'       => 'nullable|string|max:500',
+        ]);
+
+        $paymentLedger = Ledger::where('id', $validated['payment_ledger_id'])
+            ->where('company_id', $companyId)
+            ->firstOrFail();
+
+        $voucher = $this->accountingService->postAdvancePayment(
+            $employee,
+            $paymentLedger,
+            (float) $validated['amount'],
+            $validated['advance_date'],
+            $validated['description'] ?? null,
+            auth()->id()
+        );
+
+        if (! $voucher) {
+            return response()->json(['message' => 'Failed to post advance voucher. Ensure default account groups are loaded.'], 500);
+        }
+
+        return response()->json(['data' => $voucher->load('lines.ledger')], 201);
+    }
+
+    public function advanceBalance(Employee $employee): JsonResponse
+    {
+        $this->authorize('view', $employee);
+
+        $companyId = auth()->user()->company_id;
+
+        $advanceLedger = Ledger::where('company_id', $companyId)
+            ->where('system_key', 'employee_advances_account')
+            ->first();
+
+        if (! $advanceLedger) {
+            return response()->json(['outstanding' => 0, 'vouchers' => []]);
+        }
+
+        $vouchers = Voucher::where('company_id', $companyId)
+            ->where('reference_type', Employee::class)
+            ->where('reference_id', $employee->id)
+            ->where('source', 'advance')
+            ->with(['lines' => fn ($q) => $q->where('ledger_id', $advanceLedger->id)])
+            ->orderByDesc('voucher_date')
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        $outstanding = $vouchers->sum(function ($v) {
+            return $v->lines->sum(fn ($l) => (float) $l->debit - (float) $l->credit);
+        });
+
+        return response()->json([
+            'outstanding' => round($outstanding, 2),
+            'vouchers'    => $vouchers->map(fn ($v) => [
+                'id'             => $v->id,
+                'voucher_number' => $v->voucher_number,
+                'voucher_date'   => $v->voucher_date,
+                'narration'      => $v->narration,
+                'amount'         => $v->lines->sum(fn ($l) => (float) $l->debit),
+            ]),
+        ]);
     }
 }

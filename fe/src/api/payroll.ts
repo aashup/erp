@@ -2,6 +2,7 @@ import api from '@/lib/axios';
 import type {
   ApiResponse,
   PaginatedResponse,
+  AdvanceVoucherRow,
   Department,
   Designation,
   Employee,
@@ -39,6 +40,10 @@ export const employeesApi = {
     api.get<ApiResponse<SalaryStructure | null>>(`/employees/${employeeId}/salary-structure`),
   createSalaryStructure: (employeeId: string, data: Partial<SalaryStructure>) =>
     api.post<ApiResponse<SalaryStructure>>(`/employees/${employeeId}/salary-structure`, data),
+  getAdvanceBalance: (employeeId: string) =>
+    api.get<{ outstanding: number; vouchers: AdvanceVoucherRow[] }>(`/employees/${employeeId}/advance-balance`),
+  payAdvance: (employeeId: string, data: { payment_ledger_id: string; amount: number; advance_date: string; description?: string }) =>
+    api.post(`/employees/${employeeId}/advance`, data),
 };
 
 export const salaryComponentDefinitionsApi = {
@@ -60,7 +65,7 @@ export const payrollApi = {
   updateEntry: (runId: string, entryId: string, present_days: number) =>
     api.patch<ApiResponse<PayrollRun>>(`/payroll-runs/${runId}/entries/${entryId}`, { present_days }),
   approve: (id: string) => api.patch<ApiResponse<PayrollRun>>(`/payroll-runs/${id}/approve`),
-  markPaid: (id: string, data: { entry_ids: string[]; payment_mode: 'cash' | 'bank' }) =>
+  markPaid: (id: string, data: { entry_ids: string[]; payment_ledger_id: string }) =>
     api.patch<ApiResponse<PayrollRun>>(`/payroll-runs/${id}/mark-paid`, data),
   delete: (id: string) => api.delete(`/payroll-runs/${id}`),
   payslipUrl: (runId: string, employeeId: string) =>

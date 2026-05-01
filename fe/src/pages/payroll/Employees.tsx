@@ -18,6 +18,7 @@ import { SlideSelect } from '@/components/ui/SlideSelect';
 import { DepartmentFormModal } from '@/components/ui/DepartmentFormModal';
 import { DesignationFormModal } from '@/components/ui/DesignationFormModal';
 import { SalaryStructureModal } from './SalaryStructureModal';
+import EmployeeAdvancePanel from './EmployeeAdvancePanel';
 import { Plus, Pencil, Trash2, IndianRupee } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
@@ -66,9 +67,10 @@ export default function Employees() {
   const canEdit   = hasPermission('payroll.edit');
   const canDelete = hasPermission('payroll.delete');
 
-  const [showModal, setShowModal]       = useState(false);
-  const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
+  const [showModal, setShowModal]           = useState(false);
+  const [editEmployee, setEditEmployee]     = useState<Employee | null>(null);
   const [salaryEmployee, setSalaryEmployee] = useState<Employee | null>(null);
+  const [advanceEmployee, setAdvanceEmployee] = useState<Employee | null>(null);
   const [showAddDept, setShowAddDept]   = useState(false);
   const [showAddDesg, setShowAddDesg]   = useState(false);
   const [search, setSearch]             = useState('');
@@ -151,7 +153,17 @@ export default function Employees() {
 
   const columns: ColumnDef<Employee, unknown>[] = [
     { id: 'employee_code', accessorKey: 'employee_code', header: 'Code', cell: ({ getValue }) => getValue() || '—' },
-    { id: 'name', accessorKey: 'name', header: 'Name' },
+    {
+      id: 'name', accessorKey: 'name', header: 'Name',
+      cell: ({ row }) => (
+        <button
+          onClick={() => setAdvanceEmployee(row.original)}
+          className="text-left font-medium text-blue-600 hover:underline dark:text-blue-400"
+        >
+          {row.original.name}
+        </button>
+      ),
+    },
     {
       id: 'designation', header: 'Designation',
       cell: ({ row }) => row.original.designation?.name ?? '—',
@@ -323,6 +335,13 @@ export default function Employees() {
           setValue('designation_id', desg.id);
         }}
       />
+
+      {advanceEmployee && (
+        <EmployeeAdvancePanel
+          employee={advanceEmployee}
+          onClose={() => setAdvanceEmployee(null)}
+        />
+      )}
     </div>
   );
 }

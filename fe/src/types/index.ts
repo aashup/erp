@@ -726,6 +726,14 @@ export interface Employee extends SyncColumns {
   salary_structure?: SalaryStructure | null;
 }
 
+export interface AdvanceVoucherRow {
+  id: string;
+  voucher_number: string;
+  voucher_date: string;
+  narration: string | null;
+  amount: number;
+}
+
 export interface SalaryComponentDefinition extends SyncColumns {
   id: string;
   company_id: string;
