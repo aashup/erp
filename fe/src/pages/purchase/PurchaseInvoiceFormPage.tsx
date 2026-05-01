@@ -521,8 +521,8 @@ export default function PurchaseInvoiceFormPage() {
                         <div className="col-span-1">
                           <input
                             type="number"
-                            min="0.001"
-                            step="0.001"
+                            min="1"
+                            step="1"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                             {...register(`lines.${index}.quantity`)}
                           />
@@ -551,7 +551,7 @@ export default function PurchaseInvoiceFormPage() {
                           <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                             placeholder="0.00"
                             {...register(`lines.${index}.rate`)}
@@ -563,7 +563,7 @@ export default function PurchaseInvoiceFormPage() {
                             type="number"
                             min="0"
                             max="100"
-                            step="0.01"
+                            step="1"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                             {...register(`lines.${index}.discount_percent`)}
                           />

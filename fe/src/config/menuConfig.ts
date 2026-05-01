@@ -129,6 +129,38 @@ export const MENU_CONFIG: MenuItem[] = [
     ],
   },
   {
+    id: "reports",
+    label: "Reports",
+    icon: "file-text",
+    requiredPermission: "accounting.view",
+    children: [
+      {
+        id: "cash-book",
+        label: "Cash Book",
+        href: "/reports/account-books/cash-book",
+        requiredPermission: "accounting.view",
+      },
+      {
+        id: "bank-book",
+        label: "Bank Book",
+        href: "/reports/account-books/bank-book",
+        requiredPermission: "accounting.view",
+      },
+      {
+        id: "ledger-book",
+        label: "Ledger",
+        href: "/reports/account-books/ledger",
+        requiredPermission: "accounting.view",
+      },
+      {
+        id: "day-book",
+        label: "Day Book",
+        href: "/reports/account-books/day-book",
+        requiredPermission: "accounting.view",
+      },
+    ],
+  },
+  {
     id: "accounting",
     label: "Accounting",
     icon: "book-open",
@@ -201,38 +233,6 @@ export const MENU_CONFIG: MenuItem[] = [
         label: "Payroll Runs",
         href: "/payroll/runs",
         requiredPermission: "payroll.view",
-      },
-    ],
-  },
-  {
-    id: "reports",
-    label: "Reports",
-    icon: "file-text",
-    requiredPermission: "accounting.view",
-    children: [
-      {
-        id: "cash-book",
-        label: "Cash Book",
-        href: "/reports/account-books/cash-book",
-        requiredPermission: "accounting.view",
-      },
-      {
-        id: "bank-book",
-        label: "Bank Book",
-        href: "/reports/account-books/bank-book",
-        requiredPermission: "accounting.view",
-      },
-      {
-        id: "ledger-book",
-        label: "Ledger",
-        href: "/reports/account-books/ledger",
-        requiredPermission: "accounting.view",
-      },
-      {
-        id: "day-book",
-        label: "Day Book",
-        href: "/reports/account-books/day-book",
-        requiredPermission: "accounting.view",
       },
     ],
   },

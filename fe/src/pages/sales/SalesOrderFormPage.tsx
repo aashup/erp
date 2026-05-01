@@ -375,19 +375,32 @@ export default function SalesOrderFormPage() {
                 <div key={field.id} className="space-y-1">
                   <div className="grid grid-cols-12 gap-2 items-start">
                     <div className="col-span-4">
-                      <SlideSelect
-                        name={`lines.${index}.item_id`}
-                        placeholder="Select item"
-                        panelTitle="Select Item"
-                        options={itemOptions}
-                        value={watch(`lines.${index}.item_id`)}
-                        onChange={(val) => handleItemChange(index, val)}
-                      />
-                      {errors.lines?.[index]?.item_id && (
-                        <p className="mt-1 text-xs text-red-500">
-                          {errors.lines[index]?.item_id?.message}
-                        </p>
-                      )}
+                      {(() => {
+                        const selectedItemIds = new Set(
+                          (watchedLines ?? [])
+                            .filter((_, i) => i !== index)
+                            .map((l) => l.item_id)
+                            .filter(Boolean)
+                        );
+                        const filteredItemOptions = itemOptions.filter((o) => !selectedItemIds.has(o.value));
+                        return (
+                          <>
+                            <SlideSelect
+                              name={`lines.${index}.item_id`}
+                              placeholder="Select item"
+                              panelTitle="Select Item"
+                              options={filteredItemOptions}
+                              value={watch(`lines.${index}.item_id`)}
+                              onChange={(val) => handleItemChange(index, val)}
+                            />
+                            {errors.lines?.[index]?.item_id && (
+                              <p className="mt-1 text-xs text-red-500">
+                                {errors.lines[index]?.item_id?.message}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <div className="col-span-2">
                       <input
