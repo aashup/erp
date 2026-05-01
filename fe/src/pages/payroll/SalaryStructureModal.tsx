@@ -181,7 +181,7 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
             id="total_salary"
             label="Total Gross Salary (₹) — auto-distribute"
             type="number"
-            step="0.01"
+            step="1"
             value={totalSalary || ''}
             onChange={(e) => handleTotalChange(Number(e.target.value))}
           />
@@ -196,19 +196,19 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
           <p className="mb-2 text-xs font-semibold uppercase text-blue-700 dark:text-blue-300">Earnings</p>
           <div className="grid grid-cols-2 gap-3">
-            <Input id="basic" label="Basic Salary (₹)" type="number" step="0.01" error={errors.basic?.message} {...register('basic')} />
-            <Input id="hra" label="HRA (₹)" type="number" step="0.01" {...register('hra')} />
-            <Input id="da" label="DA (₹)" type="number" step="0.01" {...register('da')} />
-            <Input id="conveyance" label="Conveyance (₹)" type="number" step="0.01" {...register('conveyance')} />
-            <Input id="medical" label="Medical (₹)" type="number" step="0.01" {...register('medical')} />
-            <Input id="special_allowance" label="Special Allowance (₹)" type="number" step="0.01" {...register('special_allowance')} />
+            <Input id="basic" label="Basic Salary (₹)" type="number" step="1" error={errors.basic?.message} {...register('basic')} />
+            <Input id="hra" label="HRA (₹)" type="number" step="1" {...register('hra')} />
+            <Input id="da" label="DA (₹)" type="number" step="1" {...register('da')} />
+            <Input id="conveyance" label="Conveyance (₹)" type="number" step="1" {...register('conveyance')} />
+            <Input id="medical" label="Medical (₹)" type="number" step="1" {...register('medical')} />
+            <Input id="special_allowance" label="Special Allowance (₹)" type="number" step="1" {...register('special_allowance')} />
             {earningDefs.map((def) => (
               <Input
                 key={def.id}
                 id={`custom_earning_${def.id}`}
                 label={`${def.name} (₹)`}
                 type="number"
-                step="0.01"
+                step="1"
                 value={customAmounts[def.id] ?? 0}
                 onChange={(e) => setCustomAmounts((prev) => ({ ...prev, [def.id]: Number(e.target.value) }))}
               />
@@ -228,15 +228,15 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
             Fixed Deductions (monthly)
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <Input id="professional_tax" label="Professional Tax (₹)" type="number" step="0.01" {...register('professional_tax')} />
-            <Input id="tds_amount" label="TDS (₹)" type="number" step="0.01" {...register('tds_amount')} />
+            <Input id="professional_tax" label="Professional Tax (₹)" type="number" step="1" {...register('professional_tax')} />
+            <Input id="tds_amount" label="TDS (₹)" type="number" step="1" {...register('tds_amount')} />
             {deductionDefs.map((def) => (
               <Input
                 key={def.id}
                 id={`custom_deduction_${def.id}`}
                 label={`${def.name} (₹)`}
                 type="number"
-                step="0.01"
+                step="1"
                 value={customAmounts[def.id] ?? 0}
                 onChange={(e) => setCustomAmounts((prev) => ({ ...prev, [def.id]: Number(e.target.value) }))}
               />

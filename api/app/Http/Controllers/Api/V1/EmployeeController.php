@@ -24,7 +24,12 @@ class EmployeeController extends Controller
             ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
                 ->orWhere('employee_code', 'like', "%{$s}%"))
             ->when($request->department_id, fn ($q, $d) => $q->where('department_id', $d))
-            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true));
+            ->when($request->designation_id, fn ($q, $d) => $q->where('designation_id', $d))
+            ->when($request->joining_date_from, fn ($q, $d) => $q->whereDate('joining_date', '>=', $d))
+            ->when($request->joining_date_to, fn ($q, $d) => $q->whereDate('joining_date', '<=', $d))
+            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
+            ->when($request->is_active !== null && $request->is_active !== '',
+                fn ($q) => $q->where('is_active', $request->is_active === '1'));
 
         if ($request->sort_by) {
             $sortOrder = $request->sort_order === 'desc' ? 'desc' : 'asc';
@@ -200,9 +205,9 @@ class EmployeeController extends Controller
         }
 
         $vouchers = Voucher::where('company_id', $companyId)
-            ->where('reference_type', Employee::class)
+            // ->where('reference_type', Employee::class)
             ->where('reference_id', $employee->id)
-            ->where('source', 'advance')
+            // ->where('source', 'advance')
             ->with(['lines' => fn ($q) => $q->where('ledger_id', $advanceLedger->id)])
             ->orderByDesc('voucher_date')
             ->orderByDesc('created_at')

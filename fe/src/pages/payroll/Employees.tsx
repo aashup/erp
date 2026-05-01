@@ -15,11 +15,12 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { SlideSelect } from '@/components/ui/SlideSelect';
+import { FilterPanel } from '@/components/ui/FilterPanel';
 import { DepartmentFormModal } from '@/components/ui/DepartmentFormModal';
 import { DesignationFormModal } from '@/components/ui/DesignationFormModal';
 import { SalaryStructureModal } from './SalaryStructureModal';
 import EmployeeAdvancePanel from './EmployeeAdvancePanel';
-import { Plus, Pencil, Trash2, IndianRupee } from 'lucide-react';
+import { Plus, Pencil, Trash2, IndianRupee, Filter } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 const schema = z.object({
@@ -76,9 +77,27 @@ export default function Employees() {
   const [search, setSearch]             = useState('');
   const [page, setPage]                 = useState(1);
 
+  // Filter states
+  const [showFilterPanel, setShowFilterPanel]     = useState(false);
+  const [departmentFilter, setDepartmentFilter]   = useState('');
+  const [designationFilter, setDesignationFilter] = useState('');
+  const [joiningDateFrom, setJoiningDateFrom]     = useState('');
+  const [joiningDateTo, setJoiningDateTo]         = useState('');
+  const [statusFilter, setStatusFilter]           = useState('');
+
+  const activeFilterCount = [departmentFilter, designationFilter, joiningDateFrom, joiningDateTo, statusFilter].filter(Boolean).length;
+
   const { data, isLoading } = useQuery({
-    queryKey: ['employees', search, page],
-    queryFn: () => employeesApi.list({ ...(search ? { search } : {}), page: String(page) }),
+    queryKey: ['employees', search, departmentFilter, designationFilter, joiningDateFrom, joiningDateTo, statusFilter, page],
+    queryFn: () => employeesApi.list({
+      ...(search            ? { search }                             : {}),
+      ...(departmentFilter  ? { department_id: departmentFilter }    : {}),
+      ...(designationFilter ? { designation_id: designationFilter }  : {}),
+      ...(joiningDateFrom   ? { joining_date_from: joiningDateFrom } : {}),
+      ...(joiningDateTo     ? { joining_date_to: joiningDateTo }     : {}),
+      ...(statusFilter      ? { is_active: statusFilter }            : {}),
+      page: String(page),
+    }),
     select: (res) => res.data,
   });
 
@@ -151,6 +170,15 @@ export default function Employees() {
   const deptOptions = (deptData ?? []).map((d: Department) => ({ value: d.id, label: d.name }));
   const desgOptions = (desgData ?? []).map((d: Designation) => ({ value: d.id, label: d.name }));
 
+  const clearAllFilters = () => {
+    setDepartmentFilter('');
+    setDesignationFilter('');
+    setJoiningDateFrom('');
+    setJoiningDateTo('');
+    setStatusFilter('');
+    setPage(1);
+  };
+
   const columns: ColumnDef<Employee, unknown>[] = [
     { id: 'employee_code', accessorKey: 'employee_code', header: 'Code', cell: ({ getValue }) => getValue() || '—' },
     {
@@ -186,10 +214,19 @@ export default function Employees() {
       ),
     },
     {
-      id: 'salary', header: 'Salary',
+      id: 'salary', header: 'Net Salary',
       cell: ({ row }) => {
         const s = row.original.salary_structure;
-        return s ? `₹${Number(s.basic).toLocaleString('en-IN')}` : <span className="text-xs text-gray-400">Not set</span>;
+        if (!s) return <span className="text-xs text-gray-400">Not set</span>;
+        const customEarnings = (s.custom_components ?? [])
+          .filter((c) => c.type === 'earning')
+          .reduce((sum, c) => sum + Number(c.amount), 0);
+        const customDeductions = (s.custom_components ?? [])
+          .filter((c) => c.type === 'deduction')
+          .reduce((sum, c) => sum + Number(c.amount), 0);
+        const gross = Number(s.basic) + Number(s.hra) + Number(s.da) + Number(s.conveyance) + Number(s.medical) + Number(s.special_allowance) + customEarnings;
+        const net = gross - Number(s.professional_tax) - Number(s.tds_amount) - customDeductions;
+        return `₹${net.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
       },
     },
     {
@@ -234,6 +271,18 @@ export default function Employees() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
+          <button
+            onClick={() => setShowFilterPanel(true)}
+            className="relative flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
           {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>}
         </div>
       </div>
@@ -318,6 +367,7 @@ export default function Employees() {
           </div>
         </form>
       </Modal>
+
       <DepartmentFormModal
         open={showAddDept}
         onClose={() => setShowAddDept(false)}
@@ -342,6 +392,109 @@ export default function Employees() {
           onClose={() => setAdvanceEmployee(null)}
         />
       )}
+
+      {/* Filter Panel */}
+      <FilterPanel open={showFilterPanel} onClose={() => setShowFilterPanel(false)}>
+
+        {/* Department */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+          <SlideSelect
+            name="filter_department"
+            placeholder="All Departments"
+            panelTitle="Filter by Department"
+            options={deptOptions}
+            value={departmentFilter}
+            onChange={(v) => { setDepartmentFilter(v); setPage(1); }}
+          />
+          {departmentFilter && (
+            <button
+              onClick={() => { setDepartmentFilter(''); setPage(1); }}
+              className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Designation */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Designation</label>
+          <SlideSelect
+            name="filter_designation"
+            placeholder="All Designations"
+            panelTitle="Filter by Designation"
+            options={desgOptions}
+            value={designationFilter}
+            onChange={(v) => { setDesignationFilter(v); setPage(1); }}
+          />
+          {designationFilter && (
+            <button
+              onClick={() => { setDesignationFilter(''); setPage(1); }}
+              className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Joining Date Range */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Joining Date</label>
+          <div className="flex flex-col gap-2">
+            <div>
+              <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</span>
+              <input
+                type="date"
+                value={joiningDateFrom}
+                onChange={(e) => { setJoiningDateFrom(e.target.value); setPage(1); }}
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</span>
+              <input
+                type="date"
+                value={joiningDateTo}
+                onChange={(e) => { setJoiningDateTo(e.target.value); setPage(1); }}
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+          </div>
+          {(joiningDateFrom || joiningDateTo) && (
+            <button
+              onClick={() => { setJoiningDateFrom(''); setJoiningDateTo(''); setPage(1); }}
+              className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Status */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All</option>
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+        </div>
+
+        {/* Clear All */}
+        {activeFilterCount > 0 && (
+          <button
+            onClick={clearAllFilters}
+            className="w-full rounded-lg border border-red-200 py-2 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+          >
+            Clear All Filters
+          </button>
+        )}
+      </FilterPanel>
     </div>
   );
 }
