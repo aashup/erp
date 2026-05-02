@@ -7,6 +7,7 @@ use App\Models\FinancialYear;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class FinancialYearController extends Controller
 {
@@ -47,14 +48,14 @@ class FinancialYearController extends Controller
     {
         $this->authorize('create', FinancialYear::class);
 
+        $companyId = $request->user()->company_id;
+
         $validated = $request->validate([
-            'label' => 'required|string|max:20',
+            'label' => ['required', 'string', 'max:20', Rule::unique('financial_years')->where('company_id', $companyId)],
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'is_current' => 'boolean',
         ]);
-
-        $companyId = $request->user()->company_id;
         $validated['company_id'] = $companyId;
         $validated['is_locked'] = false;
 
@@ -68,19 +69,7 @@ class FinancialYearController extends Controller
         $year = FinancialYear::create($validated);
 
         // Seed document counters for all 11 document types
-        $docTypes = [
-            'purchase_order', 'sales_order', 'purchase_invoice', 'sales_invoice',
-            'contra', 'payment', 'receipt', 'journal', 'purchase', 'sales', 'payroll',
-        ];
-        foreach ($docTypes as $type) {
-            \App\Models\DocumentCounter::create([
-                'company_id'        => $companyId,
-                'financial_year_id' => $year->id,
-                'document_type'     => $type,
-                'prefix'            => null,
-                'next_number'       => 1,
-            ]);
-        }
+ 
 
         return response()->json(['data' => $year], 201);
     }
@@ -89,15 +78,15 @@ class FinancialYearController extends Controller
     {
         $this->authorize('update', $financialYear);
 
+        $companyId = $request->user()->company_id;
+
         $validated = $request->validate([
-            'label' => 'sometimes|string|max:20',
+            'label' => ['sometimes', 'string', 'max:20', Rule::unique('financial_years')->where('company_id', $companyId)->ignore($financialYear->id)],
             'start_date' => 'sometimes|date',
             'end_date' => 'sometimes|date|after:start_date',
             'is_locked' => 'boolean',
             'is_current' => 'boolean',
         ]);
-
-        $companyId = $request->user()->company_id;
 
         // If marking as current, unset others
         if (! empty($validated['is_current'])) {
