@@ -160,6 +160,17 @@ return new class extends Migration
             $table->unique(['company_id', 'month', 'year']);
         });
 
+        Schema::create('ledger_closing_balances', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('financial_year_id')->constrained('financial_years')->cascadeOnDelete();
+            $table->foreignUuid('ledger_id')->constrained('ledgers')->cascadeOnDelete();
+            $table->decimal('closing_balance', 18, 2)->default(0);
+            $table->enum('balance_type', ['dr', 'cr'])->default('dr');
+            $table->timestamps();
+            $table->unique(['financial_year_id', 'ledger_id'], 'lcb_fy_ledger_unique');
+        });
+
         Schema::create('payroll_entries', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('payroll_run_id')->constrained('payroll_runs')->cascadeOnDelete();
@@ -195,6 +206,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('payroll_entries');
         Schema::dropIfExists('payroll_runs');
+        Schema::dropIfExists('ledger_closing_balances');
         Schema::dropIfExists('salary_structures');
         Schema::dropIfExists('salary_component_definitions');
         Schema::dropIfExists('employees');
