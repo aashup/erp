@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\AccountingGroup;
 use App\Models\FinancialYear;
 use App\Models\Ledger;
+use App\Models\LedgerClosingBalance;
 use App\Models\Party;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
@@ -59,6 +61,8 @@ class ReportController extends Controller
             ->get()
             ->keyBy('ledger_id');
 
+        $openingSnapshots = $this->resolveOpeningBalances($companyId, $request->financial_year_id);
+
         $rows = [];
         $grandTotalDebit = 0;
         $grandTotalCredit = 0;
@@ -87,8 +91,7 @@ class ReportController extends Controller
             $txnDebit = (float) ($txn->total_debit ?? 0);
             $txnCredit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
-            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+            [$openingDebit, $openingCredit] = $this->resolveLedgerOpening($ledger, $openingSnapshots);
 
             $totalDebit = $openingDebit + $txnDebit;
             $totalCredit = $openingCredit + $txnCredit;
@@ -169,8 +172,8 @@ class ReportController extends Controller
             ->orderBy('vouchers.created_at')
             ->get();
 
-        $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
-        $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+        $openingSnapshots = $this->resolveOpeningBalances($companyId, $request->financial_year_id);
+        [$openingDebit, $openingCredit] = $this->resolveLedgerOpening($ledger, $openingSnapshots);
         $runningBalance = $openingDebit - $openingCredit;
 
         $rows = [];
@@ -291,6 +294,71 @@ class ReportController extends Controller
     }
 
     /**
+     * Resolve the effective opening balance snapshots for a given FY.
+     *
+     * Returns a Collection keyed by ledger_id containing LedgerClosingBalance
+     * records from the immediately preceding FY. Empty collection means no prior
+     * snapshot exists — callers should fall back to the static ledger opening balance.
+     */
+    private function resolveOpeningBalances(string $companyId, ?string $financialYearId): Collection
+    {
+        if (!$financialYearId) {
+            return collect();
+        }
+
+        $currentFY = FinancialYear::find($financialYearId);
+        if (!$currentFY) {
+            return collect();
+        }
+
+        $previousFY = FinancialYear::where('company_id', $companyId)
+            ->whereDate('end_date', '<', $currentFY->start_date)
+            ->orderByDesc('end_date')
+            ->first();
+
+        if (!$previousFY) {
+            return collect();
+        }
+
+        return LedgerClosingBalance::where('financial_year_id', $previousFY->id)
+            ->get()
+            ->keyBy('ledger_id');
+    }
+
+    /**
+     * Resolve a single ledger's opening debit/credit using the snapshot collection.
+     *
+     * Rules:
+     *  - Balance-sheet accounts (asset/liability/equity): use previous FY closing snapshot.
+     *  - P&L accounts (income/expense): reset to zero in any non-first FY (snapshots exist).
+     *  - Fallback: static ledger.opening_balance when no snapshot collection is available.
+     *
+     * @return array{float, float} [$openingDebit, $openingCredit]
+     */
+    private function resolveLedgerOpening(Ledger $ledger, Collection $openingSnapshots): array
+    {
+        $snap      = $openingSnapshots->get($ledger->id);
+        $groupType = $ledger->group?->type ?? 'asset';
+        $isPnL     = in_array($groupType, ['income', 'expense']);
+
+        if ($snap && !$isPnL) {
+            return [
+                $snap->balance_type === 'dr' ? (float) $snap->closing_balance : 0.0,
+                $snap->balance_type === 'cr' ? (float) $snap->closing_balance : 0.0,
+            ];
+        }
+
+        if ($openingSnapshots->isNotEmpty() && $isPnL) {
+            return [0.0, 0.0];
+        }
+
+        return [
+            $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0.0,
+            $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0.0,
+        ];
+    }
+
+    /**
      * Balance Sheet — Assets vs Liabilities + Equity as at a date.
      *
      * Tally convention:
@@ -340,6 +408,8 @@ class ReportController extends Controller
             ->get()
             ->keyBy('ledger_id');
 
+        $openingSnapshots = $this->resolveOpeningBalances($companyId, $request->financial_year_id);
+
         // ── 3. Build rows ─────────────────────────────────────────────────────
         $rows = [];
         $totalAssets = 0;
@@ -369,8 +439,7 @@ class ReportController extends Controller
             $txnDebit = (float) ($txn->total_debit ?? 0);
             $txnCredit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
-            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+            [$openingDebit, $openingCredit] = $this->resolveLedgerOpening($ledger, $openingSnapshots);
 
             $totalDebit = $openingDebit + $txnDebit;
             $totalCredit = $openingCredit + $txnCredit;
@@ -438,8 +507,7 @@ class ReportController extends Controller
             $debit = (float) ($txn->total_debit ?? 0);
             $credit = (float) ($txn->total_credit ?? 0);
 
-            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
-            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+            [$openingDebit, $openingCredit] = $this->resolveLedgerOpening($ledger, $openingSnapshots);
 
             $totalDebit = $openingDebit + $debit;
             $totalCredit = $openingCredit + $credit;
@@ -526,6 +594,8 @@ class ReportController extends Controller
             ->get()
             ->keyBy('ledger_id');
 
+        $openingSnapshots = $this->resolveOpeningBalances($companyId, $request->financial_year_id);
+
         $rows = [];
         $totalIncome = 0;
         $totalExpense = 0;
@@ -549,9 +619,7 @@ class ReportController extends Controller
             $debit = (float) ($txn->total_debit ?? 0);
             $credit = (float) ($txn->total_credit ?? 0);
 
-            // Include opening balance in P&L amount
-            $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
-            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+            [$openingDebit, $openingCredit] = $this->resolveLedgerOpening($ledger, $openingSnapshots);
 
             $totalDebit = $openingDebit + $debit;
             $totalCredit = $openingCredit + $credit;
@@ -626,7 +694,7 @@ class ReportController extends Controller
             ]);
         }
 
-        return response()->json($this->buildLedgerBook($companyId, $ledger, $dateFrom, $dateTo));
+        return response()->json($this->buildLedgerBook($companyId, $ledger, $dateFrom, $dateTo, $request->financial_year_id));
     }
 
     /**
@@ -658,7 +726,7 @@ class ReportController extends Controller
                 ->where('company_id', $companyId)
                 ->findOrFail($ledgerId);
 
-            $book = $this->buildLedgerBook($companyId, $selectedLedger, $dateFrom, $dateTo);
+            $book = $this->buildLedgerBook($companyId, $selectedLedger, $dateFrom, $dateTo, $request->financial_year_id);
             $data = $book['data'];
             $closingBalance = $book['closing_balance'];
             $selectedLedger = $book['ledger'];
@@ -746,7 +814,7 @@ class ReportController extends Controller
     /**
      * Shared helper — build ledger book (opening + transactions + closing).
      */
-    private function buildLedgerBook(string $companyId, Ledger $ledger, ?string $dateFrom, ?string $dateTo): array
+    private function buildLedgerBook(string $companyId, Ledger $ledger, ?string $dateFrom, ?string $dateTo, ?string $financialYearId = null): array
     {
         $query = DB::table('voucher_lines')
             ->join('vouchers', 'voucher_lines.voucher_id', '=', 'vouchers.id')
@@ -773,8 +841,8 @@ class ReportController extends Controller
             ->orderBy('vouchers.created_at')
             ->get();
 
-        $openingDebit = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
-        $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+        $openingSnapshots = $this->resolveOpeningBalances($companyId, $financialYearId);
+        [$openingDebit, $openingCredit] = $this->resolveLedgerOpening($ledger, $openingSnapshots);
         $runningBalance = $openingDebit - $openingCredit;
 
         $rows = [];
@@ -868,10 +936,20 @@ class ReportController extends Controller
             ->orderBy('vouchers.created_at')
             ->get();
 
-        // Calculate running balance
-        $openingBalance = (float) $party->opening_balance;
-        if ($party->balance_type === 'cr') {
-            $openingBalance = -$openingBalance;
+        // Calculate running balance — use previous FY snapshot if available
+        $openingSnapshots  = $this->resolveOpeningBalances($companyId, $fyId);
+        $primaryLedgerId   = $party->debtor_ledger_id ?? $party->creditor_ledger_id;
+        $snap              = $openingSnapshots->get($primaryLedgerId);
+
+        if ($snap) {
+            $openingBalance = $snap->balance_type === 'dr'
+                ? (float) $snap->closing_balance
+                : -(float) $snap->closing_balance;
+        } else {
+            $openingBalance = (float) $party->opening_balance;
+            if ($party->balance_type === 'cr') {
+                $openingBalance = -$openingBalance;
+            }
         }
 
         $runningBalance = $openingBalance;

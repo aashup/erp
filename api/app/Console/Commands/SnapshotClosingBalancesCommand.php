@@ -27,12 +27,32 @@ class SnapshotClosingBalancesCommand extends Command
 
         $this->info("Snapshotting closing balances for FY: {$fy->label} (company: {$fy->company_id})");
 
-        // Fetch all active ledgers for this company
-        $ledgers = Ledger::where('company_id', $fy->company_id)->get();
+        // Fetch all ledgers with their group (needed for P&L vs balance-sheet check)
+        $ledgers = Ledger::with('group')
+            ->where('company_id', $fy->company_id)
+            ->get();
 
         if ($ledgers->isEmpty()) {
             $this->warn('No ledgers found for this company.');
             return self::SUCCESS;
+        }
+
+        // Resolve previous FY closing balance snapshots as the opening for this FY
+        $previousFY = FinancialYear::where('company_id', $fy->company_id)
+            ->whereDate('end_date', '<', $fy->start_date)
+            ->orderByDesc('end_date')
+            ->first();
+
+        $openingSnapshots = $previousFY
+            ? LedgerClosingBalance::where('financial_year_id', $previousFY->id)
+                ->get()
+                ->keyBy('ledger_id')
+            : collect();
+
+        if ($previousFY) {
+            $this->info("Using FY {$previousFY->label} closing balances as opening.");
+        } else {
+            $this->info('No previous FY snapshot found — using static ledger opening balances.');
         }
 
         // Sum debits/credits per ledger for all posted vouchers in this FY
@@ -54,12 +74,27 @@ class SnapshotClosingBalancesCommand extends Command
         $updated = 0;
 
         foreach ($ledgers as $ledger) {
-            $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
-            $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+            $snap      = $openingSnapshots->get($ledger->id);
+            $groupType = $ledger->group?->type ?? 'asset';
+            $isPnL     = in_array($groupType, ['income', 'expense']);
 
-            $txnRow     = $totals->get($ledger->id);
-            $txnDebit   = $txnRow ? (float) $txnRow->total_debit  : 0;
-            $txnCredit  = $txnRow ? (float) $txnRow->total_credit : 0;
+            if ($snap && !$isPnL) {
+                // Balance-sheet account — carry forward previous FY closing
+                $openingDebit  = $snap->balance_type === 'dr' ? (float) $snap->closing_balance : 0;
+                $openingCredit = $snap->balance_type === 'cr' ? (float) $snap->closing_balance : 0;
+            } elseif ($openingSnapshots->isNotEmpty() && $isPnL) {
+                // P&L account in a non-first FY — resets to zero each year
+                $openingDebit  = 0;
+                $openingCredit = 0;
+            } else {
+                // No prior-FY snapshot — fall back to static ledger columns
+                $openingDebit  = $ledger->opening_type === 'dr' ? (float) $ledger->opening_balance : 0;
+                $openingCredit = $ledger->opening_type === 'cr' ? (float) $ledger->opening_balance : 0;
+            }
+
+            $txnRow    = $totals->get($ledger->id);
+            $txnDebit  = $txnRow ? (float) $txnRow->total_debit  : 0;
+            $txnCredit = $txnRow ? (float) $txnRow->total_credit : 0;
 
             $net = ($openingDebit + $txnDebit) - ($openingCredit + $txnCredit);
 
