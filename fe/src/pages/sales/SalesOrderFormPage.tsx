@@ -277,13 +277,6 @@ export default function SalesOrderFormPage() {
           <CardHeader><span className="font-semibold text-gray-700 dark:text-gray-200">Order Details</span></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input
-                id="so_number"
-                label="SO Number"
-                placeholder="Auto-generated if empty"
-                error={errors.so_number?.message}
-                {...register("so_number")}
-              />
               <SlideSelect
                 name="party_id"
                 label="Customer *"

@@ -372,13 +372,6 @@ export default function SalesInvoiceFormPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input
-                  id="invoice_number"
-                  label="Invoice Number"
-                  placeholder="INV-0001"
-                  error={errors.invoice_number?.message}
-                  {...register('invoice_number')}
-                />
                 <SlideSelect
                   name="party_id"
                   label="Customer"
