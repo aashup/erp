@@ -3,67 +3,26 @@ import { useQuery } from "@tanstack/react-query";
 import { IndianRupee } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { reportsApi } from "@/api/accounting";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, periodToDateRange } from "@/lib/utils";
 import { PeriodFilter, type Period } from "./PeriodFilter";
 import { useFYStore } from "@/store/fyStore";
-
-/**
- * Converts a dashboard period to an ISO date range (matching Carbon's
- * startOfWeek/endOfWeek — Monday to Sunday).
- */
-function periodToDateRange(period: Period): { date_from: string; date_to: string } {
-  const now = new Date();
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-  switch (period) {
-    case "today":
-      return { date_from: fmt(now), date_to: fmt(now) };
-
-    case "this_week": {
-      // Carbon startOfWeek = Monday (ISO 8601)
-      const day = now.getDay(); // 0=Sun … 6=Sat
-      const diffToMon = (day + 6) % 7;
-      const mon = new Date(now);
-      mon.setDate(now.getDate() - diffToMon);
-      const sun = new Date(mon);
-      sun.setDate(mon.getDate() + 6);
-      return { date_from: fmt(mon), date_to: fmt(sun) };
-    }
-
-    case "this_month": {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      return { date_from: fmt(first), date_to: fmt(last) };
-    }
-
-    case "this_year":
-      return {
-        date_from: `${now.getFullYear()}-01-01`,
-        date_to: `${now.getFullYear()}-12-31`,
-      };
-  }
-}
+import { useDateStore } from "@/store/dateStore";
 
 export function ProfitLossWidget() {
   const [period, setPeriod] = useState<Period>("this_year");
   const selectedFY = useFYStore((s) => s.selectedFY);
-
-  // "this_year" sends no explicit dates so the backend uses financial_year_id
-  // (auto-injected by axios), producing the same result as the P&L report page.
-  const isFY = period === "this_year";
-  const dateParams = isFY ? {} : periodToDateRange(period);
-  const { date_from, date_to } = isFY ? { date_from: "", date_to: "" } : periodToDateRange(period);
+  const selectedDate = useDateStore((s) => s.selectedDate);
+  const { date_from, date_to } = periodToDateRange(period, selectedDate, selectedFY);
 
   const { data: summary, isLoading } = useQuery({
-    queryKey: ["dashboard-pnl", period, selectedFY?.id],
-    queryFn: () => reportsApi.profitAndLoss(dateParams),
+    queryKey: ["dashboard-pnl", date_from, date_to],
+    queryFn: () => reportsApi.profitAndLoss({ date_from, date_to }),
     select: (res) => res.data.summary,
   });
 
   const isProfit = summary?.is_profit ?? true;
   const netValue = summary?.net_profit_loss ?? 0;
-  const dateLabel = isFY ? (selectedFY?.name ?? "Full Year") : `${date_from} — ${date_to}`;
+  const dateLabel = `${date_from} — ${date_to}`;
 
   return (
     <Card>

@@ -17,26 +17,34 @@ class DashboardController extends Controller
 {
     public function stats(Request $request): JsonResponse
     {
-        $period = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
-        $range = $this->getDateRange($period, $request->query('local_date'));
 
-        // If financial_year_id is provided, apply FY-aware date logic
-        if ($request->financial_year_id) {
-            $fy = FinancialYear::find($request->financial_year_id);
-            if ($fy) {
-                $fyStart = Carbon::parse($fy->start_date)->startOfDay();
-                $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
-                if ($period === 'this_year') {
-                    // "this_year" in ERP context = the selected financial year
-                    $range = ['from' => $fyStart, 'to' => $fyEnd];
-                } else {
-                    // For shorter periods, clamp to FY boundaries
-                    if ($range['from']->lt($fyStart)) {
-                        $range['from'] = $fyStart;
-                    }
-                    if ($range['to']->gt($fyEnd)) {
-                        $range['to'] = $fyEnd;
+        // Explicit date_from/date_to from frontend takes priority (frontend computes the range)
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $range = [
+                'from' => Carbon::parse($request->date_from)->startOfDay(),
+                'to'   => Carbon::parse($request->date_to)->endOfDay(),
+            ];
+            $period = 'custom';
+        } else {
+            $period = $request->query('period', 'today');
+            $range = $this->getDateRange($period, $request->query('local_date'));
+
+            // If financial_year_id is provided, apply FY-aware date logic
+            if ($request->financial_year_id) {
+                $fy = FinancialYear::find($request->financial_year_id);
+                if ($fy) {
+                    $fyStart = Carbon::parse($fy->start_date)->startOfDay();
+                    $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
+                    if ($period === 'this_year') {
+                        $range = ['from' => $fyStart, 'to' => $fyEnd];
+                    } else {
+                        if ($range['from']->lt($fyStart)) {
+                            $range['from'] = $fyStart;
+                        }
+                        if ($range['to']->gt($fyEnd)) {
+                            $range['to'] = $fyEnd;
+                        }
                     }
                 }
             }
@@ -293,24 +301,32 @@ class DashboardController extends Controller
 
     public function collection(Request $request): JsonResponse
     {
-        $period = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
-        $range = $this->getDateRange($period, $request->query('local_date'));
 
-        // Apply FY-aware date logic (same as stats)
-        if ($request->financial_year_id) {
-            $fy = FinancialYear::find($request->financial_year_id);
-            if ($fy) {
-                $fyStart = Carbon::parse($fy->start_date)->startOfDay();
-                $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
-                if ($period === 'this_year') {
-                    $range = ['from' => $fyStart, 'to' => $fyEnd];
-                } else {
-                    if ($range['from']->lt($fyStart)) {
-                        $range['from'] = $fyStart;
-                    }
-                    if ($range['to']->gt($fyEnd)) {
-                        $range['to'] = $fyEnd;
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $range = [
+                'from' => Carbon::parse($request->date_from)->startOfDay(),
+                'to'   => Carbon::parse($request->date_to)->endOfDay(),
+            ];
+            $period = 'custom';
+        } else {
+            $period = $request->query('period', 'today');
+            $range = $this->getDateRange($period, $request->query('local_date'));
+
+            if ($request->financial_year_id) {
+                $fy = FinancialYear::find($request->financial_year_id);
+                if ($fy) {
+                    $fyStart = Carbon::parse($fy->start_date)->startOfDay();
+                    $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
+                    if ($period === 'this_year') {
+                        $range = ['from' => $fyStart, 'to' => $fyEnd];
+                    } else {
+                        if ($range['from']->lt($fyStart)) {
+                            $range['from'] = $fyStart;
+                        }
+                        if ($range['to']->gt($fyEnd)) {
+                            $range['to'] = $fyEnd;
+                        }
                     }
                 }
             }

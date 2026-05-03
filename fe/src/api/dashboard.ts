@@ -1,6 +1,5 @@
 import api from '@/lib/axios';
 
-/** Returns the caller's local calendar date as an ISO-8601 string (YYYY-MM-DD). */
 function localDate(): string {
   const d = new Date();
   return [
@@ -59,10 +58,10 @@ export interface CollectionStats {
 }
 
 export const dashboardApi = {
-  stats: (period: string) =>
-    api.get<{ data: DashboardStats }>('/dashboard/stats', { params: { period, local_date: localDate() } }),
+  stats: (params: { date_from: string; date_to: string }) =>
+    api.get<{ data: DashboardStats }>('/dashboard/stats', { params }),
   chart: (months?: number) =>
     api.get<{ data: DashboardChartData }>('/dashboard/chart', { params: { months, local_date: localDate() } }),
-  collection: (period: string) =>
-    api.get<{ data: CollectionStats }>('/dashboard/collection', { params: { period, local_date: localDate() } }),
+  collection: (params: { date_from: string; date_to: string }) =>
+    api.get<{ data: CollectionStats }>('/dashboard/collection', { params }),
 };

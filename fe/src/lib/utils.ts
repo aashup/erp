@@ -57,3 +57,53 @@ export function fyDateBounds(fy: { start_date: string; end_date: string }): { st
     end: fy.end_date.split('T')[0],
   };
 }
+
+type Period = 'today' | 'this_week' | 'this_month' | 'this_year';
+
+/**
+ * Converts a dashboard period to an explicit ISO date range.
+ * - today/this_week/this_month are relative to `selectedDate` (from useDateStore)
+ * - this_year uses the selected FY bounds (not calendar year)
+ */
+export function periodToDateRange(
+  period: Period,
+  selectedDate: string,
+  fy?: { start_date: string; end_date: string } | null,
+): { date_from: string; date_to: string } {
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // Parse as local midnight to avoid UTC-shift when constructing from YYYY-MM-DD
+  const d = new Date(selectedDate + 'T00:00:00');
+
+  switch (period) {
+    case 'today':
+      return { date_from: selectedDate, date_to: selectedDate };
+
+    case 'this_week': {
+      const diffToMon = (d.getDay() + 6) % 7; // 0 = already Monday
+      const mon = new Date(d);
+      mon.setDate(d.getDate() - diffToMon);
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      return { date_from: fmt(mon), date_to: fmt(sun) };
+    }
+
+    case 'this_month': {
+      const first = new Date(d.getFullYear(), d.getMonth(), 1);
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return { date_from: fmt(first), date_to: fmt(last) };
+    }
+
+    case 'this_year': {
+      if (fy) {
+        const { start, end } = fyDateBounds(fy);
+        return { date_from: start, date_to: end };
+      }
+      return {
+        date_from: `${d.getFullYear()}-01-01`,
+        date_to: `${d.getFullYear()}-12-31`,
+      };
+    }
+  }
+}

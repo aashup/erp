@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { dashboardApi } from "@/api/dashboard";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, periodToDateRange } from "@/lib/utils";
 import { PeriodFilter, type Period } from "./PeriodFilter";
 import { useFYStore } from "@/store/fyStore";
+import { useDateStore } from "@/store/dateStore";
 
 function Row({
   label,
@@ -33,10 +34,12 @@ function Row({
 export function TotalPurchaseWidget() {
   const [period, setPeriod] = useState<Period>("this_year");
   const selectedFY = useFYStore((s) => s.selectedFY);
+  const selectedDate = useDateStore((s) => s.selectedDate);
+  const { date_from, date_to } = periodToDateRange(period, selectedDate, selectedFY);
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["dashboard-stats-purchase", period, selectedFY?.id],
-    queryFn: () => dashboardApi.stats(period),
+    queryKey: ["dashboard-stats-purchase", date_from, date_to],
+    queryFn: () => dashboardApi.stats({ date_from, date_to }),
     select: (res) => res.data.data,
   });
 
