@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AccountingGroupController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ImpersonationController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\DocumentCounterController;
 use App\Http\Controllers\Api\V1\BranchController;
@@ -109,6 +110,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::apiResource('roles', RoleController::class);
     Route::get('permissions', [RoleController::class, 'permissions']);
+
+    // Xtrox super-admin impersonation
+    Route::post('admin/impersonate/{user}', [ImpersonationController::class, 'impersonate']);
+    Route::delete('admin/impersonate/{user}', [ImpersonationController::class, 'stopImpersonating']);
 
     // Purchase
     Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);

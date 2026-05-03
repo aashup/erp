@@ -14,9 +14,11 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
+        $isSuperEmail = auth()->user()->email === 'aashu@xtrox.com';
+
         $query = User::query()
-            ->with(['branch'])
-            ->where('company_id', auth()->user()->company_id)
+            ->with($isSuperEmail ? ['branch', 'company'] : ['branch'])
+            ->when(! $isSuperEmail, fn ($q) => $q->where('company_id', auth()->user()->company_id))
             ->when($request->search, fn ($q) => $q->where(function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
                     ->orWhere('email', 'like', "%{$request->search}%");

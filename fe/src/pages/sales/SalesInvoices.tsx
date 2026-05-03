@@ -587,7 +587,20 @@ export default function SalesInvoices() {
           {renderSortIcon('customer')}
         </button>
       ),
-      cell: ({ row }) => row.original.party?.name ?? '—',
+      cell: ({ row }) => {
+        const p = row.original.party;
+        if (!p) return '—';
+        return (
+          <button
+            onClick={() => navigate('/reports/account-books/ledger', {
+              state: { ledgerId: p.debtor_ledger_id ?? '', ledgerName: p.name },
+            })}
+            className="text-left font-medium text-primary-600 hover:underline dark:text-primary-400"
+          >
+            {p.name}
+          </button>
+        );
+      },
     },
     {
       id: 'invoice_date',

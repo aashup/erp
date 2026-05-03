@@ -17,8 +17,11 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, UserCheck } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
+import { useAuthStore } from '@/store/authStore';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -48,7 +51,10 @@ const roleColors: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
 export default function Users() {
   usePageTitle('Users');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const { user: currentUser, beginImpersonation } = useAuthStore();
+  const isSuperAdmin = currentUser?.email === 'aashu@xtrox.com';
   const canCreate = hasPermission('user.create');
   const canEdit = hasPermission('user.edit');
   const canDelete = hasPermission('user.delete');
@@ -102,6 +108,17 @@ export default function Users() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  const impersonateMutation = useMutation({
+    mutationFn: (userId: string) => usersApi.impersonate(userId),
+    onSuccess: (res) => {
+      const { token, user, permissions } = res.data.data;
+      beginImpersonation({ ...user, permissions }, token);
+      toast.success(`Now impersonating ${user.name}`);
+      navigate('/');
+    },
+    onError: () => toast.error('Failed to impersonate user'),
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -208,6 +225,16 @@ export default function Users() {
         <div className="flex items-center gap-1">
           {canEdit && <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
           {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
+          {isSuperAdmin && row.original.email !== 'aashu@xtrox.com' && (
+            <button
+              onClick={() => impersonateMutation.mutate(row.original.id)}
+              disabled={impersonateMutation.isPending}
+              title={`Impersonate ${row.original.name}`}
+              className="rounded p-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-50"
+            >
+              <UserCheck className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+            </button>
+          )}
         </div>
       ),
     } as ColumnDef<User, unknown>] : []),

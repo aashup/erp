@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,6 +45,7 @@ type PartyForm = z.infer<typeof schema>;
 
 export default function Parties() {
   usePageTitle('Parties');
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission('party.create');
@@ -124,7 +126,20 @@ export default function Parties() {
           {renderSortIcon('name')}
         </button>
       ),
-      accessorKey: 'name',
+      cell: ({ row }) => {
+        const p = row.original;
+        const ledgerId = p.type === 'vendor' ? p.creditor_ledger_id : p.debtor_ledger_id;
+        return (
+          <button
+            onClick={() => navigate('/reports/account-books/ledger', {
+              state: { ledgerId: ledgerId ?? '', ledgerName: p.name },
+            })}
+            className="text-left font-medium text-primary-600 hover:underline dark:text-primary-400"
+          >
+            {p.name}
+          </button>
+        );
+      },
     },
     {
       id: 'type',
