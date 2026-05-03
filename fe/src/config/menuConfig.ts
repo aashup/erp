@@ -202,6 +202,12 @@ export const MENU_CONFIG: MenuItem[] = [
         href: "/accounting/balance-sheet",
         requiredPermission: "accounting.view",
       },
+      {
+        id: "audit-trail",
+        label: "Audit Trail",
+        href: "/accounting/audit-trail",
+        requiredPermission: "audit.view",
+      },
       // {
       //   id: "payments",
       //   label: "Payments",

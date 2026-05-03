@@ -274,13 +274,6 @@ export default function PurchaseOrderFormPage() {
           <CardHeader><span className="font-semibold text-gray-700 dark:text-gray-200">Order Details</span></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input
-                id="po_number"
-                label="PO Number"
-                placeholder="Auto-generated if empty"
-                error={errors.po_number?.message}
-                {...register("po_number")}
-              />
               <SlideSelect
                 name="party_id"
                 label="Vendor *"
@@ -308,7 +301,7 @@ export default function PurchaseOrderFormPage() {
                 type="date"
                 {...register("expected_delivery_date")}
               />
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-12">
                 <Input
                   id="notes"
                   label="Notes"

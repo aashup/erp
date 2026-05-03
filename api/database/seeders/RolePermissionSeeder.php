@@ -12,7 +12,7 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $modules = [
-            'inventory', 'purchase', 'sales', 'pos', 'accounting', 'party', 'branch', 'user', 'role', 'payroll',
+            'inventory', 'purchase', 'sales', 'pos', 'accounting', 'party', 'branch', 'user', 'role', 'payroll', 'audit',
         ];
 
         $actions = ['view', 'create', 'edit', 'delete'];
@@ -40,12 +40,16 @@ class RolePermissionSeeder extends Seeder
             Permission::where('name', 'not like', '%.delete')->get()
         );
 
-        // Accountant — accounting + view others
+        // Accountant — accounting + view others (excluding audit)
         $accountant = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
         $accountant->syncPermissions(
-            Permission::where('name', 'like', 'accounting.%')
-                ->orWhere('name', 'like', '%.view')
-                ->get()
+            Permission::where(function ($q) {
+                $q->where('name', 'like', 'accounting.%')
+                    ->orWhere(function ($qq) {
+                        $qq->where('name', 'like', '%.view')
+                            ->where('name', 'not like', 'audit.%');
+                    });
+            })->get()
         );
 
         // Salesman — sales + pos + inventory view + party view

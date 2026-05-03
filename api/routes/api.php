@@ -210,4 +210,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/cash-book', [ReportController::class, 'cashBook']);
     Route::get('reports/bank-book', [ReportController::class, 'bankBook']);
     Route::get('reports/day-book', [ReportController::class, 'dayBook']);
+    Route::get('reports/audit-trail/filters', [ReportController::class, 'auditTrailFilters']);
+    Route::get('reports/audit-trail', [ReportController::class, 'auditTrail']);
 });

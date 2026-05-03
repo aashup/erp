@@ -45,6 +45,7 @@ import VoucherEntryForm from "@/pages/accounting/VoucherEntryForm";
 import TrialBalance from "@/pages/accounting/TrialBalance";
 import ProfitAndLoss from "@/pages/accounting/ProfitAndLoss";
 import BalanceSheet from "@/pages/accounting/BalanceSheet";
+import AuditTrail from "@/pages/accounting/AuditTrail";
 import CashBook from "@/pages/reports/CashBook";
 import BankBook from "@/pages/reports/BankBook";
 import LedgerBook from "@/pages/reports/LedgerBook";
@@ -256,6 +257,14 @@ export default function App() {
             <Route
               path="/accounting/balance-sheet"
               element={<BalanceSheet />}
+            />
+            <Route
+              path="/accounting/audit-trail"
+              element={
+                <RequirePermission permission="audit.view">
+                  <AuditTrail />
+                </RequirePermission>
+              }
             />
 
             {/* Reports — Account Books */}

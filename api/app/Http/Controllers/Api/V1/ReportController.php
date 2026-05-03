@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccountingGroup;
+use App\Models\Activity;
 use App\Models\FinancialYear;
 use App\Models\Ledger;
 use App\Models\LedgerClosingBalance;
 use App\Models\Party;
+use App\Models\User;
 use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -981,5 +983,189 @@ class ReportController extends Controller
             'opening_balance' => round($openingBalance, 2),
             'closing_balance' => round($runningBalance, 2),
         ]);
+    }
+
+    /**
+     * Map of friendly subject_type keys → FQCN.
+     * Used to filter and to surface a clean module name on the FE.
+     */
+    private const AUDIT_SUBJECT_MAP = [
+        'sales_invoice'    => \App\Models\SalesInvoice::class,
+        'sales_order'      => \App\Models\SalesOrder::class,
+        'sales_return'     => \App\Models\SalesReturn::class,
+        'purchase_invoice' => \App\Models\PurchaseInvoice::class,
+        'purchase_order'   => \App\Models\PurchaseOrder::class,
+        'purchase_return'  => \App\Models\PurchaseReturn::class,
+        'payment_receipt'  => \App\Models\PaymentReceipt::class,
+        'voucher'          => \App\Models\Voucher::class,
+        'item'             => \App\Models\Item::class,
+        'item_group'       => \App\Models\ItemGroup::class,
+        'unit'             => \App\Models\Unit::class,
+        'batch'            => \App\Models\Batch::class,
+        'party'            => \App\Models\Party::class,
+        'ledger'           => \App\Models\Ledger::class,
+        'accounting_group' => \App\Models\AccountingGroup::class,
+        'branch'           => \App\Models\Branch::class,
+        'godown'           => \App\Models\Godown::class,
+        'financial_year'   => \App\Models\FinancialYear::class,
+        'company'          => \App\Models\Company::class,
+        'user'             => \App\Models\User::class,
+    ];
+
+    /**
+     * Audit Trail — paginated list of activity_log entries scoped to the current company.
+     */
+    public function auditTrail(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Activity::class);
+
+        [$dateFrom, $dateTo] = $this->resolveDateRange($request);
+        $perPage = (int) min($request->input('per_page', 50), 200);
+
+        $query = Activity::query()
+            ->with('causer:id,name,email')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+
+        if ($dateFrom && $dateTo) {
+            $query->whereDate('created_at', '>=', $dateFrom)
+                ->whereDate('created_at', '<=', $dateTo);
+        }
+
+        if ($request->filled('causer_id')) {
+            $query->where('causer_id', $request->causer_id);
+        }
+
+        if ($request->filled('subject_type')) {
+            $key = $request->subject_type;
+            if (isset(self::AUDIT_SUBJECT_MAP[$key])) {
+                $query->where('subject_type', self::AUDIT_SUBJECT_MAP[$key]);
+            }
+        }
+
+        if ($request->filled('event')) {
+            $query->where('event', $request->event);
+        }
+
+        if ($request->filled('search')) {
+            $term = '%'.$request->search.'%';
+            $query->where(function ($q) use ($term) {
+                $q->where('description', 'like', $term)
+                    ->orWhere('properties', 'like', $term);
+            });
+        }
+
+        $page = $query->paginate($perPage);
+
+        // Build a friendly-key reverse map FQCN → key for output
+        $typeKeyByClass = array_flip(self::AUDIT_SUBJECT_MAP);
+
+        // Resolve subject labels in batch per type to avoid N+1.
+        $idsByClass = [];
+        foreach ($page->items() as $row) {
+            if ($row->subject_type && $row->subject_id) {
+                $idsByClass[$row->subject_type][] = $row->subject_id;
+            }
+        }
+        $labelsByClass = [];
+        foreach ($idsByClass as $class => $ids) {
+            if (! class_exists($class)) {
+                continue;
+            }
+            $field = $this->subjectLabelField($class);
+            try {
+                $labelsByClass[$class] = $class::withoutGlobalScopes()
+                    ->whereIn('id', array_unique($ids))
+                    ->pluck($field, 'id')
+                    ->toArray();
+            } catch (\Throwable $e) {
+                $labelsByClass[$class] = [];
+            }
+        }
+
+        $items = collect($page->items())->map(function ($row) use ($typeKeyByClass, $labelsByClass) {
+            $class = $row->subject_type;
+            $label = null;
+            if ($class && isset($labelsByClass[$class][$row->subject_id])) {
+                $label = $labelsByClass[$class][$row->subject_id];
+            }
+
+            return [
+                'id'                 => $row->id,
+                'created_at'         => $row->created_at?->toIso8601String(),
+                'event'              => $row->event,
+                'log_name'           => $row->log_name,
+                'description'        => $row->description,
+                'subject_type'       => $class ? ($typeKeyByClass[$class] ?? class_basename($class)) : null,
+                'subject_type_class' => $class,
+                'subject_id'         => $row->subject_id,
+                'subject_label'      => $label,
+                'causer'             => $row->causer ? [
+                    'id'    => $row->causer->id,
+                    'name'  => $row->causer->name,
+                    'email' => $row->causer->email,
+                ] : null,
+                'properties'         => $row->properties,
+                'batch_uuid'         => $row->batch_uuid,
+            ];
+        });
+
+        return response()->json([
+            'data' => $items,
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page'    => $page->lastPage(),
+                'per_page'     => $page->perPage(),
+                'total'        => $page->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Audit Trail filter options — users in this company + supported subject_type keys.
+     */
+    public function auditTrailFilters(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Activity::class);
+
+        $companyId = $request->user()->company_id;
+
+        $users = User::where('company_id', $companyId)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        $subjectTypes = collect(self::AUDIT_SUBJECT_MAP)
+            ->keys()
+            ->map(fn ($key) => [
+                'key'   => $key,
+                'label' => str(str_replace('_', ' ', $key))->title()->toString(),
+            ])
+            ->values();
+
+        return response()->json([
+            'users'         => $users,
+            'subject_types' => $subjectTypes,
+            'events'        => ['created', 'updated', 'deleted'],
+        ]);
+    }
+
+    /**
+     * Best-effort label field per subject class.
+     */
+    private function subjectLabelField(string $class): string
+    {
+        return match ($class) {
+            \App\Models\SalesInvoice::class    => 'invoice_number',
+            \App\Models\PurchaseInvoice::class => 'invoice_number',
+            \App\Models\SalesOrder::class      => 'order_number',
+            \App\Models\PurchaseOrder::class   => 'order_number',
+            \App\Models\SalesReturn::class     => 'return_number',
+            \App\Models\PurchaseReturn::class  => 'return_number',
+            \App\Models\PaymentReceipt::class  => 'receipt_number',
+            \App\Models\Voucher::class         => 'voucher_number',
+            \App\Models\Batch::class           => 'batch_number',
+            \App\Models\User::class            => 'name',
+            default                            => 'name',
+        };
     }
 }
