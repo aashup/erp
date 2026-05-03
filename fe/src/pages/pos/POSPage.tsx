@@ -17,6 +17,8 @@ import { calcGST, calcRoundOff, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { db } from '@/lib/db';
+import { buildSyncRecord } from '@/lib/sync';
 import POSItemSearch from './POSItemSearch';
 import POSCart from './POSCart';
 import POSPaymentModal, { type PaymentEntry } from './POSPaymentModal';
@@ -284,32 +286,80 @@ export default function POSPage() {
   async function handleCheckout(payments: PaymentEntry[], amountTendered: number, changeAmount: number, postPayment?: boolean) {
     if (!godown) { toast.error('No godown configured'); return; }
     setCheckoutLoading(true);
+    const invoiceDate = new Date().toISOString().slice(0, 10);
+    const invoiceId = crypto.randomUUID();
+
     try {
-      const res = await posApi.checkout({
-        party_id: customer?.id ?? null,
-        godown_id: godown.id,
-        is_inter_state: isInterState,
-        invoice_date: new Date().toISOString().slice(0, 10),
-        notes,
-        round_off: roundOff,
-        lines: cart.map((l) => ({
-          item_id: l.itemId,
-          batch_id: l.batchId,
-          quantity: l.quantity,
-          unit: l.unit,
-          rate: l.rate,
-          discount_percent: l.discountPct,
-          gst_rate: l.gstRate,
-        })),
-        ...(postPayment ? { post_payment: true } : { payments, amount_tendered: amountTendered, change_amount: changeAmount }),
-      });
-      const inv = res.data.data;
-      setLastInvoice(inv);
+      // Write invoice + lines to Dexie first (offline-first)
+      const localInvoice = buildSyncRecord<import('@/types').SalesInvoice>(
+        {
+          party_id: customer?.id ?? '',
+          godown_id: godown.id,
+          is_inter_state: isInterState,
+          invoice_date: invoiceDate,
+          notes,
+          grand_total: grandTotal,
+          status: 'confirmed',
+        },
+        user!.company_id,
+        invoiceId,
+      );
+      await db.salesInvoices.put(localInvoice);
+
+      for (const l of cart) {
+        const lineRecord = buildSyncRecord<import('@/types').SalesInvoiceLine>(
+          {
+            sales_invoice_id: invoiceId,
+            item_id: l.itemId,
+            batch_id: l.batchId ?? null,
+            quantity: l.quantity,
+            unit: l.unit,
+            rate: l.rate,
+            discount_percent: l.discountPct,
+            gst_rate: l.gstRate,
+          },
+          user!.company_id,
+        );
+        await db.salesInvoiceLines.put(lineRecord);
+      }
+
+      if (isOnline) {
+        const res = await posApi.checkout({
+          party_id: customer?.id ?? null,
+          godown_id: godown.id,
+          is_inter_state: isInterState,
+          invoice_date: invoiceDate,
+          notes,
+          round_off: roundOff,
+          lines: cart.map((l) => ({
+            item_id: l.itemId,
+            batch_id: l.batchId,
+            quantity: l.quantity,
+            unit: l.unit,
+            rate: l.rate,
+            discount_percent: l.discountPct,
+            gst_rate: l.gstRate,
+          })),
+          ...(postPayment ? { post_payment: true } : { payments, amount_tendered: amountTendered, change_amount: changeAmount }),
+        });
+        const inv = res.data.data;
+        await db.salesInvoices.put({ ...inv, sync_status: 'synced' });
+        await db.salesInvoices.delete(invoiceId);
+        setLastInvoice(inv);
+      } else {
+        toast('Offline — sale saved locally, will sync when back online');
+        setLastInvoice(localInvoice as unknown as import('@/types').SalesInvoice);
+      }
+
       setPaymentModal(false);
       setSuccessModal(true);
       handleClear();
-    } catch {
-      toast.error('Checkout failed. Please try again.');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: unknown; message?: string };
+      if (axiosErr?.response) {
+        toast.error('Checkout failed. Please try again.');
+      }
+      // If the error is from the API after writing locally, the local record stays (pending sync)
     } finally {
       setCheckoutLoading(false);
     }

@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOfflineListQuery } from '@/hooks/useOfflineQuery';
+import { db } from '@/lib/db';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,7 +23,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, Upload, CreditCard, TrendingDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, Upload, CreditCard, TrendingDown, WifiOff } from 'lucide-react';
 import { OcrUploadDialog } from './OcrUploadDialog';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import toast from 'react-hot-toast';
@@ -272,6 +275,7 @@ export default function PurchaseInvoices() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const isOnline = useOnlineStatus();
   const canCreate = hasPermission('purchase.create');
   const canEdit = hasPermission('purchase.edit');
   const canDelete = hasPermission('purchase.delete');
@@ -288,9 +292,10 @@ export default function PurchaseInvoices() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [paymentInvoice, setPaymentInvoice] = useState<PurchaseInvoice | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useOfflineListQuery({
+    table: db.purchaseInvoices,
     queryKey: ['purchase-invoices', page, search, dateFrom, dateTo, vendorFilter, statusFilter, sortBy, sortOrder],
-    queryFn: () => purchaseInvoicesApi.list({
+    apiFn: () => purchaseInvoicesApi.list({
       page: String(page),
       search,
       sort_by: sortBy,
@@ -300,11 +305,28 @@ export default function PurchaseInvoices() {
       ...(vendorFilter ? { party_id: vendorFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     }),
-    select: (res) => res.data,
+    offlineFilter: (items) => {
+      let result = items;
+      if (search) result = result.filter((i) => i.invoice_number?.toLowerCase().includes(search.toLowerCase()));
+      if (vendorFilter) result = result.filter((i) => i.party_id === vendorFilter);
+      if (statusFilter) result = result.filter((i) => i.status === statusFilter);
+      if (dateFrom) result = result.filter((i) => i.invoice_date >= dateFrom);
+      if (dateTo) result = result.filter((i) => i.invoice_date <= dateTo);
+      result = result.slice().sort((a, b) => {
+        const aVal = String((a as unknown as Record<string, unknown>)[sortBy] ?? '');
+        const bVal = String((b as unknown as Record<string, unknown>)[sortBy] ?? '');
+        return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      return result;
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => purchaseInvoicesApi.delete(id),
+    mutationFn: async (id: string) => {
+      if (!isOnline) { toast.error('Cannot delete while offline'); throw new Error('offline'); }
+      await purchaseInvoicesApi.delete(id);
+      await db.purchaseInvoices.delete(id);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] }),
   });
 
@@ -520,7 +542,8 @@ export default function PurchaseInvoices() {
             {canDelete && (
               <button
                 onClick={() => { if (confirm('Delete this invoice?')) deleteMutation.mutate(inv.id); }}
-                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                disabled={!isOnline}
+                className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"
                 title="Delete"
               >
                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -557,9 +580,17 @@ export default function PurchaseInvoices() {
               <Upload className="mr-2 h-4 w-4" /> Import from Image
             </Button>
           )}
-          {canCreate && <Button onClick={() => navigate('/purchase/invoices/new')}><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>}
+          {canCreate && <Button onClick={() => navigate('/purchase/invoices/new')} disabled={!isOnline}><Plus className="mr-2 h-4 w-4" /> New Invoice</Button>}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You are offline — showing cached data. Create and delete actions are disabled.
+        </div>
+      )}
+
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800 px-4 py-2">
           <span className="text-sm font-medium text-orange-800 dark:text-orange-300">

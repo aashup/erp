@@ -10,6 +10,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAuthStore } from '@/store/authStore';
 import { db } from '@/lib/db';
 import { ledgersApi, accountingGroupsApi } from '@/api/accounting';
+import { buildSyncRecord } from '@/lib/sync';
 import type { AccountingGroup, Ledger } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
@@ -119,21 +120,49 @@ export default function Ledgers() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: Partial<Ledger>) => ledgersApi.create(data),
+    mutationFn: async (data: Partial<Ledger>) => {
+      const record = buildSyncRecord<Ledger>(data, user!.company_id);
+      await db.ledgers.put(record);
+      if (isOnline) {
+        const res = await ledgersApi.create(data);
+        await db.ledgers.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      return { data: { data: record } };
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ledgers'] }); closeModal(); toast.success('Ledger created'); },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to create'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Ledger> }) => ledgersApi.update(id, data),
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Ledger> }) => {
+      const existing = await db.ledgers.get(id);
+      const record = buildSyncRecord<Ledger>(
+        { ...existing, ...data },
+        user!.company_id,
+        id,
+        existing?.created_at,
+      );
+      await db.ledgers.put(record);
+      if (isOnline) {
+        const res = await ledgersApi.update(id, data);
+        await db.ledgers.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      return { data: { data: record } };
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ledgers'] }); closeModal(); toast.success('Ledger updated'); },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to update'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => ledgersApi.delete(id),
+    mutationFn: async (id: string) => {
+      if (!isOnline) { toast.error('Cannot delete while offline'); throw new Error('offline'); }
+      await ledgersApi.delete(id);
+      await db.ledgers.delete(id);
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ledgers'] }); toast.success('Ledger deleted'); },
-    onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to delete'),
+    onError: (err: any) => { if (err.message !== 'offline') toast.error(err?.response?.data?.message || 'Failed to delete'); },
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

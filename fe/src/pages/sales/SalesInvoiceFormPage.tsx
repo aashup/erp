@@ -6,7 +6,10 @@ import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useFYBounds } from '@/hooks/useFinancialYear';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAuthStore } from '@/store/authStore';
+import { db } from '@/lib/db';
+import { buildSyncRecord } from '@/lib/sync';
 import { useDateStore } from '@/store/dateStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
@@ -121,6 +124,8 @@ export default function SalesInvoiceFormPage() {
   const watchedLines = watch('lines');
   const isInterState = watch('is_inter_state');
   const company = useAuthStore((state) => state.user?.company);
+  const user = useAuthStore((state) => state.user);
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     if (isEditMode || !defaultGodownId) {
@@ -183,7 +188,27 @@ export default function SalesInvoiceFormPage() {
   }, [watch('party_id'), company, customersData, setValue]);
 
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => salesInvoicesApi.create(data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      const { lines, ...header } = data as { lines: Record<string, unknown>[]; [k: string]: unknown };
+      const invoiceRecord = buildSyncRecord<import('@/types').SalesInvoice>(header, user!.company_id);
+      await db.salesInvoices.put(invoiceRecord);
+      for (const line of (lines ?? [])) {
+        await db.salesInvoiceLines.put(
+          buildSyncRecord<import('@/types').SalesInvoiceLine>(
+            { ...line, sales_invoice_id: invoiceRecord.id },
+            user!.company_id,
+          ),
+        );
+      }
+      if (isOnline) {
+        const res = await salesInvoicesApi.create(data);
+        await db.salesInvoices.put({ ...res.data.data, sync_status: 'synced' });
+        await db.salesInvoices.delete(invoiceRecord.id);
+        return res;
+      }
+      toast('Saved offline — will sync when back online');
+      return { data: { data: invoiceRecord } };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
       toast.success('Sales invoice created');
@@ -192,7 +217,33 @@ export default function SalesInvoiceFormPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => salesInvoicesApi.update(id, data),
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
+      const { lines, ...header } = data as { lines: Record<string, unknown>[]; [k: string]: unknown };
+      const existing = await db.salesInvoices.get(id);
+      const invoiceRecord = buildSyncRecord<import('@/types').SalesInvoice>(
+        { ...existing, ...header },
+        user!.company_id,
+        id,
+        existing?.created_at,
+      );
+      await db.salesInvoices.put(invoiceRecord);
+      for (const line of (lines ?? [])) {
+        await db.salesInvoiceLines.put(
+          buildSyncRecord<import('@/types').SalesInvoiceLine>(
+            { ...line, sales_invoice_id: id },
+            user!.company_id,
+            (line as { id?: string }).id,
+          ),
+        );
+      }
+      if (isOnline) {
+        const res = await salesInvoicesApi.update(id, data);
+        await db.salesInvoices.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      toast('Saved offline — will sync when back online');
+      return { data: { data: invoiceRecord } };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
       if (invoiceId) {

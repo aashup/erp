@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOfflineListQuery } from '@/hooks/useOfflineQuery';
+import { db } from '@/lib/db';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -15,7 +18,7 @@ import { SlideSelect } from '@/components/ui/SlideSelect';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, PackageCheck } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, PackageCheck, WifiOff } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import { ReceiveItemsDialog } from './ReceiveItemsDialog';
 
@@ -48,6 +51,7 @@ export default function PurchaseOrders() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const isOnline = useOnlineStatus();
   const canCreate = hasPermission('purchase.create');
   const canEdit = hasPermission('purchase.edit');
   const canDelete = hasPermission('purchase.delete');
@@ -63,9 +67,10 @@ export default function PurchaseOrders() {
   const [sortBy, setSortBy] = useState('po_number');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useOfflineListQuery({
+    table: db.purchaseOrders,
     queryKey: ['purchase-orders', page, search, dateFrom, dateTo, vendorFilter, statusFilter, sortBy, sortOrder],
-    queryFn: () => purchaseOrdersApi.list({
+    apiFn: () => purchaseOrdersApi.list({
       page: String(page),
       search,
       sort_by: sortBy,
@@ -75,11 +80,28 @@ export default function PurchaseOrders() {
       ...(vendorFilter ? { party_id: vendorFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     }),
-    select: (res) => res.data,
+    offlineFilter: (items) => {
+      let result = items;
+      if (search) result = result.filter((i) => i.po_number?.toLowerCase().includes(search.toLowerCase()));
+      if (vendorFilter) result = result.filter((i) => i.party_id === vendorFilter);
+      if (statusFilter) result = result.filter((i) => i.status === statusFilter);
+      if (dateFrom) result = result.filter((i) => i.po_date >= dateFrom);
+      if (dateTo) result = result.filter((i) => i.po_date <= dateTo);
+      result = result.slice().sort((a, b) => {
+        const aVal = String((a as unknown as Record<string, unknown>)[sortBy] ?? '');
+        const bVal = String((b as unknown as Record<string, unknown>)[sortBy] ?? '');
+        return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      return result;
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => purchaseOrdersApi.delete(id),
+    mutationFn: async (id: string) => {
+      if (!isOnline) { toast.error('Cannot delete while offline'); throw new Error('offline'); }
+      await purchaseOrdersApi.delete(id);
+      await db.purchaseOrders.delete(id);
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }); toast.success('Purchase order deleted'); },
   });
 
@@ -233,7 +255,8 @@ export default function PurchaseOrders() {
             {isDraft && canDelete && (
               <button
                 onClick={() => { if (confirm('Delete this PO?')) deleteMutation.mutate(po.id); }}
-                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                disabled={!isOnline}
+                className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"
                 title="Delete"
               >
                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -258,12 +281,19 @@ export default function PurchaseOrders() {
             Filters
           </button>
           {canCreate && (
-            <Button onClick={() => navigate('/purchase/orders/new')}>
+            <Button onClick={() => navigate('/purchase/orders/new')} disabled={!isOnline}>
               <Plus className="mr-2 h-4 w-4" /> New PO
             </Button>
           )}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You are offline — showing cached data. Create and delete actions are disabled.
+        </div>
+      )}
 
       <Card>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />

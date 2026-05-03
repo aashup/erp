@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useOfflineListQuery } from "@/hooks/useOfflineQuery";
+import { db } from "@/lib/db";
 import { itemsApi, itemGroupsApi, unitsApi } from "@/api/inventory";
 import type { Item, ItemGroup, Unit } from "@/types";
 import { formatCurrency } from "@/lib/utils";
@@ -20,6 +23,7 @@ import {
   ArrowUp,
   ArrowDown,
   PackageOpen,
+  WifiOff,
 } from "lucide-react";
 import { FilterPanel } from "@/components/ui/FilterPanel";
 
@@ -28,6 +32,7 @@ export default function Items() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const isOnline = useOnlineStatus();
   const canCreate = hasPermission("inventory.create");
   const canEdit = hasPermission("inventory.edit");
   const canDelete = hasPermission("inventory.delete");
@@ -41,19 +46,10 @@ export default function Items() {
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const { data, isLoading } = useQuery({
-    queryKey: [
-      "items",
-      page,
-      search,
-      skuFilter,
-      groupFilter,
-      statusFilter,
-      unitFilter,
-      sortBy,
-      sortOrder,
-    ],
-    queryFn: () =>
+  const { data, isLoading } = useOfflineListQuery({
+    table: db.items,
+    queryKey: ["items", page, search, skuFilter, groupFilter, statusFilter, unitFilter, sortBy, sortOrder],
+    apiFn: () =>
       itemsApi.list({
         page: String(page),
         search,
@@ -62,12 +58,23 @@ export default function Items() {
         sort_order: sortOrder,
         ...(skuFilter ? { sku: skuFilter } : {}),
         ...(groupFilter ? { item_group_id: groupFilter } : {}),
-        ...(statusFilter
-          ? { is_active: statusFilter === "active" ? "1" : "0" }
-          : {}),
+        ...(statusFilter ? { is_active: statusFilter === "active" ? "1" : "0" } : {}),
         ...(unitFilter ? { unit: unitFilter } : {}),
       }),
-    select: (res) => res.data,
+    offlineFilter: (items) => {
+      let filtered = items;
+      if (search) filtered = filtered.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || (i.sku ?? '').toLowerCase().includes(search.toLowerCase()));
+      if (skuFilter) filtered = filtered.filter(i => (i.sku ?? '').toLowerCase().includes(skuFilter.toLowerCase()));
+      if (groupFilter) filtered = filtered.filter(i => i.item_group_id === groupFilter);
+      if (statusFilter) filtered = filtered.filter(i => statusFilter === 'active' ? i.is_active : !i.is_active);
+      if (unitFilter) filtered = filtered.filter(i => i.unit === unitFilter);
+      filtered.sort((a, b) => {
+        const av = String((a as unknown as Record<string, unknown>)[sortBy] ?? '');
+        const bv = String((b as unknown as Record<string, unknown>)[sortBy] ?? '');
+        return sortOrder === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+      return filtered;
+    },
   });
 
   const { data: unitsData } = useQuery({
@@ -86,7 +93,11 @@ export default function Items() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => itemsApi.delete(id),
+    mutationFn: async (id: string) => {
+      if (!isOnline) { throw new Error('Deletion requires internet connection'); }
+      await itemsApi.delete(id);
+      await db.items.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["items"] });
       queryClient.invalidateQueries({ queryKey: ["items-all"] });
@@ -301,7 +312,8 @@ export default function Items() {
           {canEdit && (
             <button
               onClick={() => navigate(`/inventory/items/${row.original.id}/edit`)}
-              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              disabled={!isOnline}
+              className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"
             >
               <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </button>
@@ -312,7 +324,8 @@ export default function Items() {
                 if (confirm("Delete this item?"))
                   deleteMutation.mutate(row.original.id);
               }}
-              className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              disabled={!isOnline}
+              className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </button>
@@ -338,13 +351,20 @@ export default function Items() {
           </button>
           {canCreate && (
             <div className="flex flex-col items-end gap-1">
-              <Button onClick={() => navigate("/inventory/items/new")}>
+              <Button onClick={() => navigate("/inventory/items/new")} disabled={!isOnline}>
                 <Plus className="mr-2 h-4 w-4" /> Add Item
               </Button>
             </div>
           )}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You are offline — showing cached data. Edits will sync when back online.
+        </div>
+      )}
 
       <Card>
         <DataTable

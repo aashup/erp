@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOfflineListQuery } from '@/hooks/useOfflineQuery';
+import { db } from '@/lib/db';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,7 +28,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { SlideSelect } from '@/components/ui/SlideSelect';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown, Eye, Banknote, TrendingUp } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, Printer, Download, ArrowUp, ArrowDown, Eye, Banknote, TrendingUp, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDateStore } from '@/store/dateStore';
 
@@ -344,6 +347,7 @@ export default function SalesInvoices() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const isOnline = useOnlineStatus();
   const user = useAuthStore((s) => s.user);
   const canCreate = hasPermission('sales.create');
   const canEdit = hasPermission('sales.edit');
@@ -372,9 +376,10 @@ export default function SalesInvoices() {
     select: (res) => res.data.data ?? [],
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useOfflineListQuery({
+    table: db.salesInvoices,
     queryKey: ['sales-invoices', page, search, dateFrom, dateTo, customerFilter, statusFilter, sortBy, sortOrder],
-    queryFn: () => salesInvoicesApi.list({
+    apiFn: () => salesInvoicesApi.list({
       page: String(page),
       search,
       sort_by: sortBy,
@@ -384,11 +389,28 @@ export default function SalesInvoices() {
       ...(customerFilter ? { party_id: customerFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     }),
-    select: (res) => res.data,
+    offlineFilter: (items) => {
+      let result = items;
+      if (search) result = result.filter((i) => i.invoice_number?.toLowerCase().includes(search.toLowerCase()) || i.party_id === search);
+      if (customerFilter) result = result.filter((i) => i.party_id === customerFilter);
+      if (statusFilter) result = result.filter((i) => i.status === statusFilter);
+      if (dateFrom) result = result.filter((i) => i.invoice_date >= dateFrom);
+      if (dateTo) result = result.filter((i) => i.invoice_date <= dateTo);
+      result = result.slice().sort((a, b) => {
+        const aVal = String((a as unknown as Record<string, unknown>)[sortBy] ?? '');
+        const bVal = String((b as unknown as Record<string, unknown>)[sortBy] ?? '');
+        return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      return result;
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => salesInvoicesApi.delete(id),
+    mutationFn: async (id: string) => {
+      if (!isOnline) { toast.error('Cannot delete while offline'); throw new Error('offline'); }
+      await salesInvoicesApi.delete(id);
+      await db.salesInvoices.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
       toast.success('Sales invoice deleted');
@@ -764,7 +786,8 @@ export default function SalesInvoices() {
                     deleteMutation.mutate(row.original.id);
                   }
                 }}
-                className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                disabled={!isOnline}
+                className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"
                 title="Delete"
               >
                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -797,17 +820,24 @@ export default function SalesInvoices() {
             Filters
           </button>
           {canCreate && (
-            <Button variant="secondary" onClick={() => navigate('/sales/invoices/new-2')}>
+            <Button variant="secondary" onClick={() => navigate('/sales/invoices/new-2')} disabled={!isOnline}>
               <Plus className="mr-2 h-4 w-4" /> SI-2
             </Button>
           )}
           {canCreate && (
-            <Button onClick={() => navigate('/sales/invoices/new')}>
+            <Button onClick={() => navigate('/sales/invoices/new')} disabled={!isOnline}>
               <Plus className="mr-2 h-4 w-4" /> New Invoice
             </Button>
           )}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You are offline — showing cached data. Create and delete actions are disabled.
+        </div>
+      )}
 
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800 px-4 py-2">

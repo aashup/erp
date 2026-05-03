@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOfflineListQuery } from '@/hooks/useOfflineQuery';
+import { useAuthStore } from '@/store/authStore';
+import { db } from '@/lib/db';
+import { buildSyncRecord } from '@/lib/sync';
 import { godownsApi } from '@/api/inventory';
 import type { Godown } from '@/types';
 import { Card } from '@/components/ui/Card';
@@ -14,8 +19,9 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Filter, Pencil, Trash2, ArrowUp, ArrowDown, WifiOff } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
+import toast from 'react-hot-toast';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -30,6 +36,8 @@ export default function Godowns() {
   usePageTitle('Godowns');
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const isOnline = useOnlineStatus();
+  const user = useAuthStore((s) => s.user);
   const canCreate = hasPermission('inventory.create');
   const canEdit = hasPermission('inventory.edit');
   const canDelete = hasPermission('inventory.delete');
@@ -39,24 +47,58 @@ export default function Godowns() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useOfflineListQuery({
+    table: db.godowns,
     queryKey: ['godowns', sortBy, sortOrder],
-    queryFn: () => godownsApi.list({ sort_by: sortBy, sort_order: sortOrder }),
-    select: (res) => res.data,
+    apiFn: () => godownsApi.list({ sort_by: sortBy, sort_order: sortOrder }),
+    offlineFilter: (items) =>
+      items.slice().sort((a, b) => {
+        const aVal = String((a as unknown as Record<string, unknown>)[sortBy] ?? '');
+        const bVal = String((b as unknown as Record<string, unknown>)[sortBy] ?? '');
+        return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: GodownForm) => godownsApi.create(data),
+    mutationFn: async (formData: GodownForm) => {
+      const record = buildSyncRecord<Godown>(formData, user!.company_id);
+      await db.godowns.put(record);
+      if (isOnline) {
+        const res = await godownsApi.create(formData);
+        await db.godowns.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      return { data: { data: record } };
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['godowns'] }); setShowModal(false); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<GodownForm> }) => godownsApi.update(id, data),
+    mutationFn: async ({ id, data: formData }: { id: string; data: Partial<GodownForm> }) => {
+      const existing = await db.godowns.get(id);
+      const record = buildSyncRecord<Godown>(
+        { ...existing, ...formData },
+        user!.company_id,
+        id,
+        existing?.created_at,
+      );
+      await db.godowns.put(record);
+      if (isOnline) {
+        const res = await godownsApi.update(id, formData);
+        await db.godowns.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      return { data: { data: record } };
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['godowns'] }); setShowModal(false); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => godownsApi.delete(id),
+    mutationFn: async (id: string) => {
+      if (!isOnline) { toast.error('Cannot delete while offline'); throw new Error('offline'); }
+      await godownsApi.delete(id);
+      await db.godowns.delete(id);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['godowns'] }),
   });
 
@@ -160,8 +202,8 @@ export default function Godowns() {
       header: '',
       cell: ({ row }: { row: { original: Godown } }) => (
         <div className="flex items-center gap-1">
-          {canEdit && <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
-          {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
+          {canEdit && <button onClick={() => openEdit(row.original)} disabled={!isOnline} className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
+          {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} disabled={!isOnline} className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
         </div>
       ),
     } as ColumnDef<Godown, unknown>] : []),
@@ -179,9 +221,17 @@ export default function Godowns() {
             <Filter className="h-4 w-4" />
             Filters
           </button>
-          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Godown</Button>}
+          {canCreate && <Button onClick={openCreate} disabled={!isOnline}><Plus className="mr-2 h-4 w-4" /> Add Godown</Button>}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You are offline — showing cached data. Edits will sync when back online.
+        </div>
+      )}
+
       <Card>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />
       </Card>

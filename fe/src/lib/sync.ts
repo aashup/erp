@@ -158,6 +158,30 @@ export async function clearLocalData(): Promise<void> {
   localStorage.removeItem('last_synced_at');
 }
 
+/**
+ * Build a Dexie record for offline-first creates/updates.
+ * Sets sync_status:'pending' so the sync engine pushes it when back online.
+ */
+export function buildSyncRecord<T>(
+  data: Partial<T>,
+  companyId: string,
+  existingId?: string,
+  existingCreatedAt?: string,
+): T {
+  const now = new Date().toISOString();
+  return {
+    ...data,
+    id: existingId ?? crypto.randomUUID(),
+    company_id: companyId,
+    sync_status: 'pending' as const,
+    device_id: null,
+    synced_at: null,
+    updated_at_local: now,
+    created_at: existingCreatedAt ?? now,
+    updated_at: now,
+  } as T;
+}
+
 export function getPendingCount(): Promise<number> {
   const counts = Object.keys(tableToApiName).map(async (tableName) => {
     const table = db.table(tableName);
