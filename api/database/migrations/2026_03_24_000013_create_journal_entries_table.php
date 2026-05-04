@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignUuid('financial_year_id')->constrained('financial_years');
             $table->string('voucher_number')->unique();
-            $table->date('voucher_date');
+            $table->datetime('voucher_date');
             $table->enum('voucher_type', ['purchase', 'sales', 'payment', 'receipt', 'journal', 'contra', 'payroll']);
             $table->text('narration')->nullable();
             $table->string('source')->nullable()->comment('auto or manual');

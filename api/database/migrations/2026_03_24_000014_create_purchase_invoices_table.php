@@ -19,8 +19,8 @@ return new class extends Migration
             $table->foreignUuid('godown_id')->nullable()->constrained('godowns')->nullOnDelete();
             $table->string('invoice_number')->unique();
             $table->string('vendor_invoice_number')->nullable();
-            $table->date('invoice_date');
-            $table->date('due_date')->nullable();
+            $table->datetime('invoice_date');
+            $table->datetime('due_date')->nullable();
             $table->boolean('is_inter_state')->default(false);
             $table->enum('status', ['draft', 'confirmed', 'cancelled'])->default('draft');
             $table->decimal('total_amount', 15, 2)->default(0);

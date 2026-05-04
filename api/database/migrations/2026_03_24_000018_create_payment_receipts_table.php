@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignUuid('party_id')->constrained('parties');
             $table->enum('type', ['payment', 'receipt']);
             $table->string('receipt_number')->unique();
-            $table->date('receipt_date');
+            $table->datetime('receipt_date');
             $table->decimal('amount', 15, 2);
             $table->enum('payment_mode', ['cash', 'bank', 'cheque', 'upi', 'other'])->default('cash');
             $table->string('reference_number')->nullable();

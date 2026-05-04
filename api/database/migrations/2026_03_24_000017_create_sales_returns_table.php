@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignUuid('sales_invoice_id')->constrained('sales_invoices');
             $table->foreignUuid('party_id')->constrained('parties');
             $table->string('return_number')->unique();
-            $table->date('return_date');
+            $table->datetime('return_date');
             $table->enum('status', ['draft', 'confirmed', 'cancelled'])->default('draft');
             $table->decimal('total_amount', 15, 2)->default(0);
             $table->decimal('gst_amount', 15, 2)->default(0);

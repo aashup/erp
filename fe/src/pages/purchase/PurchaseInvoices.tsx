@@ -14,7 +14,7 @@ import { purchaseInvoicesApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { PurchaseInvoice } from '@/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, dateToUtcIso } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -113,7 +113,7 @@ function PaymentDialog({ invoice, onClose, onSuccess }: PaymentDialogProps) {
       party_id: invoice.party_id,
       type: 'payment',
       receipt_number: generatePaymentNumber(),
-      receipt_date: formData.payment_date,
+      receipt_date: dateToUtcIso(formData.payment_date),
       amount: formData.amount,
       payment_mode: 'cash',
       purchase_invoice_id: invoice.id,

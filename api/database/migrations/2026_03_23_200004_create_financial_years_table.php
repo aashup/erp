@@ -13,8 +13,8 @@ return new class extends Migration
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->string('label'); // e.g. "2025-26"
-            $table->date('start_date');
-            $table->date('end_date');
+            $table->datetime('start_date');
+            $table->datetime('end_date');
             $table->boolean('is_locked')->default(false);
             $table->boolean('is_current')->default(false);
 

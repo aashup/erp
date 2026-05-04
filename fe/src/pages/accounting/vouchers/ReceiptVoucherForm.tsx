@@ -8,7 +8,7 @@ import { Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { vouchersApi, ledgersApi } from '@/api/accounting';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, dateToUtcIso } from '@/lib/utils';
 import { useSelectedFYId, useFYBounds } from '@/hooks/useFinancialYear';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -90,7 +90,7 @@ export function ReceiptVoucherForm() {
     const total = formData.lines.reduce((s, l) => s + Number(l.amount || 0), 0);
     mutation.mutate({
       voucher_type:      'receipt',
-      voucher_date:      formData.voucher_date,
+      voucher_date:      dateToUtcIso(formData.voucher_date),
       financial_year_id: fyId,
       narration:         formData.narration,
       lines: [

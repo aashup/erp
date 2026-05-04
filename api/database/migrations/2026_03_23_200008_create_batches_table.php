@@ -13,8 +13,8 @@ return new class extends Migration
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('item_id')->constrained('items')->cascadeOnDelete();
             $table->string('batch_number');
-            $table->date('manufacturing_date')->nullable();
-            $table->date('expiry_date')->nullable();
+            $table->datetime('manufacturing_date')->nullable();
+            $table->datetime('expiry_date')->nullable();
             $table->decimal('purchase_price', 15, 2)->nullable();
             $table->decimal('selling_price', 15, 2)->nullable();
 

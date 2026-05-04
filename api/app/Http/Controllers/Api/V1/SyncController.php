@@ -79,32 +79,42 @@ class SyncController extends Controller
         );
 
         $synced = 0;
+        $failed = [];
 
-        DB::transaction(function () use ($validated, $allModels, &$synced) {
-            foreach ($validated['changes'] as $change) {
-                $table = $change['table'];
-                if (! isset($allModels[$table])) {
-                    continue;
-                }
+        foreach ($validated['changes'] as $change) {
+            $table = $change['table'];
+            if (! isset($allModels[$table])) {
+                continue;
+            }
 
-                $modelClass = $allModels[$table];
+            $modelClass = $allModels[$table];
 
-                foreach ($change['records'] as $record) {
-                    $modelClass::updateOrCreate(
-                        ['id' => $record['id']],
-                        array_merge($record, [
-                            'sync_status' => 'synced',
-                            'synced_at' => now(),
-                        ])
-                    );
+            foreach ($change['records'] as $record) {
+                try {
+                    DB::transaction(function () use ($modelClass, $record) {
+                        $modelClass::updateOrCreate(
+                            ['id' => $record['id']],
+                            array_merge($record, [
+                                'sync_status' => 'synced',
+                                'synced_at'   => now(),
+                            ])
+                        );
+                    });
                     $synced++;
+                } catch (\Throwable $e) {
+                    $failed[] = [
+                        'table' => $table,
+                        'id'    => $record['id'],
+                        'error' => $e->getMessage(),
+                    ];
                 }
             }
-        });
+        }
 
         return response()->json([
-            'message' => 'Sync complete',
+            'message'      => 'Sync complete',
             'synced_count' => $synced,
+            'failed'       => $failed,
         ]);
     }
 

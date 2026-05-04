@@ -33,7 +33,7 @@ class StockLedger extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => 'datetime',
             'quantity' => 'decimal:3',
             'rate' => 'decimal:2',
             'value' => 'decimal:2',

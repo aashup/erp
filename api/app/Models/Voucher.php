@@ -31,7 +31,7 @@ class Voucher extends Model
     protected function casts(): array
     {
         return [
-            'voucher_date' => 'date',
+            'voucher_date' => 'datetime',
             'is_posted' => 'boolean',
         ];
     }

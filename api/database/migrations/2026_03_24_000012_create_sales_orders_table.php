@@ -16,8 +16,8 @@ return new class extends Migration
             $table->foreignUuid('party_id')->constrained('parties');
             $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->string('so_number')->unique();
-            $table->date('so_date');
-            $table->date('expected_delivery_date')->nullable();
+            $table->datetime('so_date');
+            $table->datetime('expected_delivery_date')->nullable();
             $table->enum('status', ['draft', 'confirmed', 'partially_delivered', 'delivered', 'cancelled'])->default('draft');
             $table->decimal('total_amount', 15, 2)->default(0);
             $table->decimal('gst_amount', 15, 2)->default(0);

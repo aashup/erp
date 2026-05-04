@@ -70,7 +70,7 @@ return new class extends Migration
             $table->string('employee_code')->nullable();
             $table->string('name');
             $table->enum('gender', ['male', 'female', 'other'])->nullable();
-            $table->date('date_of_birth')->nullable();
+            $table->datetime('date_of_birth')->nullable();
             $table->string('phone', 20)->nullable();
             $table->string('email')->nullable();
             $table->text('address')->nullable();
@@ -78,7 +78,7 @@ return new class extends Migration
             $table->string('state', 100)->nullable();
             $table->foreignUuid('department_id')->nullable()->constrained('departments')->nullOnDelete();
             $table->foreignUuid('designation_id')->nullable()->constrained('designations')->nullOnDelete();
-            $table->date('joining_date');
+            $table->datetime('joining_date');
             $table->enum('employment_type', ['permanent', 'contract', 'part_time'])->default('permanent');
             $table->string('bank_account_name')->nullable();
             $table->string('bank_account_no', 30)->nullable();
@@ -117,7 +117,7 @@ return new class extends Migration
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignUuid('employee_id')->constrained('employees')->cascadeOnDelete();
-            $table->date('effective_from');
+            $table->datetime('effective_from');
             $table->decimal('basic', 12, 2)->default(0);
             $table->decimal('hra', 12, 2)->default(0);
             $table->decimal('da', 12, 2)->default(0);

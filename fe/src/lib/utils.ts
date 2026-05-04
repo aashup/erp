@@ -13,6 +13,10 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export function dateToUtcIso(dateStr: string): string {
+  return `${dateStr}T00:00:00.000Z`;
+}
+
 export function formatDate(date: string): string {
   return new Date(date).toLocaleDateString('en-IN', {
     day: '2-digit',

@@ -13,7 +13,7 @@ import { thermalTemplatesApi } from '@/api/thermalTemplates';
 import { salesInvoicesApi } from '@/api/sales';
 import { render, openThermalPrintWindow } from '@/lib/thermalTemplateRenderer';
 import type { CompanySettings } from '@/types';
-import { calcGST, calcRoundOff, formatCurrency } from '@/lib/utils';
+import { calcGST, calcRoundOff, formatCurrency, dateToUtcIso } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -287,6 +287,7 @@ export default function POSPage() {
     if (!godown) { toast.error('No godown configured'); return; }
     setCheckoutLoading(true);
     const invoiceDate = new Date().toISOString().slice(0, 10);
+    const invoiceDateUtc = dateToUtcIso(invoiceDate);
     const invoiceId = crypto.randomUUID();
 
     try {
@@ -328,7 +329,7 @@ export default function POSPage() {
           party_id: customer?.id ?? null,
           godown_id: godown.id,
           is_inter_state: isInterState,
-          invoice_date: invoiceDate,
+          invoice_date: invoiceDateUtc,
           notes,
           round_off: roundOff,
           lines: cart.map((l) => ({

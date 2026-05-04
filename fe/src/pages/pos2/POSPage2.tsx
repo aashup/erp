@@ -22,7 +22,7 @@ import { thermalTemplatesApi } from "@/api/thermalTemplates";
 import { salesInvoicesApi } from "@/api/sales";
 import { render, openThermalPrintWindow } from "@/lib/thermalTemplateRenderer";
 import type { CompanySettings } from "@/types";
-import { calcGST, calcRoundOff, formatCurrency } from "@/lib/utils";
+import { calcGST, calcRoundOff, formatCurrency, dateToUtcIso } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -327,7 +327,7 @@ export default function POSPage2() {
         party_id: customer?.id ?? null,
         godown_id: godown.id,
         is_inter_state: isInterState,
-        invoice_date: new Date().toISOString().slice(0, 10),
+        invoice_date: dateToUtcIso(new Date().toISOString().slice(0, 10)),
         notes,
         lines: cart.map((l) => ({
           item_id: l.itemId,
@@ -388,7 +388,7 @@ export default function POSPage2() {
         party_id: customer?.id ?? null,
         godown_id: godown.id,
         is_inter_state: isInterState,
-        invoice_date: new Date().toISOString().slice(0, 10),
+        invoice_date: dateToUtcIso(new Date().toISOString().slice(0, 10)),
         notes,
         round_off: roundOff,
         lines: cart.map((l) => ({

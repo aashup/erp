@@ -14,7 +14,7 @@ import { useDateStore } from '@/store/dateStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
 import { salesInvoicesApi } from '@/api/sales';
-import { formatCurrency, calcGST } from '@/lib/utils';
+import { formatCurrency, calcGST, dateToUtcIso } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -154,7 +154,7 @@ export default function SalesInvoiceFormPage() {
     reset({
       invoice_number: invoiceData.invoice_number ?? '',
       party_id: invoiceData.party_id,
-      invoice_date: invoiceData.invoice_date,
+      invoice_date: (invoiceData.invoice_date as string).split('T')[0],
       due_date: invoiceData.due_date ?? '',
       is_inter_state: invoiceData.is_inter_state,
       notes: invoiceData.notes ?? '',
@@ -379,6 +379,7 @@ export default function SalesInvoiceFormPage() {
   const onSubmit = (formData: InvoiceForm) => {
     const payload = {
       ...formData,
+      invoice_date: dateToUtcIso(formData.invoice_date),
       lines: formData.lines.map((line) => ({
         ...line,
         unit: line.unit || null,

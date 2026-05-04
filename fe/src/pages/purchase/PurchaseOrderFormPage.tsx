@@ -10,7 +10,7 @@ import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
 import { itemsApi, stockLedgerApi } from "@/api/inventory";
 import { purchaseOrdersApi } from "@/api/purchase";
-import { formatCurrency, calcGST } from "@/lib/utils";
+import { formatCurrency, calcGST, dateToUtcIso } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -122,7 +122,7 @@ export default function PurchaseOrderFormPage() {
       reset({
         po_number: existingPO.po_number ?? "",
         party_id: existingPO.party_id,
-        po_date: existingPO.po_date,
+        po_date: (existingPO.po_date as string).split('T')[0],
         expected_delivery_date: existingPO.expected_delivery_date ?? "",
         is_inter_state: (existingPO as any).is_inter_state ?? false,
         notes: existingPO.notes ?? "",
@@ -172,7 +172,7 @@ export default function PurchaseOrderFormPage() {
   });
 
   const onSubmit = (formData: PoForm) => {
-    const payload = { ...formData } as Record<string, unknown>;
+    const payload = { ...formData, po_date: dateToUtcIso(formData.po_date) } as Record<string, unknown>;
     if (isEditMode) {
       updateMutation.mutate(payload);
     } else {

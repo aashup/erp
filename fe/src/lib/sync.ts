@@ -72,8 +72,11 @@ export async function pushPendingChanges(): Promise<number> {
 
   const res = await api.post('/sync/push', { changes });
   const syncedCount = res.data.synced_count as number;
+  const failedIds = new Set<string>(
+    ((res.data.failed as { id: string }[]) ?? []).map((f) => f.id)
+  );
 
-  // Mark pushed records as synced in local DB
+  // Mark pushed records as synced (or conflict if the server rejected them)
   for (const change of changes) {
     const localTable = Object.entries(tableToApiName).find(
       ([, v]) => v === change.table
@@ -82,10 +85,14 @@ export async function pushPendingChanges(): Promise<number> {
 
     const table = db.table(localTable);
     for (const record of change.records as { id: string }[]) {
-      await table.update(record.id, {
-        sync_status: 'synced',
-        synced_at: new Date().toISOString(),
-      });
+      if (failedIds.has(record.id)) {
+        await table.update(record.id, { sync_status: 'conflict' });
+      } else {
+        await table.update(record.id, {
+          sync_status: 'synced',
+          synced_at: new Date().toISOString(),
+        });
+      }
     }
   }
 

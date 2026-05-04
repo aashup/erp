@@ -18,7 +18,7 @@ import { useAuthStore } from '@/store/authStore';
 import { render, openThermalPrintWindow } from '@/lib/thermalTemplateRenderer';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { SalesInvoice, Party, ThermalTemplate } from '@/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, dateToUtcIso } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -125,7 +125,7 @@ function ReceiptDialog({ invoice, onClose, onSuccess }: ReceiptDialogProps) {
       party_id: invoice.party_id,
       type: 'receipt',
       receipt_number: generateReceiptNumber(),
-      receipt_date: formData.payment_date,
+      receipt_date: dateToUtcIso(formData.payment_date),
       amount: formData.amount,
       payment_mode: formData.payment_mode,
       sales_invoice_id: invoice.id,

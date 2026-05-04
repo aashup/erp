@@ -8,7 +8,7 @@ import { Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { vouchersApi, ledgersApi } from '@/api/accounting';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, dateToUtcIso } from '@/lib/utils';
 import { useSelectedFYId, useFYBounds } from '@/hooks/useFinancialYear';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -92,6 +92,7 @@ export function JournalVoucherForm({ voucherType }: JournalVoucherFormProps) {
     mutation.mutate({
       ...formData,
       voucher_type: voucherType,
+      voucher_date: dateToUtcIso(formData.voucher_date),
       financial_year_id: fyId,
     } as unknown as Record<string, unknown>);
   };

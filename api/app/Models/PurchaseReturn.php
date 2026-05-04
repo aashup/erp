@@ -32,7 +32,7 @@ class PurchaseReturn extends Model
     protected function casts(): array
     {
         return [
-            'return_date' => 'date',
+            'return_date' => 'datetime',
             'total_amount' => 'decimal:2',
             'gst_amount' => 'decimal:2',
             'grand_total' => 'decimal:2',

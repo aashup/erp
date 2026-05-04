@@ -52,7 +52,7 @@ class DashboardController extends Controller
 
         $salesQuery = SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [$range['from'], $range['to']]);
+            ->whereBetween('invoice_date', [$range['from']->copy()->startOfDay(), $range['to']->copy()->endOfDay()]);
 
         $salesTotal = (float) $salesQuery->sum('grand_total');
         $salesTaxable = (float) $salesQuery->sum('taxable_amount');
@@ -62,7 +62,7 @@ class DashboardController extends Controller
 
         $purchaseQuery = PurchaseInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [$range['from'], $range['to']]);
+            ->whereBetween('invoice_date', [$range['from']->copy()->startOfDay(), $range['to']->copy()->endOfDay()]);
 
         $purchaseTotal = (float) $purchaseQuery->sum('grand_total');
         $purchaseTaxable = (float) $purchaseQuery->sum('taxable_amount');

@@ -18,8 +18,8 @@ return new class extends Migration
             $table->foreignUuid('sales_order_id')->nullable()->constrained('sales_orders')->nullOnDelete();
             $table->foreignUuid('godown_id')->nullable()->constrained('godowns')->nullOnDelete();
             $table->string('invoice_number')->unique();
-            $table->date('invoice_date');
-            $table->date('due_date')->nullable();
+            $table->datetime('invoice_date');
+            $table->datetime('due_date')->nullable();
             $table->boolean('is_inter_state')->default(false);
             $table->boolean('is_printed')->default(false);
             $table->enum('status', ['draft', 'confirmed', 'cancelled'])->default('draft');
