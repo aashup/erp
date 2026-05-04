@@ -145,7 +145,7 @@ export default function PurchaseOrderFormPage() {
   const stockByItemMap = useMemo(() => {
     const map = new Map<string, number>();
     (stockSummaryData?.data ?? []).forEach((row) => {
-      map.set(row.item_id, (map.get(row.item_id) ?? 0) + (row.current_stock ?? 0));
+      map.set(row.item_id, (map.get(row.item_id) ?? 0) + Number(row.current_stock ?? 0));
     });
     return map;
   }, [stockSummaryData?.data]);
@@ -236,7 +236,7 @@ export default function PurchaseOrderFormPage() {
     const qty = stockByItemMap.get(line.item_id) ?? 0;
     const item = itemMap.get(line.item_id);
     const baseUnit = item?.unit ?? '';
-    return `${qty} ${baseUnit} (stock)`;
+    return `${parseFloat(qty.toFixed(3))} ${baseUnit} (stock)`;
   };
 
   const vendorOptions = (vendorsData?.data ?? []).map((p) => ({

@@ -145,7 +145,7 @@ export default function SalesOrderFormPage() {
   const stockByItemMap = useMemo(() => {
     const map = new Map<string, number>();
     (stockSummaryData?.data ?? []).forEach((row) => {
-      map.set(row.item_id, (map.get(row.item_id) ?? 0) + (row.current_stock ?? 0));
+      map.set(row.item_id, (map.get(row.item_id) ?? 0) + Number(row.current_stock ?? 0));
     });
     return map;
   }, [stockSummaryData?.data]);

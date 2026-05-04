@@ -269,7 +269,7 @@ export default function SalesInvoiceFormPage() {
     const map = new Map<string, number>();
     (stockSummaryData?.data ?? []).forEach((row) => {
       const key = `${row.item_id}:${row.godown_id}`;
-      map.set(key, row.current_stock ?? 0);
+      map.set(key, Number(row.current_stock ?? 0));
     });
     return map;
   }, [stockSummaryData?.data]);
@@ -314,7 +314,7 @@ export default function SalesInvoiceFormPage() {
     const item = itemMap.get(line.item_id);
     const baseUnit = item?.unit ?? '';
 
-    return `${qty} ${baseUnit} (stock)`;
+    return `${parseFloat(qty.toFixed(3))} ${baseUnit} (stock)`;
   };
 
   const handleItemSelect = (index: number, itemId: string) => {

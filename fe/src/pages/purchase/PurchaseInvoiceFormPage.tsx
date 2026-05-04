@@ -309,7 +309,7 @@ export default function PurchaseInvoiceFormPage() {
     const map = new Map<string, number>();
     (stockSummaryData?.data ?? []).forEach((row) => {
       const key = `${row.item_id}:${row.godown_id}`;
-      map.set(key, row.current_stock ?? 0);
+      map.set(key, Number(row.current_stock ?? 0));
     });
     return map;
   }, [stockSummaryData?.data]);
@@ -350,7 +350,7 @@ export default function PurchaseInvoiceFormPage() {
     const item = itemMap.get(line.item_id);
     const baseUnit = item?.unit ?? '';
 
-    return `${qty} ${baseUnit} (stock)`;
+    return `${parseFloat(qty.toFixed(3))} ${baseUnit} (stock)`;
   };
 
   const handleItemSelect = (index: number, itemId: string) => {
@@ -650,7 +650,7 @@ export default function PurchaseInvoiceFormPage() {
                                   <span>Exp: <strong>{formatDate(selectedBatch.expiry_date)}</strong></span>
                                 )}
                                 {selectedBatch.current_stock !== undefined && (
-                                  <span>Stock: <strong>{selectedBatch.current_stock} {lineItem?.unit ?? ''}</strong></span>
+                                  <span>Stock: <strong>{parseFloat(Number(selectedBatch.current_stock).toFixed(3))} {lineItem?.unit ?? ''}</strong></span>
                                 )}
                               </div>
                             )}
