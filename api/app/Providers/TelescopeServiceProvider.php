@@ -59,7 +59,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         Gate::define('viewTelescope', function ($user = null) {
             $sessionUser = Auth::guard('web')->user();
             if (! $sessionUser) {
-                abort(redirect('/api'));
+                return false;
             }
             $allowed = array_map('trim', explode(',', env('TELESCOPE_ALLOWED_EMAILS', '')));
 
