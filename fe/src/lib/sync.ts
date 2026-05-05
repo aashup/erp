@@ -1,5 +1,6 @@
 import { db } from './db';
 import api from './axios';
+import type { SalesInvoice } from '@/types';
 
 type SyncTable =
   | 'items'
@@ -190,9 +191,35 @@ export function buildSyncRecord<T>(
 }
 
 export function getPendingCount(): Promise<number> {
-  const counts = Object.keys(tableToApiName).map(async (tableName) => {
-    const table = db.table(tableName);
-    return table.where('sync_status').equals('pending').count();
-  });
+  const counts = [
+    ...Object.keys(tableToApiName).map((tableName) =>
+      db.table(tableName).where('sync_status').equals('pending').count()
+    ),
+    db.posPendingCheckouts.count(),
+  ];
   return Promise.all(counts).then((c) => c.reduce((a, b) => a + b, 0));
+}
+
+/**
+ * Replay pending offline POS checkouts via /pos/checkout.
+ * Must run BEFORE syncAll() so temp placeholder invoices are replaced
+ * before the generic push phase tries to push them.
+ */
+export async function syncPendingPOSCheckouts(): Promise<number> {
+  const pending = await db.posPendingCheckouts.orderBy('created_at').toArray();
+  let synced = 0;
+  for (const item of pending) {
+    try {
+      const res = await api.post<{ data: SalesInvoice }>('/pos/checkout', item.payload);
+      const inv = res.data.data;
+      // Replace temp placeholder with real server invoice
+      await db.salesInvoices.put({ ...inv, sync_status: 'synced' });
+      await db.salesInvoices.delete(item.id);
+      await db.posPendingCheckouts.delete(item.id);
+      synced++;
+    } catch {
+      // Keep in queue — will retry on next sync
+    }
+  }
+  return synced;
 }

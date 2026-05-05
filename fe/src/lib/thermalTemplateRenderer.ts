@@ -241,6 +241,75 @@ export function render(
 }
 
 /**
+ * Build a minimal offline receipt when no custom template is available.
+ * Renders from the local invoice object (with lines attached) — no server call needed.
+ */
+export function buildFallbackReceipt(
+  invoice: SalesInvoice,
+  company: Company | null | undefined,
+  opts: ThermalRenderOptions,
+): string {
+  const w = opts.paperSize === '3inch' ? '360px' : '280px';
+  const lines = invoice.lines ?? [];
+  const fmtAmt = (n: number | string | null | undefined) =>
+    Number(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const itemRows = lines.map((l) => {
+    const qty = Number(l.quantity ?? 0);
+    const rate = Number(l.rate ?? 0);
+    const total = Number(l.line_total ?? qty * rate);
+    return `<tr>
+      <td style="padding:1px 2px">${escapeHtml(l.item?.name ?? l.item_id)}</td>
+      <td style="padding:1px 2px;text-align:center">${qty}</td>
+      <td style="padding:1px 2px;text-align:right">${fmtAmt(rate)}</td>
+      <td style="padding:1px 2px;text-align:right">${fmtAmt(total)}</td>
+    </tr>`;
+  }).join('');
+
+  const grandTotal = Number(invoice.grand_total ?? 0);
+  const roundOff = Number(invoice.round_off ?? 0);
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @media print { @page { margin:0; size:${w} auto; } }
+  body { font-family:monospace; font-size:11px; width:${w}; margin:0 auto; padding:4px; }
+  h3,p { margin:2px 0; text-align:center; }
+  table { width:100%; border-collapse:collapse; }
+  th { border-bottom:1px solid #000; padding:2px; font-size:10px; }
+  .total-row td { border-top:1px solid #000; font-weight:bold; }
+  .divider { border-top:1px dashed #000; margin:4px 0; }
+  .note { font-size:9px; color:#555; text-align:center; margin-top:4px; }
+</style>
+</head><body>
+<h3>${escapeHtml(company?.name ?? 'Invoice')}</h3>
+${company?.address ? `<p style="font-size:10px">${escapeHtml(company.address)}</p>` : ''}
+${company?.phone ? `<p style="font-size:10px">Ph: ${escapeHtml(company.phone)}</p>` : ''}
+<div class="divider"></div>
+<p><strong>${escapeHtml(invoice.invoice_number ?? '')}</strong></p>
+<p style="font-size:10px">Date: ${new Date(invoice.invoice_date as string).toLocaleDateString('en-IN')}</p>
+${invoice.party?.name && invoice.party.name !== 'Walk-in Customer' ? `<p style="font-size:10px">Customer: ${escapeHtml(invoice.party.name)}</p>` : ''}
+<div class="divider"></div>
+<table>
+  <thead><tr>
+    <th style="text-align:left">Item</th>
+    <th style="text-align:center">Qty</th>
+    <th style="text-align:right">Rate</th>
+    <th style="text-align:right">Amt</th>
+  </tr></thead>
+  <tbody>${itemRows}</tbody>
+  <tfoot>
+    ${Math.abs(roundOff) > 0.001 ? `<tr><td colspan="3">Round Off</td><td style="text-align:right">${fmtAmt(roundOff)}</td></tr>` : ''}
+    <tr class="total-row"><td colspan="3">TOTAL</td><td style="text-align:right">&#8377;${fmtAmt(grandTotal)}</td></tr>
+  </tfoot>
+</table>
+<div class="divider"></div>
+<p class="note">OFFLINE RECEIPT — syncing to server</p>
+<p class="note">Thank you!</p>
+</body></html>`;
+}
+
+/**
  * Open a browser print window with rendered thermal HTML.
  * Width matches physical paper: 3inch → 380px, 2inch → 300px.
  */

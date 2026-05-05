@@ -157,6 +157,7 @@ class POSController extends Controller
             $invoice = SalesInvoice::create([
                 'party_id' => $partyId,
                 'godown_id' => $validated['godown_id'],
+                'financial_year_id' => $fy->id,
                 'invoice_number' => $invoiceNumber,
                 'invoice_date' => $validated['invoice_date'],
                 'is_inter_state' => $isInterState,
@@ -355,12 +356,22 @@ class POSController extends Controller
             $partyId = $walkIn->id;
         }
 
-        $invoice = DB::transaction(function () use ($validated, $userId, $partyId) {
+        $invoice = DB::transaction(function () use ($validated, $companyId, $userId, $partyId) {
             $isInterState = $validated['is_inter_state'] ?? false;
+
+            $fy = FinancialYear::where('company_id', $companyId)
+                ->whereDate('start_date', '<=', $validated['invoice_date'])
+                ->whereDate('end_date', '>=', $validated['invoice_date'])
+                ->first();
+
+            if (! $fy) {
+                throw ValidationException::withMessages(['invoice_date' => 'No financial year found for the selected date']);
+            }
 
             $invoice = SalesInvoice::create([
                 'party_id' => $partyId,
                 'godown_id' => $validated['godown_id'],
+                'financial_year_id' => $fy->id,
                 'invoice_number' => 'HOLD-'.now()->format('ymdHis'),
                 'invoice_date' => $validated['invoice_date'],
                 'is_inter_state' => $isInterState,

@@ -66,8 +66,7 @@ class StockLedgerController extends Controller
 
         $query = StockLedger::select('stock_ledger.item_id', 'stock_ledger.godown_id', DB::raw('SUM(stock_ledger.quantity) as current_stock'))
             ->where('stock_ledger.company_id', $companyId)
-            ->groupBy('stock_ledger.item_id', 'stock_ledger.godown_id')
-            ->having(DB::raw('SUM(stock_ledger.quantity)'), '!=', 0);
+            ->groupBy('stock_ledger.item_id', 'stock_ledger.godown_id');
 
         if ($request->godown_id) {
             $query->where('stock_ledger.godown_id', $request->godown_id);

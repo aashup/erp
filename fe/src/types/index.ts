@@ -841,3 +841,10 @@ export interface RegisterResponse {
     permissions: string[];
   };
 }
+
+export interface POSPendingCheckout {
+  id: string;         // same UUID as the temp local invoice
+  company_id: string;
+  payload: import('@/api/pos').POSCheckoutPayload;
+  created_at: string;
+}

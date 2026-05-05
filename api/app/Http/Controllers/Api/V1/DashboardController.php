@@ -342,7 +342,7 @@ class DashboardController extends Controller
 
         $total = (float) (clone $base)->sum('amount');
         $cash = (float) (clone $base)->where('payment_mode', 'cash')->sum('amount');
-        $account = (float) (clone $base)->whereIn('payment_mode', ['bank', 'cheque', 'upi', 'other'])->sum('amount');
+        $account = (float) (clone $base)->where('payment_mode', '!=', 'cash')->sum('amount');
 
         $needToCollect = (float) SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')

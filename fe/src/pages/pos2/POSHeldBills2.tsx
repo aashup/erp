@@ -4,6 +4,9 @@ import { posApi } from '@/api/pos';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { SalesInvoice } from '@/types';
 import toast from 'react-hot-toast';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useAuthStore } from '@/store/authStore';
+import { db } from '@/lib/db';
 
 interface Props {
   open: boolean;
@@ -13,19 +16,43 @@ interface Props {
 }
 
 export default function POSHeldBills2({ open, onClose, onResume, refreshKey }: Props) {
+  const isOnline = useOnlineStatus();
+  const user = useAuthStore((s) => s.user);
   const [bills, setBills] = useState<SalesInvoice[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    posApi.getHeld()
-      .then((res) => setBills(res.data.data ?? []))
-      .catch(() => setBills([]))
-      .finally(() => setLoading(false));
-  }, [open, refreshKey]);
+    (async () => {
+      const local = await db.salesInvoices
+        .where('company_id').equals(user!.company_id)
+        .filter((inv) => !!inv.pos_held && inv.status === 'draft' && inv.sync_status !== 'synced')
+        .toArray();
+
+      if (isOnline) {
+        try {
+          const server = (await posApi.getHeld()).data.data ?? [];
+          const serverIds = new Set(server.map((b) => b.id));
+          setBills([...server, ...local.filter((b) => !serverIds.has(b.id))]);
+        } catch {
+          setBills(local);
+        }
+      } else {
+        setBills(local);
+      }
+      setLoading(false);
+    })();
+  }, [open, refreshKey, isOnline]);
 
   async function handleDelete(id: string) {
+    const local = await db.salesInvoices.get(id);
+    if (local && local.sync_status !== 'synced') {
+      await db.salesInvoices.delete(id);
+      setBills((prev) => prev.filter((b) => b.id !== id));
+      toast.success('Held bill removed');
+      return;
+    }
     try {
       await posApi.deleteHeld(id);
       setBills((prev) => prev.filter((b) => b.id !== id));

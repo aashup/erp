@@ -21,6 +21,7 @@ import type {
   PurchaseInvoiceLine,
   SalesInvoiceLine,
   VoucherLine,
+  POSPendingCheckout,
 } from '@/types';
 
 class ErpDatabase extends Dexie {
@@ -50,6 +51,9 @@ class ErpDatabase extends Dexie {
   poLines!: EntityTable<PoLine, 'id'>;
   soLines!: EntityTable<SoLine, 'id'>;
   voucherLines!: EntityTable<VoucherLine, 'id'>;
+
+  // v5 tables
+  posPendingCheckouts!: EntityTable<POSPendingCheckout, 'id'>;
 
   constructor() {
     super('erpdb');
@@ -89,6 +93,12 @@ class ErpDatabase extends Dexie {
     // are downloaded on the next sync rather than missed by delta comparison.
     this.version(4).upgrade(() => {
       localStorage.removeItem('last_synced_at');
+    });
+
+    // v5: dedicated queue for pending POS checkouts (offline sales awaiting replay
+    // via /pos/checkout — cannot use generic sync/push due to server-side side effects).
+    this.version(5).stores({
+      posPendingCheckouts: 'id, company_id, created_at',
     });
   }
 }
