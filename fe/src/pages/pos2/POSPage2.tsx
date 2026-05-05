@@ -620,7 +620,7 @@ export default function POSPage2() {
     const lines = [
       `🧾 *Invoice ${invoice.invoice_number}*`,
       partyName ? `Customer: ${partyName}` : null,
-      `Amount: ₹${netPayable}`,
+      `Amount: ${formatCurrency(netPayable)}`,
       `Date: ${new Date(invoice.invoice_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`,
       shareUrl ? `\n📄 View & Download Invoice:\n${shareUrl}` : null,
       `\nThank you for your business! 🙏`,

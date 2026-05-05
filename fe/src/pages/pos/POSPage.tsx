@@ -529,7 +529,7 @@ export default function POSPage() {
     const lines = [
       `🧾 *Invoice ${invoice.invoice_number}*`,
       partyName ? `Customer: ${partyName}` : null,
-      `Amount: ₹${netPayable}`,
+      `Amount: ${formatCurrency(netPayable)}`,
       `Date: ${new Date(invoice.invoice_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
       shareUrl ? `\n📄 View & Download Invoice:\n${shareUrl}` : null,
       `\nThank you for your business! 🙏`,
@@ -769,7 +769,7 @@ export default function POSPage() {
           className="flex items-center gap-3 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-6 py-3 text-base transition-colors"
           title="Checkout (Ctrl+Enter)"
         >
-          <span>₹{netPayable}</span>
+          <span>{formatCurrency(netPayable)}</span>
           <span className="text-green-200">→</span>
           <span>Checkout</span>
         </button>

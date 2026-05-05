@@ -335,10 +335,8 @@ class DashboardController extends Controller
         $base = PaymentReceipt::where('company_id', $companyId)
             ->where('type', 'receipt')
             ->whereNull('deleted_at')
-            ->whereBetween('receipt_date', [
-                $range['from']->toDateString(),
-                $range['to']->toDateString(),
-            ]);
+            ->where('receipt_date', '>=', $range['from']->toDateString())
+            ->where('receipt_date', '<=', $range['to']->toDateString());
 
         $total = (float) (clone $base)->sum('amount');
         $cash = (float) (clone $base)->where('payment_mode', 'cash')->sum('amount');
