@@ -80,6 +80,9 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1600,
   },
+  optimizeDeps: {
+    include: ['qrcode.react', 'jsbarcode'],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

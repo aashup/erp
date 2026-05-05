@@ -59,6 +59,9 @@ import ThermalTemplateEditor from "@/pages/settings/ThermalTemplateEditor";
 import Theme from "@/pages/settings/Theme";
 import PayrollSettings from "@/pages/settings/PayrollSettings";
 import TallyImport from "@/pages/settings/TallyImport";
+import Utility from "@/pages/settings/Utility";
+import PrintQR from "@/pages/settings/PrintQR";
+import PrintBarcode from "@/pages/settings/PrintBarcode";
 import POSPage from "@/pages/pos/POSPage";
 import POSPage2 from "@/pages/pos2/POSPage2";
 import Departments from "@/pages/payroll/Departments";
@@ -302,6 +305,9 @@ export default function App() {
             <Route path="/settings/inventory" element={<InventorySettings />} />
             <Route path="/settings/payroll" element={<PayrollSettings />} />
             <Route path="/settings/tally-import" element={<TallyImport />} />
+            <Route path="/settings/utility" element={<Utility />} />
+            <Route path="/settings/utility/print-qr" element={<PrintQR />} />
+            <Route path="/settings/utility/print-barcode" element={<PrintBarcode />} />
 
             {/* Payroll */}
             <Route path="/payroll/departments" element={<RequirePermission permission="payroll.view"><Departments /></RequirePermission>} />

@@ -314,6 +314,12 @@ export const MENU_CONFIG: MenuItem[] = [
         href: "/settings/tally-import",
         requiredPermission: "accounting.create",
       },
+      {
+        id: "utility",
+        label: "Utility",
+        href: "/settings/utility",
+        requiredPermission: "branch.view",
+      },
     ],
   },
   {
