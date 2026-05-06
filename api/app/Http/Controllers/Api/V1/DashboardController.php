@@ -19,11 +19,12 @@ class DashboardController extends Controller
     {
         $companyId = $request->user()->company_id;
 
-        // Explicit date_from/date_to from frontend takes priority (frontend computes the range)
+        // Explicit date_from/date_to from frontend takes priority (frontend computes the range).
+        // Frontend sends full UTC ISO datetimes representing local day boundaries — use as-is.
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $range = [
-                'from' => Carbon::parse($request->date_from)->startOfDay(),
-                'to'   => Carbon::parse($request->date_to)->endOfDay(),
+                'from' => Carbon::parse($request->date_from),
+                'to'   => Carbon::parse($request->date_to),
             ];
             $period = 'custom';
         } else {
@@ -52,7 +53,7 @@ class DashboardController extends Controller
 
         $salesQuery = SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [$range['from']->copy()->startOfDay(), $range['to']->copy()->endOfDay()]);
+            ->whereBetween('invoice_date', [$range['from'], $range['to']]);
 
         $salesTotal = (float) $salesQuery->sum('grand_total');
         $salesTaxable = (float) $salesQuery->sum('taxable_amount');
@@ -62,7 +63,7 @@ class DashboardController extends Controller
 
         $purchaseQuery = PurchaseInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [$range['from']->copy()->startOfDay(), $range['to']->copy()->endOfDay()]);
+            ->whereBetween('invoice_date', [$range['from'], $range['to']]);
 
         $purchaseTotal = (float) $purchaseQuery->sum('grand_total');
         $purchaseTaxable = (float) $purchaseQuery->sum('taxable_amount');
@@ -305,8 +306,8 @@ class DashboardController extends Controller
 
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $range = [
-                'from' => Carbon::parse($request->date_from)->startOfDay(),
-                'to'   => Carbon::parse($request->date_to)->endOfDay(),
+                'from' => Carbon::parse($request->date_from),
+                'to'   => Carbon::parse($request->date_to),
             ];
             $period = 'custom';
         } else {
@@ -335,8 +336,8 @@ class DashboardController extends Controller
         $base = PaymentReceipt::where('company_id', $companyId)
             ->where('type', 'receipt')
             ->whereNull('deleted_at')
-            ->where('receipt_date', '>=', $range['from']->toDateString())
-            ->where('receipt_date', '<=', $range['to']->toDateString());
+            ->where('receipt_date', '>=', $range['from'])
+            ->where('receipt_date', '<=', $range['to']);
 
         $total = (float) (clone $base)->sum('amount');
         $cash = (float) (clone $base)->where('payment_mode', 'cash')->sum('amount');
@@ -344,10 +345,7 @@ class DashboardController extends Controller
 
         $needToCollect = (float) SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [
-                $range['from']->toDateString(),
-                $range['to']->toDateString(),
-            ])
+            ->whereBetween('invoice_date', [$range['from'], $range['to']])
             ->sum('balance_due');
 
         return response()->json([

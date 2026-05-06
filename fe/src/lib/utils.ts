@@ -77,52 +77,66 @@ export function fyDateBounds(fy: { start_date: string; end_date: string }): { st
   };
 }
 
+// Converts a local YYYY-MM-DD pair to UTC ISO start/end datetimes using the
+// browser's own timezone. No offset is hardcoded — parsing without a timezone
+// suffix treats the string as local time, so toISOString() gives the correct UTC.
+export function localDateToUtcRange(
+  startDate: string,
+  endDate: string,
+): { date_from: string; date_to: string } {
+  return {
+    date_from: new Date(startDate + 'T00:00:00').toISOString(),
+    date_to:   new Date(endDate   + 'T23:59:59.999').toISOString(),
+  };
+}
+
 type Period = 'today' | 'this_week' | 'this_month' | 'this_year';
 
-/**
- * Converts a dashboard period to an explicit ISO date range.
- * - today/this_week/this_month are relative to `selectedDate` (from useDateStore)
- * - this_year uses the selected FY bounds (not calendar year)
- */
 export function periodToDateRange(
   period: Period,
   selectedDate: string,
   fy?: { start_date: string; end_date: string } | null,
 ): { date_from: string; date_to: string } {
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-  // Parse as local midnight to avoid UTC-shift when constructing from YYYY-MM-DD
   const d = new Date(selectedDate + 'T00:00:00');
+
+  const localStr = (dt: Date) =>
+    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 
   switch (period) {
     case 'today':
-      return { date_from: selectedDate, date_to: selectedDate };
+      return localDateToUtcRange(selectedDate, selectedDate);
 
     case 'this_week': {
-      const diffToMon = (d.getDay() + 6) % 7; // 0 = already Monday
+      const diffToMon = (d.getDay() + 6) % 7;
       const mon = new Date(d);
       mon.setDate(d.getDate() - diffToMon);
       const sun = new Date(mon);
       sun.setDate(mon.getDate() + 6);
-      return { date_from: fmt(mon), date_to: fmt(sun) };
+      return localDateToUtcRange(localStr(mon), localStr(sun));
     }
 
     case 'this_month': {
       const first = new Date(d.getFullYear(), d.getMonth(), 1);
-      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-      return { date_from: fmt(first), date_to: fmt(last) };
+      const last  = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return localDateToUtcRange(localStr(first), localStr(last));
     }
 
     case 'this_year': {
       if (fy) {
-        const { start, end } = fyDateBounds(fy);
-        return { date_from: start, date_to: end };
+        // FY dates in DB are already stored with the IST→UTC day-shift baked in
+        // (April 1 IST → stored as 2026-03-31). Appending a UTC suffix directly
+        // gives the correct UTC anchor without double-shifting.
+        const fyStart = fy.start_date.split('T')[0];
+        const fyEnd   = fy.end_date.split('T')[0];
+        return {
+          date_from: fyStart + 'T00:00:00.000Z',
+          date_to:   fyEnd   + 'T23:59:59.999Z',
+        };
       }
-      return {
-        date_from: `${d.getFullYear()}-01-01`,
-        date_to: `${d.getFullYear()}-12-31`,
-      };
+      return localDateToUtcRange(
+        `${d.getFullYear()}-01-01`,
+        `${d.getFullYear()}-12-31`,
+      );
     }
   }
 }
