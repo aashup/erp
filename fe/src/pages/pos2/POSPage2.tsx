@@ -22,7 +22,7 @@ import { thermalTemplatesApi } from "@/api/thermalTemplates";
 import { salesInvoicesApi } from "@/api/sales";
 import { render, openThermalPrintWindow, buildFallbackReceipt } from "@/lib/thermalTemplateRenderer";
 import type { CompanySettings, Item } from "@/types";
-import { calcGST, calcRoundOff, formatCurrency, dateToUtcIso } from "@/lib/utils";
+import { calcGST, calcRoundOff, formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -338,7 +338,7 @@ export default function POSPage2() {
           party: customer ?? undefined,
           godown_id: godown.id,
           invoice_number: `HOLD-${Date.now()}`,
-          invoice_date: new Date().toISOString().slice(0, 10),
+          invoice_date: new Date().toISOString(),
           is_inter_state: isInterState,
           notes,
           status: "draft",
@@ -373,7 +373,7 @@ export default function POSPage2() {
         party_id: customer?.id ?? null,
         godown_id: godown.id,
         is_inter_state: isInterState,
-        invoice_date: dateToUtcIso(new Date().toISOString().slice(0, 10)),
+        invoice_date: new Date().toISOString(),
         notes,
         lines: cart.map((l) => ({
           item_id: l.itemId,
@@ -428,8 +428,7 @@ export default function POSPage2() {
     if (!godown) { toast.error("No godown configured"); return; }
     setCheckoutLoading(true);
 
-    const invoiceDate = new Date().toISOString().slice(0, 10);
-    const invoiceDateUtc = dateToUtcIso(invoiceDate);
+    const invoiceDateUtc = new Date().toISOString();
     const invoiceId = crypto.randomUUID();
 
     // Compute per-line values for local invoice
@@ -451,7 +450,7 @@ export default function POSPage2() {
         party: customer ?? undefined,
         godown_id: godown.id,
         invoice_number: `OFFLINE-${Date.now()}`,
-        invoice_date: invoiceDate,
+        invoice_date: invoiceDateUtc,
         is_inter_state: isInterState,
         notes,
         status: "confirmed",
