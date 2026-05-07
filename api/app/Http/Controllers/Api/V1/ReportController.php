@@ -50,8 +50,8 @@ class ReportController extends Controller
             ->where('vouchers.is_posted', true);
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+            $query->where('vouchers.voucher_date', '>=', $dateFrom)
+                ->where('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $totals = $query->select(
@@ -155,8 +155,8 @@ class ReportController extends Controller
             ->where('voucher_lines.ledger_id', $ledger->id);
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+            $query->where('vouchers.voucher_date', '>=', $dateFrom)
+                ->where('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $entries = $query->select(
@@ -288,7 +288,10 @@ class ReportController extends Controller
         if ($fyId) {
             $fy = FinancialYear::find($fyId);
             if ($fy) {
-                return [$fy->start_date, $fy->end_date];
+                return [
+                    $fy->start_date . 'T00:00:00.000Z',
+                    $fy->end_date   . 'T23:59:59.999Z',
+                ];
             }
         }
 
@@ -397,8 +400,8 @@ class ReportController extends Controller
             ->where('vouchers.is_posted', true);
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+            $query->where('vouchers.voucher_date', '>=', $dateFrom)
+                ->where('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $totals = $query->select(
@@ -488,8 +491,8 @@ class ReportController extends Controller
             ->whereIn('voucher_lines.ledger_id', $pnlLedgers->pluck('id'));
 
         if ($dateFrom && $dateTo) {
-            $pnlQuery->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+            $pnlQuery->where('vouchers.voucher_date', '>=', $dateFrom)
+                ->where('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $pnlTotals = $pnlQuery->select(
@@ -583,8 +586,8 @@ class ReportController extends Controller
             ->whereIn('voucher_lines.ledger_id', $ledgers->pluck('id'));
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+            $query->where('vouchers.voucher_date', '>=', $dateFrom)
+                ->where('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $totals = $query->select(
@@ -759,8 +762,8 @@ class ReportController extends Controller
             ->orderByDesc('created_at');
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('voucher_date', '>=', $dateFrom)
-                ->whereDate('voucher_date', '<=', $dateTo);
+            $query->where('voucher_date', '>=', $dateFrom)
+                ->where('voucher_date', '<=', $dateTo);
         }
 
         $vouchers = $query->get();
@@ -825,8 +828,8 @@ class ReportController extends Controller
             ->where('voucher_lines.ledger_id', $ledger->id);
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+            $query->where('vouchers.voucher_date', '>=', $dateFrom)
+                ->where('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $entries = $query->select(
@@ -908,8 +911,8 @@ class ReportController extends Controller
         if ($fyId) {
             $fy = FinancialYear::find($fyId);
             if ($fy) {
-                $dateFrom = $fy->start_date;
-                $dateTo = $fy->end_date;
+                $dateFrom = $fy->start_date . 'T00:00:00.000Z';
+                $dateTo   = $fy->end_date   . 'T23:59:59.999Z';
             }
         }
 
@@ -921,8 +924,8 @@ class ReportController extends Controller
             ->whereIn('voucher_lines.ledger_id', $ledgerIds);
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('vouchers.voucher_date', '>=', $dateFrom)
-                ->whereDate('vouchers.voucher_date', '<=', $dateTo);
+            $query->where('vouchers.voucher_date', '>=', $dateFrom)
+                ->where('vouchers.voucher_date', '<=', $dateTo);
         }
 
         $entries = $query->select(
@@ -1028,8 +1031,8 @@ class ReportController extends Controller
             ->orderByDesc('id');
 
         if ($dateFrom && $dateTo) {
-            $query->whereDate('created_at', '>=', $dateFrom)
-                ->whereDate('created_at', '<=', $dateTo);
+            $query->where('created_at', '>=', $dateFrom)
+                ->where('created_at', '<=', $dateTo);
         }
 
         if ($request->filled('causer_id')) {

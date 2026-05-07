@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi } from '@/api/accounting';
-import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime, localDateToUtcRange } from '@/lib/utils';
 import { Filter, Printer } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 
@@ -34,8 +34,11 @@ export default function CashBook() {
 
   const queryParams = useMemo(() => {
     const p: Record<string, string> = {};
-    if (appliedDateFrom) p.date_from = appliedDateFrom;
-    if (appliedDateTo) p.date_to = appliedDateTo;
+    if (appliedDateFrom && appliedDateTo) {
+      const { date_from, date_to } = localDateToUtcRange(appliedDateFrom, appliedDateTo);
+      p.date_from = date_from;
+      p.date_to = date_to;
+    }
     return p;
   }, [appliedDateFrom, appliedDateTo]);
 

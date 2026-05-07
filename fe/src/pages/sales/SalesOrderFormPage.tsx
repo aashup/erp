@@ -10,7 +10,7 @@ import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
 import { itemsApi, stockLedgerApi } from "@/api/inventory";
 import { salesOrdersApi } from "@/api/sales";
-import { formatCurrency, calcGST, dateToUtcIso } from "@/lib/utils";
+import { formatCurrency, calcGST, dateToUtcIso, apiDateToLocalDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -122,7 +122,7 @@ export default function SalesOrderFormPage() {
       reset({
         so_number: existingSO.so_number ?? "",
         party_id: existingSO.party_id,
-        so_date: (existingSO.so_date as string).split('T')[0],
+        so_date: apiDateToLocalDate(existingSO.so_date as string),
         expected_delivery_date: existingSO.expected_delivery_date ?? "",
         is_inter_state: (existingSO as any).is_inter_state ?? false,
         notes: existingSO.notes ?? "",

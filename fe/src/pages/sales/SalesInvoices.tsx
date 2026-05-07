@@ -18,7 +18,7 @@ import { useAuthStore } from '@/store/authStore';
 import { render, openThermalPrintWindow } from '@/lib/thermalTemplateRenderer';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { SalesInvoice, Party, ThermalTemplate } from '@/types';
-import { formatCurrency, formatDate, dateToUtcIso } from '@/lib/utils';
+import { formatCurrency, formatDate, dateToUtcIso, localDateToUtcRange } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -384,8 +384,7 @@ export default function SalesInvoices() {
       search,
       sort_by: sortBy,
       sort_order: sortOrder,
-      ...(dateFrom ? { date_from: dateFrom } : {}),
-      ...(dateTo ? { date_to: dateTo } : {}),
+      ...(dateFrom && dateTo ? (() => { const { date_from, date_to } = localDateToUtcRange(dateFrom, dateTo); return { date_from, date_to }; })() : {}),
       ...(customerFilter ? { party_id: customerFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     }),

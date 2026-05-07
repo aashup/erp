@@ -11,7 +11,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { purchaseOrdersApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
 import type { PurchaseOrder } from '@/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, localDateToUtcRange } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { SlideSelect } from '@/components/ui/SlideSelect';
@@ -75,8 +75,7 @@ export default function PurchaseOrders() {
       search,
       sort_by: sortBy,
       sort_order: sortOrder,
-      ...(dateFrom ? { date_from: dateFrom } : {}),
-      ...(dateTo ? { date_to: dateTo } : {}),
+      ...(dateFrom && dateTo ? (() => { const { date_from, date_to } = localDateToUtcRange(dateFrom, dateTo); return { date_from, date_to }; })() : {}),
       ...(vendorFilter ? { party_id: vendorFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     }),

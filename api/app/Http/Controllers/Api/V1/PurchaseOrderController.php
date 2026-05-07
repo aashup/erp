@@ -26,7 +26,9 @@ class PurchaseOrderController extends Controller
 
         $query = PurchaseOrder::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('po_number', 'like', "%{$s}%"));
+            ->when($request->search, fn ($q, $s) => $q->where('po_number', 'like', "%{$s}%"))
+            ->when($request->date_from, fn ($q, $d) => $q->where('po_date', '>=', $d))
+            ->when($request->date_to,   fn ($q, $d) => $q->where('po_date', '<=', $d));
 
         // Sorting
         if ($request->sort_by) {

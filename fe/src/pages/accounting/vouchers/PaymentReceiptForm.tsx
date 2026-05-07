@@ -19,7 +19,7 @@ import { SlideSelect } from '@/components/ui/SlideSelect';
 import { TYPE_CONFIG, type VoucherTab } from './types';
 import { paymentSchema, type PaymentForm } from './schemas';
 import { VoucherFormHeader } from './VoucherFormHeader';
-import { dateToUtcIso } from '@/lib/utils';
+import { dateToUtcIso, apiDateToLocalDate } from '@/lib/utils';
 import { useDateStore } from '@/store/dateStore';
 
 interface PaymentReceiptFormProps {
@@ -68,7 +68,7 @@ export function PaymentReceiptForm({ voucherType }: PaymentReceiptFormProps) {
           party_id:         editRecord.party_id,
           type:             editRecord.type,
           receipt_number:   editRecord.receipt_number,
-          receipt_date:     (editRecord.receipt_date as string).split('T')[0],
+          receipt_date:     apiDateToLocalDate(editRecord.receipt_date as string),
           amount:           editRecord.amount,
           payment_mode:     editRecord.payment_mode,
           reference_number: editRecord.reference_number ?? '',

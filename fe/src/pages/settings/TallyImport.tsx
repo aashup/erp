@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import type { TallyConnectionMethod } from "@/api/tallyImport";
 import toast from "react-hot-toast";
+import { todayLocalDate } from "@/lib/utils";
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
 
@@ -765,7 +766,7 @@ function GroupsTab() {
 // ─── Section 3: Vouchers ─────────────────────────────────────────────────────
 
 function VouchersSection() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalDate();
   const fyStart =
     new Date().getMonth() >= 3
       ? `${new Date().getFullYear()}-04-01`

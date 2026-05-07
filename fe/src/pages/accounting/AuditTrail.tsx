@@ -4,7 +4,7 @@ import { ArrowLeft, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useFYStore } from '@/store/fyStore';
 import { reportsApi, type AuditTrailEntry } from '@/api/accounting';
-import { formatDate } from '@/lib/utils';
+import { formatDate, localDateToUtcRange } from '@/lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -359,8 +359,11 @@ export default function AuditTrail() {
 
   const queryParams = useMemo(() => {
     const p: Record<string, string | number> = { per_page: 50, page };
-    if (applied.dateFrom) p.date_from = applied.dateFrom;
-    if (applied.dateTo) p.date_to = applied.dateTo;
+    if (applied.dateFrom && applied.dateTo) {
+      const { date_from, date_to } = localDateToUtcRange(applied.dateFrom, applied.dateTo);
+      p.date_from = date_from;
+      p.date_to = date_to;
+    }
     if (applied.causerId) p.causer_id = applied.causerId;
     if (applied.subjectType) p.subject_type = applied.subjectType;
     if (applied.event) p.event = applied.event;

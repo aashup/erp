@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeesApi, salaryComponentDefinitionsApi } from '@/api/payroll';
 import { companySettingsApi } from '@/api/settings';
+import { todayLocalDate } from '@/lib/utils';
 import type { Employee } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -91,7 +92,7 @@ export function SalaryStructureModal({ employee, open, onClose }: Props) {
       setTotalSalary(0);
       const s = structureRes;
       reset({
-        effective_from:    s?.effective_from ?? new Date().toISOString().slice(0, 10),
+        effective_from:    s?.effective_from ?? todayLocalDate(),
         basic:             s ? Number(s.basic) : 0,
         hra:               s ? Number(s.hra) : 0,
         da:                s ? Number(s.da) : 0,

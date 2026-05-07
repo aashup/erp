@@ -27,7 +27,9 @@ class PurchaseInvoiceController extends Controller
 
         $query = PurchaseInvoice::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"));
+            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"))
+            ->when($request->date_from, fn ($q, $d) => $q->where('invoice_date', '>=', $d))
+            ->when($request->date_to,   fn ($q, $d) => $q->where('invoice_date', '<=', $d));
 
         // Sorting
         if ($request->sort_by) {

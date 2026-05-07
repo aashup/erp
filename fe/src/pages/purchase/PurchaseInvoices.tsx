@@ -14,7 +14,7 @@ import { purchaseInvoicesApi } from '@/api/purchase';
 import { partiesApi } from '@/api/parties';
 import { paymentReceiptsApi, reportsApi, ledgersApi } from '@/api/accounting';
 import type { PurchaseInvoice } from '@/types';
-import { formatCurrency, formatDate, dateToUtcIso } from '@/lib/utils';
+import { formatCurrency, formatDate, dateToUtcIso, localDateToUtcRange } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -300,8 +300,7 @@ export default function PurchaseInvoices() {
       search,
       sort_by: sortBy,
       sort_order: sortOrder,
-      ...(dateFrom ? { date_from: dateFrom } : {}),
-      ...(dateTo ? { date_to: dateTo } : {}),
+      ...(dateFrom && dateTo ? (() => { const { date_from, date_to } = localDateToUtcRange(dateFrom, dateTo); return { date_from, date_to }; })() : {}),
       ...(vendorFilter ? { party_id: vendorFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     }),

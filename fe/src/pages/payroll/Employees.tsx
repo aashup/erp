@@ -21,7 +21,7 @@ import { DesignationFormModal } from '@/components/ui/DesignationFormModal';
 import { SalaryStructureModal } from './SalaryStructureModal';
 import EmployeeAdvancePanel from './EmployeeAdvancePanel';
 import { Plus, Pencil, Trash2, IndianRupee, Filter } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, todayLocalDate } from '@/lib/utils';
 
 const schema = z.object({
   name:              z.string().min(1, 'Name is required'),
@@ -130,7 +130,7 @@ export default function Employees() {
 
   const openCreate = () => {
     setEditEmployee(null);
-    reset({ name: '', joining_date: new Date().toISOString().slice(0, 10), employment_type: 'permanent', is_pf_applicable: true, is_esi_applicable: true });
+    reset({ name: '', joining_date: todayLocalDate(), employment_type: 'permanent', is_pf_applicable: true, is_esi_applicable: true });
     setShowModal(true);
   };
   const openEdit = (e: Employee) => {
