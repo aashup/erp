@@ -5,7 +5,7 @@ import { employeesApi } from '@/api/payroll';
 import { ledgersApi } from '@/api/accounting';
 import type { Employee } from '@/types';
 import { X, Wallet } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, todayLocalDate } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { useDateStore } from '@/store/dateStore';
 import toast from 'react-hot-toast';
@@ -53,7 +53,7 @@ export default function EmployeeAdvancePanel({ employee, onClose }: Props) {
       queryClient.invalidateQueries({ queryKey: ['employee-advance-balance', employee?.id] });
       setAmount('');
       setDescription('');
-      setAdvanceDate(today);
+      setAdvanceDate(todayLocalDate());
       toast.success('Advance paid and voucher posted');
     },
     onError: () => toast.error('Failed to post advance'),

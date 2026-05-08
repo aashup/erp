@@ -254,6 +254,7 @@ export default function ThermalTemplateEditor() {
   const getDefaultSampleInvoice = () => ({
     id: 'sample-001',
     company_id: 'company-001',
+    financial_year_id: null,
     party_id: 'party-001',
     branch_id: null,
     sales_order_id: null,

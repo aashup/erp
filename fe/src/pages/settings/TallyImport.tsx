@@ -27,7 +27,6 @@ import {
   FolderOpen,
   Folder,
 } from "lucide-react";
-import type { TallyConnectionMethod } from "@/api/tallyImport";
 import toast from "react-hot-toast";
 import { todayLocalDate } from "@/lib/utils";
 

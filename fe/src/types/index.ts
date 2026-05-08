@@ -322,6 +322,7 @@ export interface SalesInvoice extends SyncColumns {
   sgst_total: number;
   igst_total: number;
   grand_total: number;
+  round_off?: number;
   amount_paid: number;
   balance_due: number;
   notes: string | null;

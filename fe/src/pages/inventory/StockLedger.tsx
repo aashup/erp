@@ -121,7 +121,7 @@ export default function StockLedger() {
         </button>
       ),
       cell: ({ row }) =>
-        new Date(row.original.date).toLocaleDateString("en-IN"),
+        new Date(row.original.created_at).toLocaleDateString("en-IN"),
     },
     {
       id: "item_name",
