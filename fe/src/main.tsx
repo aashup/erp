@@ -5,8 +5,11 @@ import App from './App';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { registerSW } from 'virtual:pwa-register';
 
-// Register service worker — silently auto-updates when a new build is available
-registerSW({ immediate: false });
+// Service workers don't work in Electron — skip registration there.
+const isElectron = navigator.userAgent.includes('Electron');
+if (!isElectron) {
+  registerSW({ immediate: false });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

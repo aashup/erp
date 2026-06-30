@@ -3,12 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "dist-electron/main/index.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "profile:react": "react-devtools"
+    "profile:react": "react-devtools",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "dev:electron": "electron dist-electron/main/index.js",
+    "build:electron": "tsc -p tsconfig.electron.json && tsc -b && vite build",
+    "dist:electron": "npm run build:electron && electron-builder --config electron-builder.config.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -32,6 +37,10 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "electron": "^33.4.0",
+    "electron-builder": "^25.1.8",
+    "concurrently": "^9.1.2",
+    "wait-on": "^8.0.3",
     "@eslint/js": "^9.39.4",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^24.12.0",

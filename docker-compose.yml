@@ -40,11 +40,14 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./api:/var/www/html
+    # This is the fix:
+    command: >
+      sh -c "composer install && php artisan serve --host=0.0.0.0 --port=8000"
     ports:
       - "8000:8000"
       - "9003:9003"
     environment:
-      XDEBUG_MODE: develop,debug
+      XDEBUG_MODE: "develop,debug"
     env_file:
       - ./api/.env
     depends_on:

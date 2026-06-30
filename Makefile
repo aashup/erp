@@ -1,4 +1,4 @@
-COMPOSE := PATH=/usr/local/bin:$$PATH /usr/local/bin/docker compose
+COMPOSE := docker compose
 
 .PHONY: start rebuild rebuild-fe rebuild-be migrate seed pint logs backend-log frontend-log down
 
@@ -24,7 +24,7 @@ rebuild-fe:
 	$(COMPOSE) build --no-cache fe
 	$(COMPOSE) up -d fe
 
-rebuild-be:
+rebuild-api:
 	$(COMPOSE) rm -sf api
 	$(COMPOSE) build --no-cache api
 	$(COMPOSE) up -d api

@@ -55,15 +55,52 @@ erp/
 │   ├── app/Traits/            # HasUuid, HasSyncColumns, BelongsToCompany, FiltersByFinancialYear
 │   ├── database/migrations/   # Modify in-place (no new files during initial dev)
 │   └── routes/api.php         # All routes under /api/v1, auth:sanctum
-└── fe/           # React + Vite frontend  (not apps/web/)
+└── fe/           # React 19 + Vite frontend  (not apps/web/)
     └── src/
-        ├── api/               # accounting.ts, inventory.ts, sales.ts, payroll.ts, …
-        ├── components/layout/ # AppLayout, Header (FY selector lives here), Sidebar
-        ├── components/ui/     # DataTable, Modal, FilterPanel, SlideSelect, …
-        ├── hooks/             # useFinancialYear.ts, useSelectedFYId, useDebounce, …
-        ├── lib/               # axios.ts (auto-injects JWT + financial_year_id), utils.ts
-        ├── pages/accounting/  # ChartOfAccounts, Ledgers, TrialBalance, ProfitAndLoss, …
-        ├── store/             # authStore, fyStore (selectedFY → localStorage), themeStore
+        ├── api/               # accounting.ts, auth.ts, dashboard.ts, financialYears.ts,
+        │                      # inventory.ts, ocr.ts, parties.ts, payroll.ts, pos.ts,
+        │                      # purchase.ts, roles.ts, sales.ts, settings.ts,
+        │                      # tallyImport.ts, thermalTemplates.ts, users.ts
+        ├── components/
+        │   ├── accounting/    # LedgerBalanceBadge.tsx, PaymentVoucherDetailModal.tsx
+        │   ├── layout/        # AppLayout, AuthLayout, Header (FY selector), Sidebar, Footer
+        │   └── ui/            # DataTable, Modal, FilterPanel, SlideSelect, Badge, Button,
+        │                      # Card, Input, Select, Pagination, CanAccess (permission gate),
+        │                      # BatchFormModal, PartyFormModal, UnitFormModal,
+        │                      # ItemGroupFormModal, DepartmentFormModal, DesignationFormModal
+        ├── config/            # menuConfig.ts
+        ├── contexts/          # ThemeContext.tsx
+        ├── hooks/             # useDebounce.ts, useFinancialYear.ts, useOnlineStatus.ts,
+        │                      # usePageTitle.ts, usePermissions.ts, useSync.ts
+        ├── lib/               # axios.ts (auto-injects JWT + financial_year_id), utils.ts,
+        │                      # constants.ts, db.ts (Dexie), sync.ts, thermalTemplateRenderer.ts
+        ├── pages/
+        │   ├── accounting/    # ChartOfAccounts, Ledgers, TrialBalance, ProfitAndLoss,
+        │   │                  # BalanceSheet, JournalEntries, VouchersHub, VouchersEntry,
+        │   │                  # VoucherEntryForm, VoucherTypeList, Payments
+        │   │   └── vouchers/  # ContraVoucherForm, JournalVoucherForm, PaymentVoucherForm,
+        │   │                  # ReceiptVoucherForm, PaymentReceiptForm, VoucherFormHeader,
+        │   │                  # schemas.ts, types.ts
+        │   ├── auth/          # Login.tsx, Register.tsx
+        │   ├── dashboard/     # Dashboard.tsx
+        │   ├── inventory/     # Items, ItemFormPage, ItemBatches, AllBatches, ItemGroups,
+        │   │                  # ItemMovements, Godowns, OpeningStock, StockAdjustment,
+        │   │                  # StockLedger, StockSummary, StockTransfer
+        │   ├── payroll/       # Departments, Employees, PayrollRuns, GeneratePayrollRun,
+        │   │                  # PayrollRunDetail, SalaryStructureModal
+        │   ├── pos/           # POSPage.tsx
+        │   ├── pos2/          # POSPage2.tsx  (alternative POS layout)
+        │   ├── purchase/      # PurchaseInvoices, PurchaseInvoiceFormPage, PurchaseOrders,
+        │   │                  # PurchaseOrderFormPage, OcrReviewPage
+        │   ├── reports/       # BankBook, CashBook, DayBook, LedgerBook
+        │   ├── sales/         # SalesInvoices, SalesInvoiceFormPage, SalesInvoiceFormPage2,
+        │   │                  # SalesOrders, SalesOrderFormPage
+        │   ├── settings/      # FinancialYears, InvoiceSettings, InventorySettings,
+        │   │                  # PayrollSettings, ThermalTemplateEditor, TallyImport,
+        │   │                  # Units, Theme
+        │   └── (root)         # Branches, Groups, Parties, Settings, Users
+        ├── store/             # authStore.ts, fyStore.ts (selectedFY → localStorage), themeStore.ts
+        ├── types/             # index.ts
         └── App.tsx            # React Router v7 routes + React Query provider
 ```
 
@@ -125,7 +162,7 @@ Two MCP servers are active — **always use them**. Never use Bash equivalents.
 - Use `mcp__filesystem__*` tools for **every** file operation: read, write, edit, list directory, search files.
 - **Never** use Bash `cat`, `ls`, `find`, `grep`, `echo >`, or `cp` for project files.
 - Available tools: `read_file`, `write_file`, `edit_file`, `list_directory`, `search_files`, `create_directory`, `move_file`, `get_file_info`.
-- Covers the entire `/Users/aashu/erp/` project tree.
+- Covers the entire `D:\erp\erp\` project tree.
 
 ---
 
@@ -235,6 +272,82 @@ Targets: retailers, wholesalers, pharma distributors, kirana stores.
 - Orange `Expiring Soon`: within next 30 days
 - Green `OK`: more than 30 days away
 - Grey `No Expiry`: `expiry_date` is null
+
+---
+
+### Vouchers Subsystem (Accounting)
+
+**Pages** — all under `fe/src/pages/accounting/`:
+- `VouchersHub.tsx` — entry point listing voucher types
+- `VouchersEntry.tsx` / `VoucherEntryForm.tsx` — generic voucher entry
+- `VoucherTypeList.tsx` — manage custom voucher types
+- `vouchers/ContraVoucherForm.tsx` — contra (cash↔bank transfer)
+- `vouchers/PaymentVoucherForm.tsx` — payment out
+- `vouchers/ReceiptVoucherForm.tsx` — receipt in
+- `vouchers/JournalVoucherForm.tsx` — manual journal
+- `vouchers/PaymentReceiptForm.tsx` — combined payment/receipt
+- `vouchers/VoucherFormHeader.tsx` — shared header component
+- `vouchers/schemas.ts` + `vouchers/types.ts` — shared Zod schemas & TS types
+
+**Component**: `components/accounting/PaymentVoucherDetailModal.tsx` — slide-over showing voucher line detail
+
+---
+
+### POS (Point of Sale)
+
+- `pages/pos/POSPage.tsx` — primary POS interface (full-screen, no AppLayout)
+- `pages/pos2/POSPage2.tsx` — alternative POS layout (full-screen, no AppLayout)
+- `api/pos.ts` — POS-specific API calls
+- Both POS pages read `thermal_printer_paper_size` and `default_invoice_template` from company settings on mount and use them in `handlePrint()`
+
+---
+
+### Payroll Module
+
+**Pages** — all under `fe/src/pages/payroll/`:
+- `Departments.tsx` — department master
+- `Employees.tsx` — employee master with salary structure assignment
+- `SalaryStructureModal.tsx` — define earnings/deductions components
+- `PayrollRuns.tsx` — list of payroll runs
+- `GeneratePayrollRun.tsx` — generate payroll for a period
+- `PayrollRunDetail.tsx` — view/approve individual run
+
+**API**: `fe/src/api/payroll.ts`
+
+**Settings**: `fe/src/pages/settings/PayrollSettings.tsx` — configure payroll parameters
+
+---
+
+### Reports Module
+
+**Pages** — all under `fe/src/pages/reports/`:
+- `CashBook.tsx` — cash account transactions
+- `BankBook.tsx` — bank account transactions
+- `LedgerBook.tsx` — party / ledger statement
+- `DayBook.tsx` — all vouchers for a date range
+
+All report pages follow the standard FY-aware query key pattern (`selectedFY?.id` in React Query key) and use `resolveDateRange()` on the backend.
+
+---
+
+### OCR Purchase Invoice Review
+
+- `pages/purchase/OcrReviewPage.tsx` — review and confirm OCR-extracted purchase invoice data before saving
+- `api/ocr.ts` — OCR API calls (upload image → get extracted fields)
+
+---
+
+### Tally Import
+
+- `pages/settings/TallyImport.tsx` — import data from Tally XML exports
+- `api/tallyImport.ts` — upload and process Tally export files
+
+---
+
+### Permission Gating (UI)
+
+- `components/ui/CanAccess.tsx` — wrapper component that renders children only when the user has a specific permission (e.g. `<CanAccess permission="payroll.view">`)
+- `hooks/usePermissions.ts` — returns the current user's permission set from `authStore`
 
 ---
 
@@ -473,16 +586,23 @@ erp-app/
 
 ## React Web Libraries
 
-| Library                     | Purpose                                      |
-|-----------------------------|----------------------------------------------|
-| `vite`                      | Fast build tool                              |
-| `dexie`                     | IndexedDB wrapper for offline web storage    |
-| `@tanstack/react-query`     | Same as mobile — shared hooks work           |
-| `zustand`                   | Same store as mobile                         |
-| `react-hook-form` + `zod`   | Same validation schemas as mobile            |
-| `@tanstack/react-table`     | Data tables for stock, ledger views          |
-| `recharts`                  | Dashboard charts                             |
-| `tailwindcss`               | Styling                                      |
+| Library                          | Purpose                                      |
+|----------------------------------|----------------------------------------------|
+| `react` 19                       | UI framework (latest)                        |
+| `vite` 8                         | Fast build tool                              |
+| `react-router-dom` v7            | Client-side routing                          |
+| `dexie` + `dexie-react-hooks`    | IndexedDB wrapper for offline web storage    |
+| `@tanstack/react-query` v5       | Server state & data fetching                 |
+| `@tanstack/react-table` v8       | Data tables for stock, ledger views          |
+| `zustand` v5                     | Client state management                      |
+| `react-hook-form` v7 + `zod` v4  | Forms with schema validation                 |
+| `recharts` + `chart.js`          | Dashboard charts (two chart libs in use)     |
+| `tailwindcss` v4                 | Styling                                      |
+| `clsx` + `tailwind-merge`        | Conditional class merging utilities          |
+| `lucide-react`                   | Icon library                                 |
+| `react-hot-toast`                | Toast notifications                          |
+| `axios`                          | HTTP client (auto-injects JWT + FY id)       |
+| `vite-plugin-pwa`                | PWA / service-worker support                 |
 
 ---
 

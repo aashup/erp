@@ -43,13 +43,28 @@ export function useSync() {
     }
   }, [isOnline, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Periodic sync every 5 minutes
+  // Periodic sync every 30 minutes (renderer-side fallback)
   useEffect(() => {
     if (!isOnline || !isAuthenticated) return;
 
-    const interval = setInterval(doSync, 1000 * 60 * 5);
+    const interval = setInterval(doSync, 1000 * 60 * 30);
     return () => clearInterval(interval);
   }, [isOnline, isAuthenticated, doSync]);
+
+  // In Electron: also listen for sync-trigger IPC from the main process.
+  // The main process fires this every 30 minutes — more reliable than renderer
+  // timers which can be throttled when the window is minimized.
+  useEffect(() => {
+    type ElectronBridge = {
+      onSyncTrigger: (cb: () => void) => void;
+      removeSyncTrigger: () => void;
+    };
+    const electronApi = (window as Window & { electron?: ElectronBridge }).electron;
+    if (!electronApi) return;
+
+    electronApi.onSyncTrigger(doSync);
+    return () => electronApi.removeSyncTrigger();
+  }, [doSync]);
 
   // Refresh pending count on mount
   useEffect(() => {
