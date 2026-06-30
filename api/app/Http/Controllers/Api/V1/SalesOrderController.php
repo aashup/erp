@@ -26,7 +26,9 @@ class SalesOrderController extends Controller
 
         $query = SalesOrder::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('so_number', 'like', "%{$s}%"));
+            ->when($request->search, fn ($q, $s) => $q->where('so_number', 'like', "%{$s}%"))
+            ->when($request->date_from, fn ($q, $d) => $q->where('so_date', '>=', $d))
+            ->when($request->date_to,   fn ($q, $d) => $q->where('so_date', '<=', $d));
 
         // Sorting
         if ($request->sort_by) {
@@ -281,7 +283,7 @@ class SalesOrderController extends Controller
             'sales_order_id' => $so->id,
             'godown_id' => $defaultGodown?->id,
             'invoice_number' => $invoiceNumber,
-            'invoice_date' => now()->toDateString(),
+            'invoice_date' => $so->so_date,
             'is_inter_state' => $isInterState,
             'status' => 'confirmed',
             'created_by' => $request->user()->id,
@@ -321,6 +323,7 @@ class SalesOrderController extends Controller
                 'value' => $soLine->quantity * $soLine->rate,
                 'narration' => "Auto from SO #{$so->so_number}",
                 'created_by' => $request->user()->id,
+                'date' => $so->so_date,
             ]);
 
             // Mark SO line as fully delivered

@@ -11,7 +11,7 @@ import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
 import { itemsApi, godownsApi, stockLedgerApi } from "@/api/inventory";
 import { salesInvoicesApi } from "@/api/sales";
-import { formatCurrency, calcGST, calcRoundOff } from "@/lib/utils";
+import { formatCurrency, calcGST, calcRoundOff, dateToUtcIso, apiDateToLocalDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -159,7 +159,7 @@ export default function SalesInvoiceFormPage2() {
     reset({
       invoice_number: invoiceData.invoice_number ?? "",
       party_id: invoiceData.party_id,
-      invoice_date: invoiceData.invoice_date,
+      invoice_date: apiDateToLocalDate(invoiceData.invoice_date as string),
       due_date: invoiceData.due_date ?? "",
       is_inter_state: invoiceData.is_inter_state,
       notes: invoiceData.notes ?? "",
@@ -237,7 +237,7 @@ export default function SalesInvoiceFormPage2() {
     const map = new Map<string, number>();
     (stockSummaryData?.data ?? []).forEach((row) => {
       const key = `${row.item_id}:${row.godown_id}`;
-      map.set(key, row.current_stock ?? 0);
+      map.set(key, Number(row.current_stock ?? 0));
     });
     return map;
   }, [stockSummaryData?.data]);
@@ -297,7 +297,7 @@ export default function SalesInvoiceFormPage2() {
     const item = itemMap.get(line.item_id);
     const baseUnit = item?.unit ?? "";
 
-    return `${qty} ${baseUnit} (stock)`;
+    return `${parseFloat(qty.toFixed(3))} ${baseUnit} (stock)`;
   };
 
   const handleItemSelect = (index: number, itemId: string) => {
@@ -426,6 +426,7 @@ export default function SalesInvoiceFormPage2() {
   const onSubmit = (formData: InvoiceForm) => {
     const payload = {
       ...formData,
+      invoice_date: dateToUtcIso(formData.invoice_date),
       lines: formData.lines.map((line) => ({
         ...line,
         unit: line.unit || null,

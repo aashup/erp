@@ -6,12 +6,15 @@ import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useFYBounds } from '@/hooks/useFinancialYear';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAuthStore } from '@/store/authStore';
+import { db } from '@/lib/db';
+import { buildSyncRecord } from '@/lib/sync';
 import { useDateStore } from '@/store/dateStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi, stockLedgerApi } from '@/api/inventory';
 import { salesInvoicesApi } from '@/api/sales';
-import { formatCurrency, calcGST } from '@/lib/utils';
+import { formatCurrency, calcGST, dateToUtcIso, apiDateToLocalDate } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -110,7 +113,7 @@ export default function SalesInvoiceFormPage() {
       invoice_number: '',
       party_id: '',
       invoice_date: selectedDate,
-      due_date: '',
+      due_date: selectedDate,
       is_inter_state: false,
       notes: '',
       lines: [makeEmptyLine()],
@@ -121,6 +124,8 @@ export default function SalesInvoiceFormPage() {
   const watchedLines = watch('lines');
   const isInterState = watch('is_inter_state');
   const company = useAuthStore((state) => state.user?.company);
+  const user = useAuthStore((state) => state.user);
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     if (isEditMode || !defaultGodownId) {
@@ -149,7 +154,7 @@ export default function SalesInvoiceFormPage() {
     reset({
       invoice_number: invoiceData.invoice_number ?? '',
       party_id: invoiceData.party_id,
-      invoice_date: invoiceData.invoice_date,
+      invoice_date: apiDateToLocalDate(invoiceData.invoice_date as string),
       due_date: invoiceData.due_date ?? '',
       is_inter_state: invoiceData.is_inter_state,
       notes: invoiceData.notes ?? '',
@@ -183,7 +188,27 @@ export default function SalesInvoiceFormPage() {
   }, [watch('party_id'), company, customersData, setValue]);
 
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => salesInvoicesApi.create(data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      const { lines, ...header } = data as { lines: Record<string, unknown>[]; [k: string]: unknown };
+      const invoiceRecord = buildSyncRecord<import('@/types').SalesInvoice>(header, user!.company_id);
+      await db.salesInvoices.put(invoiceRecord);
+      for (const line of (lines ?? [])) {
+        await db.salesInvoiceLines.put(
+          buildSyncRecord<import('@/types').SalesInvoiceLine>(
+            { ...line, sales_invoice_id: invoiceRecord.id },
+            user!.company_id,
+          ),
+        );
+      }
+      if (isOnline) {
+        const res = await salesInvoicesApi.create(data);
+        await db.salesInvoices.put({ ...res.data.data, sync_status: 'synced' });
+        await db.salesInvoices.delete(invoiceRecord.id);
+        return res;
+      }
+      toast('Saved offline — will sync when back online');
+      return { data: { data: invoiceRecord } };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
       toast.success('Sales invoice created');
@@ -192,7 +217,33 @@ export default function SalesInvoiceFormPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => salesInvoicesApi.update(id, data),
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
+      const { lines, ...header } = data as { lines: Record<string, unknown>[]; [k: string]: unknown };
+      const existing = await db.salesInvoices.get(id);
+      const invoiceRecord = buildSyncRecord<import('@/types').SalesInvoice>(
+        { ...existing, ...header },
+        user!.company_id,
+        id,
+        existing?.created_at,
+      );
+      await db.salesInvoices.put(invoiceRecord);
+      for (const line of (lines ?? [])) {
+        await db.salesInvoiceLines.put(
+          buildSyncRecord<import('@/types').SalesInvoiceLine>(
+            { ...line, sales_invoice_id: id },
+            user!.company_id,
+            (line as { id?: string }).id,
+          ),
+        );
+      }
+      if (isOnline) {
+        const res = await salesInvoicesApi.update(id, data);
+        await db.salesInvoices.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      toast('Saved offline — will sync when back online');
+      return { data: { data: invoiceRecord } };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-invoices'] });
       if (invoiceId) {
@@ -218,7 +269,7 @@ export default function SalesInvoiceFormPage() {
     const map = new Map<string, number>();
     (stockSummaryData?.data ?? []).forEach((row) => {
       const key = `${row.item_id}:${row.godown_id}`;
-      map.set(key, row.current_stock ?? 0);
+      map.set(key, Number(row.current_stock ?? 0));
     });
     return map;
   }, [stockSummaryData?.data]);
@@ -263,7 +314,7 @@ export default function SalesInvoiceFormPage() {
     const item = itemMap.get(line.item_id);
     const baseUnit = item?.unit ?? '';
 
-    return `${qty} ${baseUnit} (stock)`;
+    return `${parseFloat(qty.toFixed(3))} ${baseUnit} (stock)`;
   };
 
   const handleItemSelect = (index: number, itemId: string) => {
@@ -328,6 +379,7 @@ export default function SalesInvoiceFormPage() {
   const onSubmit = (formData: InvoiceForm) => {
     const payload = {
       ...formData,
+      invoice_date: dateToUtcIso(formData.invoice_date),
       lines: formData.lines.map((line) => ({
         ...line,
         unit: line.unit || null,
@@ -372,13 +424,6 @@ export default function SalesInvoiceFormPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input
-                  id="invoice_number"
-                  label="Invoice Number"
-                  placeholder="INV-0001"
-                  error={errors.invoice_number?.message}
-                  {...register('invoice_number')}
-                />
                 <SlideSelect
                   name="party_id"
                   label="Customer"

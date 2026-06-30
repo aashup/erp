@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AccountingGroup;
 use App\Models\CompanySetting;
+use App\Models\Employee;
 use App\Models\FinancialYear;
 use App\Models\Ledger;
 use App\Models\Party;
@@ -36,7 +37,7 @@ class AccountingService
             return null;
         }
 
-        $fy = $this->getCurrentFY($companyId, $invoice->invoice_date);
+        $fy = $invoice->financialYear;
         if (! $fy) {
             return null;
         }
@@ -127,7 +128,7 @@ class AccountingService
             return null;
         }
 
-        $fy = $this->getCurrentFY($companyId, $invoice->invoice_date);
+        $fy = $invoice->financialYear;
         if (! $fy) {
             return null;
         }
@@ -438,16 +439,11 @@ class AccountingService
      * Dr: [Per-employee salary ledger] (clears the liability posted at approval)
      *   Cr: Cash / Bank (total disbursed)
      */
-    public function postPayrollPayment(PayrollRun $run, array $entries, string $paymentMode, string $userId): ?Voucher
+    public function postPayrollPayment(PayrollRun $run, array $entries, Ledger $paymentLedger, string $userId): ?Voucher
     {
         $companyId = $run->company_id;
 
-        $cashOrBank = $this->getCashOrBankLedger($companyId, $paymentMode);
         $salaryPayableLedger = Ledger::findBySystemKey($companyId, 'salary_payable');
-
-        if (! $cashOrBank) {
-            return null;
-        }
 
         $voucherDate = now()->format('Y-m-d');
         $fy = $this->getCurrentFY($companyId, $voucherDate);
@@ -461,7 +457,7 @@ class AccountingService
 
         return DB::transaction(function () use (
             $companyId, $userId, $fy, $voucherDate, $run,
-            $entries, $cashOrBank, $salaryPayableLedger,
+            $entries, $paymentLedger, $salaryPayableLedger,
             $totalAmount, $periodLabel, $count
         ) {
             $voucherNumber = $this->generateVoucherNumber($companyId, 'payment');
@@ -504,10 +500,10 @@ class AccountingService
 
             // Cr: Cash / Bank — single total line
             $voucher->lines()->create([
-                'ledger_id' => $cashOrBank->id,
+                'ledger_id' => $paymentLedger->id,
                 'debit'     => 0,
                 'credit'    => round($totalAmount, 2),
-                'narration' => 'Salary disbursed via ' . $cashOrBank->name,
+                'narration' => 'Salary disbursed via ' . $paymentLedger->name,
             ]);
 
             return $voucher;
@@ -596,6 +592,105 @@ class AccountingService
                 ]);
             }
         }
+    }
+
+    /**
+     * Pay an advance to an employee.
+     *
+     * Dr: Employee Advances Account (receivable from employee)
+     *   Cr: Cash / Bank Ledger (money going out)
+     */
+    public function postAdvancePayment(Employee $employee, Ledger $paymentLedger, float $amount, string $advanceDate, ?string $description, string $userId): ?Voucher
+    {
+        $companyId = $employee->company_id;
+
+        $advanceLedger = $this->getOrCreateAdvanceLedger($companyId);
+        if (! $advanceLedger) {
+            return null;
+        }
+
+        $fy = $this->getCurrentFY($companyId, $advanceDate);
+        if (! $fy) {
+            return null;
+        }
+
+        return DB::transaction(function () use (
+            $companyId, $userId, $fy, $advanceDate,
+            $employee, $paymentLedger, $advanceLedger, $amount, $description
+        ) {
+            $voucherNumber = $this->generateVoucherNumber($companyId, 'payment');
+            $narration = $description
+                ? "Advance to {$employee->name} — {$description}"
+                : "Advance paid to {$employee->name}";
+
+            $voucher = Voucher::create([
+                'company_id'        => $companyId,
+                'financial_year_id' => $fy->id,
+                'voucher_number'    => $voucherNumber,
+                'voucher_date'      => $advanceDate,
+                'voucher_type'      => 'payment',
+                'narration'         => $narration,
+                'source'            => 'advance',
+                'reference_type'    => Employee::class,
+                'reference_id'      => $employee->id,
+                'is_posted'         => true,
+                'created_by'        => $userId,
+            ]);
+
+            // Dr: Employee Advances (receivable increases)
+            $voucher->lines()->create([
+                'ledger_id' => $advanceLedger->id,
+                'debit'     => round($amount, 2),
+                'credit'    => 0,
+                'narration' => "Advance to {$employee->name}",
+            ]);
+
+            // Cr: Cash / Bank (cash goes out)
+            $voucher->lines()->create([
+                'ledger_id' => $paymentLedger->id,
+                'debit'     => 0,
+                'credit'    => round($amount, 2),
+                'narration' => "Paid via {$paymentLedger->name}",
+            ]);
+
+            return $voucher;
+        });
+    }
+
+    /**
+     * Find or lazy-create the company's Employee Advances ledger.
+     * Creates it under group code 1240 (Loans & Advances Asset) or falls back to 1200 (Current Assets).
+     */
+    private function getOrCreateAdvanceLedger(string $companyId): ?Ledger
+    {
+        $existing = Ledger::where('company_id', $companyId)
+            ->where('system_key', 'employee_advances_account')
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $group = AccountingGroup::where('company_id', $companyId)->where('code', '1240')->first()
+            ?? AccountingGroup::where('company_id', $companyId)->where('code', '1200')->first();
+
+        if (! $group) {
+            return null;
+        }
+
+        return Ledger::create([
+            'company_id'          => $companyId,
+            'name'                => 'Employee Advances',
+            'group_id'            => $group->id,
+            'system_key'          => 'employee_advances_account',
+            'opening_balance'     => 0,
+            'opening_type'        => 'dr',
+            'opening_date'        => null,
+            'is_bill_wise'        => false,
+            'is_cost_center_applicable' => false,
+            'allow_manual_entry'  => false,
+            'is_system'           => true,
+        ]);
     }
 
     /**

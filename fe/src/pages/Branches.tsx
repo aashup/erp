@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOfflineListQuery } from '@/hooks/useOfflineQuery';
+import { useAuthStore } from '@/store/authStore';
+import { db } from '@/lib/db';
+import { buildSyncRecord } from '@/lib/sync';
 import api from '@/lib/axios';
-import type { Branch, PaginatedResponse, ApiResponse } from '@/types';
+import type { Branch, ApiResponse } from '@/types';
 import { INDIAN_STATES } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,7 +22,8 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { FilterPanel } from '@/components/ui/FilterPanel';
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, WifiOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -34,6 +40,8 @@ export default function Branches() {
   usePageTitle('Branches');
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const isOnline = useOnlineStatus();
+  const user = useAuthStore((s) => s.user);
   const canCreate = hasPermission('branch.create');
   const canEdit = hasPermission('branch.edit');
   const canDelete = hasPermission('branch.delete');
@@ -47,9 +55,10 @@ export default function Branches() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useOfflineListQuery({
+    table: db.branches,
     queryKey: ['branches', search, codeFilter, cityFilter, addressFilter, sortBy, sortOrder],
-    queryFn: () => api.get<PaginatedResponse<Branch>>('/branches', {
+    apiFn: () => api.get('/branches', {
       params: {
         ...(search ? { search } : {}),
         ...(codeFilter ? { code: codeFilter } : {}),
@@ -59,21 +68,61 @@ export default function Branches() {
         sort_order: sortOrder,
       }
     }),
-    select: (res) => res.data,
+    offlineFilter: (items) => {
+      let result = items;
+      if (search) result = result.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
+      if (codeFilter) result = result.filter((i) => i.code?.toLowerCase().includes(codeFilter.toLowerCase()));
+      if (cityFilter) result = result.filter((i) => i.city?.toLowerCase().includes(cityFilter.toLowerCase()));
+      if (addressFilter) result = result.filter((i) => i.address?.toLowerCase().includes(addressFilter.toLowerCase()));
+      result = result.slice().sort((a, b) => {
+        const aVal = String((a as unknown as Record<string, unknown>)[sortBy] ?? '');
+        const bVal = String((b as unknown as Record<string, unknown>)[sortBy] ?? '');
+        return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      return result;
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: BranchForm) => api.post<ApiResponse<Branch>>('/branches', data),
+    mutationFn: async (formData: BranchForm) => {
+      const record = buildSyncRecord<Branch>(formData, user!.company_id);
+      await db.branches.put(record);
+      if (isOnline) {
+        const res = await api.post<ApiResponse<Branch>>('/branches', formData);
+        await db.branches.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      return { data: { data: record } };
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['branches'] }); setShowModal(false); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<BranchForm> }) => api.put<ApiResponse<Branch>>(`/branches/${id}`, data),
+    mutationFn: async ({ id, data: formData }: { id: string; data: Partial<BranchForm> }) => {
+      const existing = await db.branches.get(id);
+      const record = buildSyncRecord<Branch>(
+        { ...existing, ...formData },
+        user!.company_id,
+        id,
+        existing?.created_at,
+      );
+      await db.branches.put(record);
+      if (isOnline) {
+        const res = await api.put<ApiResponse<Branch>>(`/branches/${id}`, formData);
+        await db.branches.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      return { data: { data: record } };
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['branches'] }); setShowModal(false); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/branches/${id}`),
+    mutationFn: async (id: string) => {
+      if (!isOnline) { toast.error('Cannot delete while offline'); throw new Error('offline'); }
+      await api.delete(`/branches/${id}`);
+      await db.branches.delete(id);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['branches'] }),
   });
 
@@ -152,8 +201,8 @@ export default function Branches() {
       id: 'actions', header: '',
       cell: ({ row }: { row: { original: Branch } }) => (
         <div className="flex items-center gap-1">
-          {canEdit && <button onClick={() => openEdit(row.original)} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
-          {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
+          {canEdit && <button onClick={() => openEdit(row.original)} disabled={!isOnline} className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"><Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" /></button>}
+          {canDelete && <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(row.original.id); }} disabled={!isOnline} className="rounded p-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4 text-red-500" /></button>}
         </div>
       ),
     } as ColumnDef<Branch, unknown>] : []),
@@ -173,9 +222,17 @@ export default function Branches() {
             </svg>
             Filters
           </button>
-          {canCreate && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Branch</Button>}
+          {canCreate && <Button onClick={openCreate} disabled={!isOnline}><Plus className="mr-2 h-4 w-4" /> Add Branch</Button>}
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You are offline — showing cached data. Edits will sync when back online.
+        </div>
+      )}
+
       <Card>
         <CardHeader><p className="text-sm text-gray-500 dark:text-gray-400">Manage company branches</p></CardHeader>
         <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} />

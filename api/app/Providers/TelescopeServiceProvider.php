@@ -19,7 +19,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
         $this->hideSensitiveRequestDetails();
 
-        $isLocal = $this->app->environment('local');
+        $isLocal = true;
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal) {
             return $isLocal ||
@@ -36,9 +36,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function hideSensitiveRequestDetails(): void
     {
-        if ($this->app->environment('local')) {
-            return;
-        }
 
         Telescope::hideRequestParameters(['_token']);
 
@@ -59,7 +56,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         Gate::define('viewTelescope', function ($user = null) {
             $sessionUser = Auth::guard('web')->user();
             if (! $sessionUser) {
-                abort(redirect('/api'));
+                return false;
             }
             $allowed = array_map('trim', explode(',', env('TELESCOPE_ALLOWED_EMAILS', '')));
 

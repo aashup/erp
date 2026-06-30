@@ -8,9 +8,9 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { useFYBounds } from "@/hooks/useFinancialYear";
 import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
-import { itemsApi } from "@/api/inventory";
+import { itemsApi, stockLedgerApi } from "@/api/inventory";
 import { salesOrdersApi } from "@/api/sales";
-import { formatCurrency, calcGST } from "@/lib/utils";
+import { formatCurrency, calcGST, dateToUtcIso, apiDateToLocalDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -78,6 +78,12 @@ export default function SalesOrderFormPage() {
     select: (res) => res.data,
   });
 
+  const { data: stockSummaryData } = useQuery({
+    queryKey: ['stock-summary-all'],
+    queryFn: () => stockLedgerApi.summary({ per_page: '999' }),
+    select: (res) => res.data,
+  });
+
   const { data: existingSO } = useQuery({
     queryKey: ["sales-order", orderId],
     queryFn: () => salesOrdersApi.get(orderId!),
@@ -116,7 +122,7 @@ export default function SalesOrderFormPage() {
       reset({
         so_number: existingSO.so_number ?? "",
         party_id: existingSO.party_id,
-        so_date: existingSO.so_date,
+        so_date: apiDateToLocalDate(existingSO.so_date as string),
         expected_delivery_date: existingSO.expected_delivery_date ?? "",
         is_inter_state: (existingSO as any).is_inter_state ?? false,
         notes: existingSO.notes ?? "",
@@ -135,6 +141,14 @@ export default function SalesOrderFormPage() {
     () => new Map((itemsData?.data ?? []).map((i) => [i.id, i])),
     [itemsData?.data]
   );
+
+  const stockByItemMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (stockSummaryData?.data ?? []).forEach((row) => {
+      map.set(row.item_id, (map.get(row.item_id) ?? 0) + Number(row.current_stock ?? 0));
+    });
+    return map;
+  }, [stockSummaryData?.data]);
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => salesOrdersApi.create(data),
@@ -157,7 +171,7 @@ export default function SalesOrderFormPage() {
   });
 
   const onSubmit = (formData: SoForm) => {
-    const payload = { ...formData } as Record<string, unknown>;
+    const payload = { ...formData, so_date: dateToUtcIso(formData.so_date) } as Record<string, unknown>;
     if (isEditMode) {
       updateMutation.mutate(payload);
     } else {
@@ -219,6 +233,15 @@ export default function SalesOrderFormPage() {
     return `CGST ${gstRate / 2}% = ${formatCurrency(gst.cgst)} · SGST ${gstRate / 2}% = ${formatCurrency(gst.sgst)}`;
   };
 
+  const getLineAvailableQty = (lineIndex: number) => {
+    const line = watchedLines?.[lineIndex];
+    if (!line?.item_id) return null;
+    const qty = stockByItemMap.get(line.item_id) ?? 0;
+    const item = itemMap.get(line.item_id);
+    const baseUnit = item?.unit ?? '';
+    return `${qty} ${baseUnit} (stock)`;
+  };
+
   const customerOptions = (customersData?.data ?? []).map((p) => ({
     value: p.id,
     label: p.name,
@@ -254,13 +277,6 @@ export default function SalesOrderFormPage() {
           <CardHeader><span className="font-semibold text-gray-700 dark:text-gray-200">Order Details</span></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input
-                id="so_number"
-                label="SO Number"
-                placeholder="Auto-generated if empty"
-                error={errors.so_number?.message}
-                {...register("so_number")}
-              />
               <SlideSelect
                 name="party_id"
                 label="Customer *"
@@ -352,19 +368,32 @@ export default function SalesOrderFormPage() {
                 <div key={field.id} className="space-y-1">
                   <div className="grid grid-cols-12 gap-2 items-start">
                     <div className="col-span-4">
-                      <SlideSelect
-                        name={`lines.${index}.item_id`}
-                        placeholder="Select item"
-                        panelTitle="Select Item"
-                        options={itemOptions}
-                        value={watch(`lines.${index}.item_id`)}
-                        onChange={(val) => handleItemChange(index, val)}
-                      />
-                      {errors.lines?.[index]?.item_id && (
-                        <p className="mt-1 text-xs text-red-500">
-                          {errors.lines[index]?.item_id?.message}
-                        </p>
-                      )}
+                      {(() => {
+                        const selectedItemIds = new Set(
+                          (watchedLines ?? [])
+                            .filter((_, i) => i !== index)
+                            .map((l) => l.item_id)
+                            .filter(Boolean)
+                        );
+                        const filteredItemOptions = itemOptions.filter((o) => !selectedItemIds.has(o.value));
+                        return (
+                          <>
+                            <SlideSelect
+                              name={`lines.${index}.item_id`}
+                              placeholder="Select item"
+                              panelTitle="Select Item"
+                              options={filteredItemOptions}
+                              value={watch(`lines.${index}.item_id`)}
+                              onChange={(val) => handleItemChange(index, val)}
+                            />
+                            {errors.lines?.[index]?.item_id && (
+                              <p className="mt-1 text-xs text-red-500">
+                                {errors.lines[index]?.item_id?.message}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <div className="col-span-2">
                       <input
@@ -433,12 +462,19 @@ export default function SalesOrderFormPage() {
                       )}
                     </div>
                   </div>
-                  {/* Per-line GST info */}
-                  {getLineGSTInfo(index) && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 pl-1">
-                      {getLineGSTInfo(index)}
-                    </p>
-                  )}
+                  {/* Per-line stock + GST info */}
+                  <div className="flex items-center justify-between pl-1">
+                    {getLineGSTInfo(index) ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {getLineGSTInfo(index)}
+                      </p>
+                    ) : <span />}
+                    {getLineAvailableQty(index) && (
+                      <span className="bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded text-blue-900 dark:text-blue-200 font-semibold text-xs">
+                        Available: {getLineAvailableQty(index)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

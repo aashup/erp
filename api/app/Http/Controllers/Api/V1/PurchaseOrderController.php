@@ -26,7 +26,9 @@ class PurchaseOrderController extends Controller
 
         $query = PurchaseOrder::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('po_number', 'like', "%{$s}%"));
+            ->when($request->search, fn ($q, $s) => $q->where('po_number', 'like', "%{$s}%"))
+            ->when($request->date_from, fn ($q, $d) => $q->where('po_date', '>=', $d))
+            ->when($request->date_to,   fn ($q, $d) => $q->where('po_date', '<=', $d));
 
         // Sorting
         if ($request->sort_by) {
@@ -255,7 +257,7 @@ class PurchaseOrderController extends Controller
             $isInterState = $companyStateCode && $partyStateCode && $companyStateCode !== $partyStateCode;
 
             // Resolve financial year for receipt date
-            $receiptDate = $validated['receipt_date'] ?? now()->toDateString();
+            $receiptDate = $validated['receipt_date'] ?? $purchaseOrder->po_date;
 
             $defaultGodown = Godown::where('company_id', $purchaseOrder->company_id)
                 ->where('is_default', true)
@@ -329,6 +331,7 @@ class PurchaseOrderController extends Controller
                     'item_id' => $poLine->item_id,
                     'godown_id' => $defaultGodown?->id,
                     'type' => 'purchase',
+                    'date' => $receiptDate,
                     'reference_type' => PurchaseInvoice::class,
                     'reference_id' => $invoice->id,
                     'quantity' => $qty,

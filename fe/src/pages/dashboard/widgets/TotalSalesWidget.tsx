@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { dashboardApi } from "@/api/dashboard";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, periodToDateRange } from "@/lib/utils";
 import { PeriodFilter, type Period } from "./PeriodFilter";
+import { useFYStore } from "@/store/fyStore";
+import { useDateStore } from "@/store/dateStore";
 
 function Row({ label, value, colored }: { label: string; value: number; colored?: "green" | "red" }) {
   const cls =
@@ -22,11 +24,14 @@ function Row({ label, value, colored }: { label: string; value: number; colored?
 }
 
 export function TotalSalesWidget() {
-  const [period, setPeriod] = useState<Period>("this_month");
+  const [period, setPeriod] = useState<Period>("this_year");
+  const selectedFY = useFYStore((s) => s.selectedFY);
+  const selectedDate = useDateStore((s) => s.selectedDate);
+  const { date_from, date_to } = periodToDateRange(period, selectedDate, selectedFY);
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["dashboard-stats-sales", period],
-    queryFn: () => dashboardApi.stats(period),
+    queryKey: ["dashboard-stats-sales", date_from, date_to],
+    queryFn: () => dashboardApi.stats({ date_from, date_to }),
     select: (res) => res.data.data,
   });
 

@@ -181,7 +181,7 @@ export default function POSCart({ lines, isInterState, onQtyChange, onDiscChange
           </div>
           <div className="flex justify-between text-base font-bold text-gray-900 dark:text-gray-100 pt-1 border-t border-gray-200 dark:border-gray-700">
             <span>Net Payable</span>
-            <span>₹{netPayable}</span>
+            <span>{formatCurrency(netPayable)}</span>
           </div>
         </div>
       )}

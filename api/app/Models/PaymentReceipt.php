@@ -34,7 +34,7 @@ class PaymentReceipt extends Model
     protected function casts(): array
     {
         return [
-            'receipt_date' => 'date',
+            'receipt_date' => 'datetime',
             'amount' => 'decimal:2',
         ];
     }

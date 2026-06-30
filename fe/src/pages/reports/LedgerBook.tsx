@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { reportsApi, ledgersApi } from '@/api/accounting';
-import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime, localDateToUtcRange } from '@/lib/utils';
 import { Filter, Printer } from 'lucide-react';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import { SlideSelect } from '@/components/ui/SlideSelect';
@@ -28,18 +29,24 @@ function voucherTypeBadge(type: string): string {
 export default function LedgerBook() {
   usePageTitle('Ledger');
 
+  const location = useLocation();
+  const initState = location.state as { ledgerId?: string; ledgerName?: string } | null;
+
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [appliedDateFrom, setAppliedDateFrom] = useState('');
   const [appliedDateTo, setAppliedDateTo] = useState('');
-  const [ledgerId, setLedgerId] = useState('');
-  const [ledgerName, setLedgerName] = useState('');
+  const [ledgerId, setLedgerId] = useState(initState?.ledgerId ?? '');
+  const [ledgerName, setLedgerName] = useState(initState?.ledgerName ?? '');
 
   const queryParams = useMemo(() => {
     const p: Record<string, string> = { ledger_id: ledgerId };
-    if (appliedDateFrom) p.date_from = appliedDateFrom;
-    if (appliedDateTo) p.date_to = appliedDateTo;
+    if (appliedDateFrom && appliedDateTo) {
+      const { date_from, date_to } = localDateToUtcRange(appliedDateFrom, appliedDateTo);
+      p.date_from = date_from;
+      p.date_to = date_to;
+    }
     return p;
   }, [ledgerId, appliedDateFrom, appliedDateTo]);
 

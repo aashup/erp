@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AccountingGroupController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ImpersonationController;
 use App\Http\Controllers\Api\V1\BatchController;
 use App\Http\Controllers\Api\V1\DocumentCounterController;
 use App\Http\Controllers\Api\V1\BranchController;
@@ -110,6 +111,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('roles', RoleController::class);
     Route::get('permissions', [RoleController::class, 'permissions']);
 
+    // Xtrox super-admin impersonation
+    Route::post('admin/impersonate/{user}', [ImpersonationController::class, 'impersonate']);
+    Route::delete('admin/impersonate/{user}', [ImpersonationController::class, 'stopImpersonating']);
+
     // Purchase
     Route::patch('purchase-orders/{purchase_order}/status', [PurchaseOrderController::class, 'updateStatus']);
     Route::post('purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive']);
@@ -170,6 +175,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('designations', DesignationController::class);
     Route::get('employees/{employee}/salary-structure', [EmployeeController::class, 'salaryStructure']);
     Route::post('employees/{employee}/salary-structure', [SalaryStructureController::class, 'storeForEmployee']);
+    Route::get('employees/{employee}/advance-balance', [EmployeeController::class, 'advanceBalance']);
+    Route::post('employees/{employee}/advance', [EmployeeController::class, 'payAdvance']);
     Route::apiResource('salary-structures', SalaryStructureController::class)->only(['show', 'update', 'destroy']);
     Route::apiResource('salary-component-definitions', SalaryComponentDefinitionController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('employees', EmployeeController::class);
@@ -186,6 +193,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('tally')->group(function () {
         Route::get('test-connection', [TallyImportController::class, 'testConnection']);
         Route::get('test-odbc-connection', [TallyImportController::class, 'testOdbcConnection']);
+        Route::get('fetch-groups', [TallyImportController::class, 'fetchGroups']);
         Route::get('fetch-ledgers', [TallyImportController::class, 'fetchLedgers']);
         Route::post('import-ledgers', [TallyImportController::class, 'importLedgers']);
         Route::get('fetch-stock-items', [TallyImportController::class, 'fetchStockItems']);
@@ -202,4 +210,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/cash-book', [ReportController::class, 'cashBook']);
     Route::get('reports/bank-book', [ReportController::class, 'bankBook']);
     Route::get('reports/day-book', [ReportController::class, 'dayBook']);
+    Route::get('reports/audit-trail/filters', [ReportController::class, 'auditTrailFilters']);
+    Route::get('reports/audit-trail', [ReportController::class, 'auditTrail']);
 });

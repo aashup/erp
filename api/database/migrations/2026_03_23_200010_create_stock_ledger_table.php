@@ -21,6 +21,7 @@ return new class extends Migration
                 'transfer_in', 'transfer_out',
                 'adjustment', 'opening',
             ]);
+            $table->datetime('date');
             $table->string('reference_type')->nullable();
             $table->uuid('reference_id')->nullable();
             $table->decimal('quantity', 15, 3);

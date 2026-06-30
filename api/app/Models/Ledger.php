@@ -6,6 +6,7 @@ use App\Traits\BelongsToCompany;
 use App\Traits\HasSyncColumns;
 use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
@@ -84,5 +85,17 @@ class Ledger extends Model
     public function voucherLines()
     {
         return $this->hasMany(VoucherLine::class, 'ledger_id');
+    }
+
+    public function closingBalances()
+    {
+        return $this->hasMany(LedgerClosingBalance::class, 'ledger_id');
+    }
+
+    public function closingBalanceForFY(string $financialYearId): ?LedgerClosingBalance
+    {
+        return $this->closingBalances()
+            ->where('financial_year_id', $financialYearId)
+            ->first();
     }
 }

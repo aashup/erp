@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
+import { SlideSelect } from '@/components/ui/SlideSelect';
+import type { SlideSelectOption } from '@/components/ui/SlideSelect';
 import { Plus, Pencil, Trash2, Star, Lock, Unlock, ArrowUp, ArrowDown, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -51,6 +53,7 @@ export default function FinancialYears() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editFY, setEditFY] = useState<FinancialYear | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number>(0);
   const [sortBy, setSortBy] = useState('start_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -136,14 +139,37 @@ export default function FinancialYears() {
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to update counter'),
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FYForm>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FYForm>({
     resolver: zodResolver(schema),
   });
 
+  const now = new Date();
+  const currentFYStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const takenYears = new Set((data?.data ?? []).map((fy) => parseInt(fy.label)));
+  const fyYearNumbers = Array.from({ length: currentFYStartYear + 2 - 2018 + 1 }, (_, i) => 2018 + i);
+  const fyYearOptions: SlideSelectOption[] = fyYearNumbers
+    .filter((yr) => !takenYears.has(yr))
+    .map((yr) => ({
+      value: String(yr),
+      label: `${yr}-${String(yr + 1).slice(-2)}`,
+    }));
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+    setValue('label', `${year}-${String(year + 1).slice(-2)}`);
+    setValue('start_date', `${year}-04-01`);
+    setValue('end_date', `${year + 1}-03-31`);
+  };
+
   const openCreate = () => {
     setEditFY(null);
-    const now = new Date();
-    const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    const firstAvailable = fyYearOptions[0];
+    if (!firstAvailable) {
+      toast('All available financial years have already been created.');
+      return;
+    }
+    const fyStartYear = Number(firstAvailable.value);
+    setSelectedYear(fyStartYear);
     reset({
       label: `${fyStartYear}-${String(fyStartYear + 1).slice(-2)}`,
       start_date: `${fyStartYear}-04-01`,
@@ -363,29 +389,62 @@ export default function FinancialYears() {
       {/* FY Create/Edit Modal */}
       <Modal open={showModal} onClose={closeModal} title={editFY ? 'Edit Financial Year' : 'New Financial Year'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input
-            id="label"
-            label="Label"
-            placeholder="2024-25"
-            error={errors.label?.message}
-            {...register('label')}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              id="start_date"
-              label="Start Date"
-              type="date"
-              error={errors.start_date?.message}
-              {...register('start_date')}
-            />
-            <Input
-              id="end_date"
-              label="End Date"
-              type="date"
-              error={errors.end_date?.message}
-              {...register('end_date')}
-            />
-          </div>
+          {!editFY ? (
+            <>
+              <SlideSelect
+                name="year"
+                label="Financial Year"
+                panelTitle="Select Financial Year"
+                options={fyYearOptions}
+                value={String(selectedYear)}
+                onChange={(val) => handleYearChange(Number(val))}
+              />
+              <div className="grid grid-cols-3 gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/50">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Label</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{watch('label')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Start Date</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {watch('start_date') ? formatDate(watch('start_date')) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">End Date</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {watch('end_date') ? formatDate(watch('end_date')) : '—'}
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <Input
+                id="label"
+                label="Label"
+                placeholder="2024-25"
+                error={errors.label?.message}
+                {...register('label')}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  id="start_date"
+                  label="Start Date"
+                  type="date"
+                  error={errors.start_date?.message}
+                  {...register('start_date')}
+                />
+                <Input
+                  id="end_date"
+                  label="End Date"
+                  type="date"
+                  error={errors.end_date?.message}
+                  {...register('end_date')}
+                />
+              </div>
+            </>
+          )}
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input type="checkbox" className="rounded" {...register('is_current')} />
             Set as current (default) financial year

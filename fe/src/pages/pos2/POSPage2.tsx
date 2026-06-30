@@ -20,12 +20,14 @@ import { godownsApi } from "@/api/inventory";
 import { companySettingsApi } from "@/api/settings";
 import { thermalTemplatesApi } from "@/api/thermalTemplates";
 import { salesInvoicesApi } from "@/api/sales";
-import { render, openThermalPrintWindow } from "@/lib/thermalTemplateRenderer";
-import type { CompanySettings } from "@/types";
+import { render, openThermalPrintWindow, buildFallbackReceipt } from "@/lib/thermalTemplateRenderer";
+import type { CompanySettings, Item } from "@/types";
 import { calcGST, calcRoundOff, formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { db } from "@/lib/db";
+import { buildSyncRecord } from "@/lib/sync";
 import POSItemSearch2 from "./POSItemSearch2";
 import POSCart2 from "./POSCart2";
 import POSPaymentModal2, { type PaymentEntry } from "./POSPaymentModal2";
@@ -128,13 +130,21 @@ export default function POSPage2() {
       .catch(() => {});
   }, []);
 
-  // Load held count
+  // Load held count (server + offline Dexie)
   useEffect(() => {
-    posApi
-      .getHeld()
-      .then((res) => setHeldCount((res.data.data ?? []).length))
-      .catch(() => {});
-  }, [heldRefresh]);
+    async function loadCount() {
+      let serverCount = 0;
+      if (isOnline) {
+        try { serverCount = ((await posApi.getHeld()).data.data ?? []).length; } catch {}
+      }
+      const localCount = await db.salesInvoices
+        .where("company_id").equals(user!.company_id)
+        .filter((inv) => !!inv.pos_held && inv.status === "draft" && inv.sync_status !== "synced")
+        .count();
+      setHeldCount(isOnline ? serverCount + localCount : localCount);
+    }
+    loadCount();
+  }, [heldRefresh, isOnline]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -317,17 +327,53 @@ export default function POSPage2() {
   }
 
   async function handleHold() {
-    if (!godown) {
-      toast.error("No godown configured");
+    if (!godown) { toast.error("No godown configured"); return; }
+    if (cart.length === 0) return;
+
+    if (!isOnline) {
+      const invoiceId = crypto.randomUUID();
+      const localHeld = buildSyncRecord<SalesInvoice>(
+        {
+          party_id: customer?.id ?? "",
+          party: customer ?? undefined,
+          godown_id: godown.id,
+          invoice_number: `HOLD-${Date.now()}`,
+          invoice_date: new Date().toISOString(),
+          is_inter_state: isInterState,
+          notes,
+          status: "draft",
+          pos_held: true,
+          grand_total: grandTotal,
+          lines: cart.map((l) => ({
+            id: crypto.randomUUID(),
+            sales_invoice_id: invoiceId,
+            item_id: l.itemId,
+            item: { id: l.itemId, name: l.name, unit: l.unit } as Item,
+            batch_id: l.batchId ?? null,
+            quantity: l.quantity,
+            unit: l.unit,
+            conversion_factor: l.conversionFactor,
+            rate: l.rate,
+            discount_percent: l.discountPct,
+            gst_rate: l.gstRate,
+          })),
+        } as Partial<SalesInvoice>,
+        user!.company_id,
+        invoiceId,
+      );
+      await db.salesInvoices.put(localHeld);
+      setHeldRefresh((n) => n + 1);
+      handleClear();
+      toast.success("Bill held (offline)");
       return;
     }
-    if (cart.length === 0) return;
+
     try {
       await posApi.hold({
         party_id: customer?.id ?? null,
         godown_id: godown.id,
         is_inter_state: isInterState,
-        invoice_date: new Date().toISOString().slice(0, 10),
+        invoice_date: new Date().toISOString(),
         notes,
         lines: cart.map((l) => ({
           item_id: l.itemId,
@@ -364,11 +410,12 @@ export default function POSPage2() {
     }));
     setCart(lines);
     if (invoice.party) setCustomer(invoice.party as Party);
-    // Delete the held bill
-    posApi
-      .deleteHeld(invoice.id)
-      .then(() => setHeldRefresh((n) => n + 1))
-      .catch(() => {});
+    // Local-only held bills → delete from Dexie; server bills → call API
+    if (invoice.sync_status === "pending" || invoice.sync_status === "conflict") {
+      db.salesInvoices.delete(invoice.id).then(() => setHeldRefresh((n) => n + 1)).catch(() => {});
+    } else {
+      posApi.deleteHeld(invoice.id).then(() => setHeldRefresh((n) => n + 1)).catch(() => {});
+    }
     toast.success("Bill resumed");
   }
 
@@ -378,39 +425,131 @@ export default function POSPage2() {
     changeAmount: number,
     postPayment?: boolean,
   ) {
-    if (!godown) {
-      toast.error("No godown configured");
-      return;
-    }
+    if (!godown) { toast.error("No godown configured"); return; }
     setCheckoutLoading(true);
-    try {
-      const res = await posApi.checkout({
-        party_id: customer?.id ?? null,
+
+    const invoiceDateUtc = new Date().toISOString();
+    const invoiceId = crypto.randomUUID();
+
+    // Compute per-line values for local invoice
+    const computedLines = cart.map((l) => {
+      const taxable = l.quantity * l.rate * (1 - l.discountPct / 100);
+      const gst = calcGST(taxable, l.gstRate, isInterState);
+      return { ...l, taxable, ...gst, lineTotal: taxable + gst.cgst + gst.sgst + gst.igst };
+    });
+    const taxableTotal = computedLines.reduce((s, l) => s + l.taxable, 0);
+    const cgstTotal    = computedLines.reduce((s, l) => s + l.cgst, 0);
+    const sgstTotal    = computedLines.reduce((s, l) => s + l.sgst, 0);
+    const igstTotal    = computedLines.reduce((s, l) => s + l.igst, 0);
+    const rawTotal     = computedLines.reduce((s, l) => s + l.lineTotal, 0);
+    const { roundOff: ro, netPayable: np } = calcRoundOff(rawTotal);
+
+    const localInvoice = buildSyncRecord<SalesInvoice>(
+      {
+        party_id: customer?.id ?? "",
+        party: customer ?? undefined,
         godown_id: godown.id,
+        invoice_number: `OFFLINE-${Date.now()}`,
+        invoice_date: invoiceDateUtc,
         is_inter_state: isInterState,
-        invoice_date: new Date().toISOString().slice(0, 10),
         notes,
-        round_off: roundOff,
-        lines: cart.map((l) => ({
+        status: "confirmed",
+        pos_held: false,
+        taxable_amount: taxableTotal,
+        cgst_total: cgstTotal,
+        sgst_total: sgstTotal,
+        igst_total: igstTotal,
+        round_off: ro,
+        grand_total: np,
+        amount_paid: postPayment ? 0 : np,
+        balance_due: postPayment ? np : 0,
+        lines: computedLines.map((l) => ({
+          id: crypto.randomUUID(),
+          sales_invoice_id: invoiceId,
           item_id: l.itemId,
-          batch_id: l.batchId,
+          item: { id: l.itemId, name: l.name, unit: l.unit } as Item,
+          batch_id: l.batchId ?? null,
           quantity: l.quantity,
           unit: l.unit,
           conversion_factor: l.conversionFactor,
           rate: l.rate,
           discount_percent: l.discountPct,
           gst_rate: l.gstRate,
+          taxable_amount: l.taxable,
+          cgst: l.cgst,
+          sgst: l.sgst,
+          igst: l.igst,
+          line_total: l.lineTotal,
+          sync_status: 'pending' as const,
+          device_id: null,
+          synced_at: null,
+          updated_at_local: invoiceDateUtc,
+          created_at: invoiceDateUtc,
+          updated_at: invoiceDateUtc,
         })),
-        ...(postPayment
-          ? { post_payment: true }
-          : {
-              payments,
-              amount_tendered: amountTendered,
-              change_amount: changeAmount,
-            }),
-      });
-      const inv = res.data.data;
-      setLastInvoice(inv);
+      } as Partial<SalesInvoice>,
+      user!.company_id,
+      invoiceId,
+    );
+
+    try {
+      if (isOnline) {
+        const res = await posApi.checkout({
+          party_id: customer?.id ?? null,
+          godown_id: godown.id,
+          is_inter_state: isInterState,
+          invoice_date: invoiceDateUtc,
+          notes,
+          round_off: roundOff,
+          lines: cart.map((l) => ({
+            item_id: l.itemId,
+            batch_id: l.batchId,
+            quantity: l.quantity,
+            unit: l.unit,
+            conversion_factor: l.conversionFactor,
+            rate: l.rate,
+            discount_percent: l.discountPct,
+            gst_rate: l.gstRate,
+          })),
+          ...(postPayment
+            ? { post_payment: true }
+            : { payments, amount_tendered: amountTendered, change_amount: changeAmount }),
+        });
+        const inv = res.data.data;
+        await db.salesInvoices.put({ ...inv, sync_status: "synced" });
+        setLastInvoice(inv);
+      } else {
+        await db.salesInvoices.put(localInvoice);
+        await db.posPendingCheckouts.put({
+          id: invoiceId,
+          company_id: user!.company_id,
+          payload: {
+            party_id: customer?.id ?? null,
+            godown_id: godown.id,
+            is_inter_state: isInterState,
+            invoice_date: invoiceDateUtc,
+            notes,
+            round_off: roundOff,
+            lines: cart.map((l) => ({
+              item_id: l.itemId,
+              batch_id: l.batchId,
+              quantity: l.quantity,
+              unit: l.unit,
+              conversion_factor: l.conversionFactor,
+              rate: l.rate,
+              discount_percent: l.discountPct,
+              gst_rate: l.gstRate,
+            })),
+            ...(postPayment
+              ? { post_payment: true }
+              : { payments, amount_tendered: amountTendered, change_amount: changeAmount }),
+          },
+          created_at: new Date().toISOString(),
+        });
+        toast("Offline — sale saved, will sync when reconnected");
+        setLastInvoice(localInvoice as SalesInvoice);
+      }
+
       setPaymentModal(false);
       setSuccessModal(true);
       handleClear();
@@ -423,8 +562,20 @@ export default function POSPage2() {
 
   async function handlePrint(invoiceId: string) {
     try {
-      const paperSize = (companySettings?.thermal_printer_paper_size ??
-        "2inch") as "2inch" | "3inch";
+      const paperSize = (companySettings?.thermal_printer_paper_size ?? "2inch") as "2inch" | "3inch";
+
+      if (!isOnline) {
+        const invoiceForPrint = lastInvoice?.id === invoiceId ? lastInvoice : null;
+        if (!invoiceForPrint) { toast.error("Cannot print offline — invoice not in memory"); return; }
+        const cached = JSON.parse(localStorage.getItem("pos_thermal_templates") ?? "[]");
+        const tpl = cached.find((t: { paper_size: string; is_default: boolean }) => t.paper_size === paperSize && t.is_default);
+        const html = (tpl && user?.company)
+          ? render(tpl.html_content, invoiceForPrint, user.company, { paperSize })
+          : buildFallbackReceipt(invoiceForPrint, user?.company, { paperSize });
+        const win = openThermalPrintWindow(html, paperSize);
+        if (!win) toast.error("Pop-up blocked. Please allow pop-ups for printing.");
+        return;
+      }
 
       const [invoiceRes, templatesRes] = await Promise.all([
         salesInvoicesApi.get(invoiceId),
@@ -433,17 +584,16 @@ export default function POSPage2() {
 
       const invoice = invoiceRes.data.data;
       const templates = (templatesRes.data as any)?.data ?? [];
+      localStorage.setItem("pos_thermal_templates", JSON.stringify(templates));
+
       const customTemplate = templates.find(
         (t: any) => t.paper_size === paperSize && t.is_default,
       );
 
       let html: string;
       if (customTemplate && user?.company) {
-        html = render(customTemplate.html_content, invoice, user.company, {
-          paperSize,
-        });
+        html = render(customTemplate.html_content, invoice, user.company, { paperSize });
       } else {
-        // Fallback: built-in Blade template rendered by backend
         const res = await api.get(`/sales-invoices/${invoiceId}/html`, {
           params: { template: "thermal", paper_size: paperSize },
           responseType: "text",
@@ -452,8 +602,7 @@ export default function POSPage2() {
       }
 
       const win = openThermalPrintWindow(html, paperSize);
-      if (!win)
-        toast.error("Pop-up blocked. Please allow pop-ups for printing.");
+      if (!win) toast.error("Pop-up blocked. Please allow pop-ups for printing.");
     } catch {
       toast.error("Could not load receipt for printing");
     }
@@ -476,7 +625,7 @@ export default function POSPage2() {
     const lines = [
       `🧾 *Invoice ${invoice.invoice_number}*`,
       partyName ? `Customer: ${partyName}` : null,
-      `Amount: ₹${netPayable}`,
+      `Amount: ${formatCurrency(netPayable)}`,
       `Date: ${new Date(invoice.invoice_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`,
       shareUrl ? `\n📄 View & Download Invoice:\n${shareUrl}` : null,
       `\nThank you for your business! 🙏`,

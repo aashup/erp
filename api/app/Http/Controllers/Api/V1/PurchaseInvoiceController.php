@@ -27,7 +27,9 @@ class PurchaseInvoiceController extends Controller
 
         $query = PurchaseInvoice::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"));
+            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"))
+            ->when($request->date_from, fn ($q, $d) => $q->where('invoice_date', '>=', $d))
+            ->when($request->date_to,   fn ($q, $d) => $q->where('invoice_date', '<=', $d));
 
         // Sorting
         if ($request->sort_by) {
@@ -62,7 +64,6 @@ class PurchaseInvoiceController extends Controller
             'party_id' => 'required|uuid|exists:parties,id',
             'branch_id' => 'nullable|uuid|exists:branches,id',
             'purchase_order_id' => 'nullable|uuid|exists:purchase_orders,id',
-            'financial_year_id' => 'required|uuid|exists:financial_years,id',
             'invoice_number' => 'nullable|string|unique:purchase_invoices',
             'vendor_invoice_number' => 'nullable|string',
             'invoice_date' => 'required|date',
@@ -79,13 +80,21 @@ class PurchaseInvoiceController extends Controller
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'lines.*.gst_rate' => 'required|numeric|min:0',
             'lines.*.godown_id' => 'nullable|uuid|exists:godowns,id',
-
         ]);
 
         $invoice = DB::transaction(function () use ($validated, $request) {
             $isInterState = $validated['is_inter_state'] ?? false;
 
-            $fy = FinancialYear::find($validated['financial_year_id']);
+            $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                ->whereDate('start_date', '<=', $validated['invoice_date'])
+                ->whereDate('end_date', '>=', $validated['invoice_date'])
+                ->first();
+
+            if (! $fy) {
+                throw ValidationException::withMessages(['invoice_date' => 'No financial year found for the selected date']);
+            }
+
+            $validated['financial_year_id'] = $fy->id;
 
             // Auto-generate invoice number if not provided
             if (empty($validated['invoice_number'])) {
@@ -95,7 +104,7 @@ class PurchaseInvoiceController extends Controller
                     ->first();
 
                 if (! $counter) {
-                    throw ValidationException::withMessages(['financial_year_id' => 'Document counter not initialized for this financial year']);
+                    throw ValidationException::withMessages(['invoice_date' => 'Document counter not initialized for this financial year']);
                 }
 
                 $nextNumber = $counter->getAndIncrementCounter(
@@ -139,6 +148,7 @@ class PurchaseInvoiceController extends Controller
                     'batch_id' => $line['batch_id'] ?? null,
                     'godown_id' => $line['godown_id'] ?? null,
                     'type' => 'purchase',
+                    'date' => $validated['invoice_date'],
                     'reference_type' => PurchaseInvoice::class,
                     'reference_id' => $invoice->id,
                     'quantity' => $baseQuantity,
@@ -218,6 +228,11 @@ class PurchaseInvoiceController extends Controller
         $purchaseInvoice = DB::transaction(function () use ($validated, $purchaseInvoice, $request) {
             $isInterState = $validated['is_inter_state'] ?? false;
 
+            $fy = FinancialYear::where('company_id', $request->user()->company_id)
+                ->whereDate('start_date', '<=', $validated['invoice_date'])
+                ->whereDate('end_date', '>=', $validated['invoice_date'])
+                ->first();
+
             $purchaseInvoice->update([
                 'party_id' => $validated['party_id'],
                 'branch_id' => $validated['branch_id'] ?? null,
@@ -228,6 +243,7 @@ class PurchaseInvoiceController extends Controller
                 'due_date' => $validated['due_date'] ?? null,
                 'is_inter_state' => $isInterState,
                 'notes' => $validated['notes'] ?? null,
+                'financial_year_id' => $fy?->id,
                 'updated_by' => $request->user()->id,
             ]);
 
@@ -261,6 +277,7 @@ class PurchaseInvoiceController extends Controller
                     'batch_id' => $line['batch_id'] ?? null,
                     'godown_id' => $line['godown_id'] ?? null,
                     'type' => 'purchase',
+                    'date' => $validated['invoice_date'],
                     'reference_type' => PurchaseInvoice::class,
                     'reference_id' => $purchaseInvoice->id,
                     'quantity' => $baseQuantity,
@@ -349,6 +366,7 @@ class PurchaseInvoiceController extends Controller
                         'batch_id' => $line->batch_id ?? null,
                         'godown_id' => $line->godown_id ?? $defaultGodown?->id,
                         'type' => 'purchase_reversal',
+                        'date' => $invoice->invoice_date,
                         'reference_type' => PurchaseInvoice::class,
                         'reference_id' => $invoice->id,
                         'quantity' => -$baseQty,

@@ -23,7 +23,7 @@ return new class extends Migration
             // Opening Balance
             $table->decimal('opening_balance', 18, 2)->default(0);
             $table->enum('opening_type', ['dr', 'cr'])->default('dr');
-            $table->date('opening_date')->nullable();
+            $table->datetime('opening_date')->nullable();
 
             // Behavior Flags
             $table->boolean('is_bill_wise')->default(false);

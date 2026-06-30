@@ -6,6 +6,7 @@ import { itemsApi } from "@/api/inventory";
 import { partiesApi } from "@/api/parties";
 import { purchaseOrdersApi } from "@/api/purchase";
 import { salesInvoicesApi } from "@/api/sales";
+import { useFYStore } from "@/store/fyStore";
 
 import { CountStatsRow } from "./widgets/CountStatsRow";
 import { TotalSalesWidget } from "./widgets/TotalSalesWidget";
@@ -24,6 +25,7 @@ export default function Dashboard() {
   usePageTitle("Dashboard");
   const { user } = useAuthStore();
   const { pendingCount, lastSync, isSyncing } = useSync();
+  const selectedFY = useFYStore((s) => s.selectedFY);
 
   const { data: itemsData } = useQuery({
     queryKey: ["items", 1],
@@ -38,13 +40,13 @@ export default function Dashboard() {
   });
 
   const { data: posData } = useQuery({
-    queryKey: ["purchase-orders", 1],
+    queryKey: ["purchase-orders", 1, selectedFY?.id],
     queryFn: () => purchaseOrdersApi.list({ per_page: "1" }),
     select: (res) => res.data,
   });
 
   const { data: invoicesData } = useQuery({
-    queryKey: ["sales-invoices", 1],
+    queryKey: ["sales-invoices", 1, selectedFY?.id],
     queryFn: () => salesInvoicesApi.list({ per_page: "5" }),
     select: (res) => res.data,
   });

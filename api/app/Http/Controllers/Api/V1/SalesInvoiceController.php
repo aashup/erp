@@ -32,7 +32,9 @@ class SalesInvoiceController extends Controller
 
         $query = SalesInvoice::with('party', 'branch')
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"));
+            ->when($request->search, fn ($q, $s) => $q->where('invoice_number', 'like', "%{$s}%"))
+            ->when($request->date_from, fn ($q, $d) => $q->where('invoice_date', '>=', $d))
+            ->when($request->date_to,   fn ($q, $d) => $q->where('invoice_date', '<=', $d));
 
         // Sorting
         if ($request->sort_by) {
@@ -51,7 +53,7 @@ class SalesInvoiceController extends Controller
             $query->latest('sales_invoices.invoice_date');
         }
 
-        $this->applyFYFilter($query, $request);
+        // $this->applyFYFilter($query, $request);
 
         $invoices = $query->paginate($request->per_page ?? 25);
 
@@ -150,6 +152,7 @@ class SalesInvoiceController extends Controller
                     'batch_id' => $line['batch_id'] ?? null,
                     'godown_id' => $line['godown_id'],
                     'type' => 'sale',
+                    'date' => $validated['invoice_date'],
                     'reference_type' => SalesInvoice::class,
                     'reference_id' => $invoice->id,
                     'quantity' => -$baseQuantity,
@@ -269,6 +272,7 @@ class SalesInvoiceController extends Controller
                     'batch_id' => $line['batch_id'] ?? null,
                     'godown_id' => $line['godown_id'] ?? null,
                     'type' => 'sale',
+                    'date' => $validated['invoice_date'],
                     'reference_type' => SalesInvoice::class,
                     'reference_id' => $salesInvoice->id,
                     'quantity' => -$baseQuantity,
@@ -375,6 +379,7 @@ class SalesInvoiceController extends Controller
                         'batch_id' => $line->batch_id ?? null,
                         'godown_id' => $line->godown_id ?? $defaultGodown?->id,
                         'type' => 'sale',
+                        'date' => $salesInvoice->invoice_date,
                         'reference_type' => SalesInvoice::class,
                         'reference_id' => $salesInvoice->id,
                         'quantity' => -$baseQuantity,
@@ -406,6 +411,7 @@ class SalesInvoiceController extends Controller
                         'batch_id' => $line->batch_id ?? null,
                         'godown_id' => $line->godown_id ?? $defaultGodown?->id,
                         'type' => 'sale_reversal',
+                        'date' => $salesInvoice->invoice_date,
                         'reference_type' => SalesInvoice::class,
                         'reference_id' => $salesInvoice->id,
                         'quantity' => $baseQuantity,
@@ -469,6 +475,7 @@ class SalesInvoiceController extends Controller
                         'batch_id' => $line->batch_id ?? null,
                         'godown_id' => $line->godown_id ?? $defaultGodown?->id,
                         'type' => 'sale_reversal',
+                        'date' => $invoice->invoice_date,
                         'reference_type' => SalesInvoice::class,
                         'reference_id' => $invoice->id,
                         'quantity' => $baseQty,

@@ -8,7 +8,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { vouchersApi, ledgersApi, paymentReceiptsApi } from "@/api/accounting";
 import { partiesApi } from "@/api/parties";
 import type { Voucher, PaymentReceipt } from "@/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, dateToUtcIso } from "@/lib/utils";
 import { useSelectedFYId, useFYBounds } from "@/hooks/useFinancialYear";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -356,6 +356,7 @@ export default function VouchersEntry() {
   const onJournalSubmit = (formData: JournalForm) => {
     journalCreateMutation.mutate({
       ...formData,
+      voucher_date: dateToUtcIso(formData.voucher_date),
       voucher_type: activeTab,
       financial_year_id: fyId,
     } as unknown as Record<string, unknown>);

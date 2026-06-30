@@ -110,7 +110,7 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
             </div>
             <div>
               <p className="text-xs text-gray-400 dark:text-gray-500">Net Payable</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">₹{netPayable}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(netPayable)}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -160,7 +160,7 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
                     onClick={() => setCashTendered(amt.toFixed(2))}
                     className="flex-1 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
                   >
-                    ₹{amt % 1 === 0 ? amt : amt.toFixed(2)}
+                    {formatCurrency(amt % 1 === 0 ? amt : parseFloat(amt.toFixed(2)))}
                   </button>
                 ))}
               </div>
@@ -175,7 +175,7 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
               </div>
               {tendered < netPayable && tendered > 0 && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                  ₹{formatCurrency(netPayable - tendered)} still remaining
+                  {formatCurrency(netPayable - tendered)} still remaining
                 </p>
               )}
             </>
@@ -192,7 +192,7 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
                 autoFocus
               />
               <p className="text-xs text-gray-400 mt-2 text-center">
-                Collecting ₹{netPayable} via UPI
+                Collecting {formatCurrency(netPayable)} via UPI
               </p>
             </div>
           )}
@@ -208,7 +208,7 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
                 autoFocus
               />
               <p className="text-xs text-gray-400 mt-2 text-center">
-                Collecting ₹{netPayable} via Card
+                Collecting {formatCurrency(netPayable)} via Card
               </p>
             </div>
           )}
@@ -247,8 +247,8 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
                 {Math.abs(splitRemaining) < 0.01
                   ? '✓ Amounts match'
                   : splitRemaining > 0
-                  ? `Still ₹${formatCurrency(splitRemaining)} remaining`
-                  : `₹${formatCurrency(-splitRemaining)} over total`}
+                  ? `Still ${formatCurrency(splitRemaining)} remaining`
+                  : `${formatCurrency(-splitRemaining)} over total`}
               </div>
               {splitLines.some((l) => l.mode === 'lend' && parseFloat(l.amount) > 0) && (
                 <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2 text-xs text-orange-700 dark:text-orange-400">
@@ -279,7 +279,7 @@ export default function POSPaymentModal({ grandTotal, netPayable, roundOff, cust
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Amount to Ledger</p>
-                  <p className="text-lg font-bold text-orange-600 dark:text-orange-400">₹{netPayable}</p>
+                  <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatCurrency(netPayable)}</p>
                 </div>
               </div>
 

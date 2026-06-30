@@ -52,7 +52,7 @@ class SalesInvoice extends Model
     protected function casts(): array
     {
         return [
-            'invoice_date' => 'date',
+            'invoice_date' => 'datetime',
             'due_date' => 'date',
             'is_inter_state' => 'boolean',
             'is_printed' => 'boolean',

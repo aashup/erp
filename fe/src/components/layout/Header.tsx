@@ -66,14 +66,14 @@ export function Header({
   };
 
   const fyStart = selectedFY ? selectedFY.start_date.slice(0, 10) : null;
-  const fyEnd   = selectedFY ? selectedFY.end_date.slice(0, 10)   : null;
+  const fyEnd = selectedFY ? selectedFY.end_date.slice(0, 10) : null;
 
   const shiftDate = (days: number) => {
     const d = new Date(selectedDate + "T00:00:00");
     d.setDate(d.getDate() + days);
     let next = localDateStr(d);
     if (fyStart && next < fyStart) next = fyStart;
-    if (fyEnd   && next > fyEnd)   next = fyEnd;
+    if (fyEnd && next > fyEnd) next = fyEnd;
     setSelectedDate(next);
   };
 
@@ -93,7 +93,8 @@ export function Header({
       setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
   const handleLogout = async () => {

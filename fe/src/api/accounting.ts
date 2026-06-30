@@ -62,9 +62,41 @@ export const ledgersApi = {
   delete: (id: string) => api.delete(`/ledgers/${id}`),
 };
 
+export interface AuditTrailEntry {
+  id: number;
+  created_at: string;
+  event: string | null;
+  log_name: string | null;
+  description: string;
+  subject_type: string | null;
+  subject_type_class: string | null;
+  subject_id: string | null;
+  subject_label: string | null;
+  causer: { id: string; name: string; email: string } | null;
+  properties: { attributes?: Record<string, unknown>; old?: Record<string, unknown> } | null;
+  batch_uuid: string | null;
+}
+
+export interface AuditTrailResponse {
+  data: AuditTrailEntry[];
+  meta: { current_page: number; last_page: number; per_page: number; total: number };
+}
+
+export interface AuditTrailFiltersResponse {
+  users: { id: string; name: string; email: string }[];
+  subject_types: { key: string; label: string }[];
+  events: string[];
+}
+
 export const reportsApi = {
   trialBalance: (params?: Record<string, string>) =>
     api.get<TrialBalanceResponse>('/reports/trial-balance', { params }),
+
+  auditTrail: (params?: Record<string, string | number>) =>
+    api.get<AuditTrailResponse>('/reports/audit-trail', { params }),
+
+  auditTrailFilters: () =>
+    api.get<AuditTrailFiltersResponse>('/reports/audit-trail/filters'),
 
   profitAndLoss: (params?: Record<string, string>) =>
     api.get<ProfitAndLossResponse>('/reports/profit-and-loss', { params }),

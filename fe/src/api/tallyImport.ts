@@ -4,6 +4,18 @@ export interface TallyConnectionResult {
   connected: boolean;
   url: string;
   message: string;
+  company?: string;
+}
+
+export interface TallyGroupPreview {
+  name: string;
+  parent: string | null;
+  children: TallyGroupPreview[];
+}
+
+export interface TallyGroupFetchResponse {
+  data: TallyGroupPreview[];
+  count: number;
 }
 
 export interface TallyLedgerPreview {
@@ -59,6 +71,9 @@ export const tallyImportApi = {
 
   testOdbcConnection: () =>
     api.get<TallyConnectionResult>("/tally/test-odbc-connection"),
+
+  fetchGroups: () =>
+    api.get<TallyGroupFetchResponse>("/tally/fetch-groups"),
 
   fetchLedgers: (connectionMethod: TallyConnectionMethod = "xml") =>
     api.get<TallyLedgerFetchResponse>("/tally/fetch-ledgers", {

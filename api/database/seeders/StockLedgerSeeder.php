@@ -58,6 +58,7 @@ class StockLedgerSeeder extends Seeder
                 'value' => fn (array $attributes) => $attributes['quantity'] * $attributes['rate'],
                 'narration' => 'Opening stock',
                 'created_by' => $user->id,
+                'date' => now(),
             ]);
         }
 

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { reportsApi } from "@/api/accounting";
 import type { BalanceSheetRow } from "@/types";
+import { localDateToUtcRange } from "@/lib/utils";
 import {
   ChevronRight,
   ChevronDown,
@@ -470,8 +471,11 @@ function LedgerDrillDownPanel({
   onClose,
 }: DrillDownProps) {
   const params: Record<string, string> = { ledger_id: ledgerId };
-  if (dateFrom) params.date_from = dateFrom;
-  if (dateTo) params.date_to = dateTo;
+  if (dateFrom && dateTo) {
+    const { date_from, date_to } = localDateToUtcRange(dateFrom, dateTo);
+    params.date_from = date_from;
+    params.date_to = date_to;
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ["ledger-transactions", ledgerId, dateFrom, dateTo],
@@ -793,8 +797,11 @@ export default function BalanceSheet() {
 
   const queryParams = useMemo(() => {
     const p: Record<string, string> = {};
-    if (appliedDateFrom) p.date_from = appliedDateFrom;
-    if (appliedDateTo) p.date_to = appliedDateTo;
+    if (appliedDateFrom && appliedDateTo) {
+      const { date_from, date_to } = localDateToUtcRange(appliedDateFrom, appliedDateTo);
+      p.date_from = date_from;
+      p.date_to = date_to;
+    }
     return p;
   }, [appliedDateFrom, appliedDateTo]);
 

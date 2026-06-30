@@ -17,22 +17,36 @@ class DashboardController extends Controller
 {
     public function stats(Request $request): JsonResponse
     {
-        $period = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
-        $range = $this->getDateRange($period, $request->query('local_date'));
 
-        // If financial_year_id is provided, clamp the range to the FY boundaries
-        if ($request->financial_year_id) {
-            $fy = FinancialYear::find($request->financial_year_id);
-            if ($fy) {
-                $fyStart = Carbon::parse($fy->start_date)->startOfDay();
-                $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
-                // Clamp: only show data within both the period AND the FY
-                if ($range['from']->lt($fyStart)) {
-                    $range['from'] = $fyStart;
-                }
-                if ($range['to']->gt($fyEnd)) {
-                    $range['to'] = $fyEnd;
+        // Explicit date_from/date_to from frontend takes priority (frontend computes the range).
+        // Frontend sends full UTC ISO datetimes representing local day boundaries — use as-is.
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $range = [
+                'from' => Carbon::parse($request->date_from),
+                'to'   => Carbon::parse($request->date_to),
+            ];
+            $period = 'custom';
+        } else {
+            $period = $request->query('period', 'today');
+            $range = $this->getDateRange($period, $request->query('local_date'));
+
+            // If financial_year_id is provided, apply FY-aware date logic
+            if ($request->financial_year_id) {
+                $fy = FinancialYear::find($request->financial_year_id);
+                if ($fy) {
+                    $fyStart = Carbon::parse($fy->start_date)->startOfDay();
+                    $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
+                    if ($period === 'this_year') {
+                        $range = ['from' => $fyStart, 'to' => $fyEnd];
+                    } else {
+                        if ($range['from']->lt($fyStart)) {
+                            $range['from'] = $fyStart;
+                        }
+                        if ($range['to']->gt($fyEnd)) {
+                            $range['to'] = $fyEnd;
+                        }
+                    }
                 }
             }
         }
@@ -288,28 +302,50 @@ class DashboardController extends Controller
 
     public function collection(Request $request): JsonResponse
     {
-        $period = $request->query('period', 'today');
         $companyId = $request->user()->company_id;
-        $range = $this->getDateRange($period, $request->query('local_date'));
+
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $range = [
+                'from' => Carbon::parse($request->date_from),
+                'to'   => Carbon::parse($request->date_to),
+            ];
+            $period = 'custom';
+        } else {
+            $period = $request->query('period', 'today');
+            $range = $this->getDateRange($period, $request->query('local_date'));
+
+            if ($request->financial_year_id) {
+                $fy = FinancialYear::find($request->financial_year_id);
+                if ($fy) {
+                    $fyStart = Carbon::parse($fy->start_date)->startOfDay();
+                    $fyEnd = Carbon::parse($fy->end_date)->endOfDay();
+                    if ($period === 'this_year') {
+                        $range = ['from' => $fyStart, 'to' => $fyEnd];
+                    } else {
+                        if ($range['from']->lt($fyStart)) {
+                            $range['from'] = $fyStart;
+                        }
+                        if ($range['to']->gt($fyEnd)) {
+                            $range['to'] = $fyEnd;
+                        }
+                    }
+                }
+            }
+        }
 
         $base = PaymentReceipt::where('company_id', $companyId)
             ->where('type', 'receipt')
             ->whereNull('deleted_at')
-            ->whereBetween('receipt_date', [
-                $range['from']->toDateString(),
-                $range['to']->toDateString(),
-            ]);
+            ->where('receipt_date', '>=', $range['from'])
+            ->where('receipt_date', '<=', $range['to']);
 
         $total = (float) (clone $base)->sum('amount');
         $cash = (float) (clone $base)->where('payment_mode', 'cash')->sum('amount');
-        $account = (float) (clone $base)->whereIn('payment_mode', ['bank', 'cheque', 'upi', 'other'])->sum('amount');
+        $account = (float) (clone $base)->where('payment_mode', '!=', 'cash')->sum('amount');
 
         $needToCollect = (float) SalesInvoice::where('company_id', $companyId)
             ->where('status', '!=', 'cancelled')
-            ->whereBetween('invoice_date', [
-                $range['from']->toDateString(),
-                $range['to']->toDateString(),
-            ])
+            ->whereBetween('invoice_date', [$range['from'], $range['to']])
             ->sum('balance_due');
 
         return response()->json([

@@ -70,7 +70,7 @@ return new class extends Migration
             $table->string('employee_code')->nullable();
             $table->string('name');
             $table->enum('gender', ['male', 'female', 'other'])->nullable();
-            $table->date('date_of_birth')->nullable();
+            $table->datetime('date_of_birth')->nullable();
             $table->string('phone', 20)->nullable();
             $table->string('email')->nullable();
             $table->text('address')->nullable();
@@ -78,7 +78,7 @@ return new class extends Migration
             $table->string('state', 100)->nullable();
             $table->foreignUuid('department_id')->nullable()->constrained('departments')->nullOnDelete();
             $table->foreignUuid('designation_id')->nullable()->constrained('designations')->nullOnDelete();
-            $table->date('joining_date');
+            $table->datetime('joining_date');
             $table->enum('employment_type', ['permanent', 'contract', 'part_time'])->default('permanent');
             $table->string('bank_account_name')->nullable();
             $table->string('bank_account_no', 30)->nullable();
@@ -117,7 +117,7 @@ return new class extends Migration
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignUuid('employee_id')->constrained('employees')->cascadeOnDelete();
-            $table->date('effective_from');
+            $table->datetime('effective_from');
             $table->decimal('basic', 12, 2)->default(0);
             $table->decimal('hra', 12, 2)->default(0);
             $table->decimal('da', 12, 2)->default(0);
@@ -160,6 +160,17 @@ return new class extends Migration
             $table->unique(['company_id', 'month', 'year']);
         });
 
+        Schema::create('ledger_closing_balances', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
+            $table->foreignUuid('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignUuid('financial_year_id')->constrained('financial_years')->cascadeOnDelete();
+            $table->foreignUuid('ledger_id')->constrained('ledgers')->cascadeOnDelete();
+            $table->decimal('closing_balance', 18, 2)->default(0);
+            $table->enum('balance_type', ['dr', 'cr'])->default('dr');
+            $table->timestamps();
+            $table->unique(['financial_year_id', 'ledger_id'], 'lcb_fy_ledger_unique');
+        });
+
         Schema::create('payroll_entries', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('(UUID())'));
             $table->foreignUuid('payroll_run_id')->constrained('payroll_runs')->cascadeOnDelete();
@@ -195,6 +206,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('payroll_entries');
         Schema::dropIfExists('payroll_runs');
+        Schema::dropIfExists('ledger_closing_balances');
         Schema::dropIfExists('salary_structures');
         Schema::dropIfExists('salary_component_definitions');
         Schema::dropIfExists('employees');

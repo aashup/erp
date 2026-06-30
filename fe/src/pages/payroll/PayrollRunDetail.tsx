@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { usePermissions } from '@/hooks/usePermissions';
 import { payrollApi } from '@/api/payroll';
+import { ledgersApi } from '@/api/accounting';
 import type { PayrollEntry } from '@/types';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -62,8 +63,20 @@ export default function PayrollRunDetail() {
   const canEdit = hasPermission('payroll.edit');
 
   const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
-  const [paymentMode, setPaymentMode] = useState<'cash' | 'bank'>('bank');
+  const [paymentLedgerId, setPaymentLedgerId] = useState<string>('');
   const selectAllRef = useRef<HTMLInputElement | null>(null);
+
+  const { data: cashBankLedgers } = useQuery({
+    queryKey: ['cash-bank-ledgers'],
+    queryFn: () => ledgersApi.list({ group_system_key: 'cash_account,bank_account', per_page: '100' }),
+    select: (res) => res.data.data,
+  });
+
+  useEffect(() => {
+    if (cashBankLedgers && cashBankLedgers.length > 0 && !paymentLedgerId) {
+      setPaymentLedgerId(cashBankLedgers[0].id);
+    }
+  }, [cashBankLedgers]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['payroll-run', id],
@@ -77,7 +90,7 @@ export default function PayrollRunDetail() {
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: (payload: { entry_ids: string[]; payment_mode: 'cash' | 'bank' }) =>
+    mutationFn: (payload: { entry_ids: string[]; payment_ledger_id: string }) =>
       payrollApi.markPaid(id!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll-run', id] });
@@ -150,10 +163,10 @@ export default function PayrollRunDetail() {
   };
 
   const handleConfirmPayment = () => {
-    if (selectedEntryIds.size === 0) return;
+    if (selectedEntryIds.size === 0 || !paymentLedgerId) return;
     markPaidMutation.mutate({
       entry_ids: Array.from(selectedEntryIds),
-      payment_mode: paymentMode,
+      payment_ledger_id: paymentLedgerId,
     });
   };
 
@@ -322,12 +335,18 @@ export default function PayrollRunDetail() {
               <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(selectedNetTotal)}</span>
             </span>
             <select
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value as 'cash' | 'bank')}
+              value={paymentLedgerId}
+              onChange={(e) => setPaymentLedgerId(e.target.value)}
               className="rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
             >
-              <option value="bank">Bank</option>
-              <option value="cash">Cash</option>
+              {(cashBankLedgers ?? []).map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}{l.group?.name ? ` (${l.group.name})` : ''}
+                </option>
+              ))}
+              {(!cashBankLedgers || cashBankLedgers.length === 0) && (
+                <option value="" disabled>No cash/bank ledgers found</option>
+              )}
             </select>
             <Button
               onClick={handleConfirmPayment}

@@ -9,7 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { paymentReceiptsApi } from '@/api/accounting';
 import { partiesApi } from '@/api/parties';
 import type { PaymentReceipt } from '@/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, dateToUtcIso, apiDateToLocalDate } from '@/lib/utils';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -85,7 +85,7 @@ export default function Payments() {
       party_id: record.party_id,
       type: record.type,
       receipt_number: record.receipt_number,
-      receipt_date: record.receipt_date,
+      receipt_date: apiDateToLocalDate(record.receipt_date as string),
       amount: record.amount,
       payment_mode: record.payment_mode,
       reference_number: record.reference_number ?? '',
@@ -102,7 +102,7 @@ export default function Payments() {
   };
 
   const onSubmit = (formData: PaymentForm) => {
-    createMutation.mutate(formData);
+    createMutation.mutate({ ...formData, receipt_date: dateToUtcIso(formData.receipt_date) });
   };
 
   const partyOptions = (partiesData?.data ?? []).map((p) => ({ value: p.id, label: `${p.name} (${p.type})` }));

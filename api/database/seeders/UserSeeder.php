@@ -68,6 +68,16 @@ class UserSeeder extends Seeder
             'is_active' => true,
         ])->assignRole('salesman');
 
+        // Xtrox super-admin — cross-company visibility + impersonation
+        User::factory()->create([
+            'company_id' => $company->id,
+            'branch_id'  => $branch->id,
+            'name'       => 'Aashu Xtrox',
+            'email'      => 'aashu@xtrox.com',
+            'role'       => 'admin',
+            'is_active'  => true,
+        ])->refresh()->assignRole('admin');
+
         // Create additional users if needed
         if (app()->environment('local', 'testing')) {
             $users = User::factory()->count(100)->create([

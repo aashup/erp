@@ -6,13 +6,15 @@ import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useFYBounds } from '@/hooks/useFinancialYear';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAuthStore } from '@/store/authStore';
-import { useFYStore } from '@/store/fyStore';
+import { db } from '@/lib/db';
+import { buildSyncRecord } from '@/lib/sync';
 import { useDateStore } from '@/store/dateStore';
 import { partiesApi } from '@/api/parties';
 import { itemsApi, godownsApi, stockLedgerApi, batchesApi } from '@/api/inventory';
 import { purchaseInvoicesApi } from '@/api/purchase';
-import { formatCurrency, calcGST, formatDate } from '@/lib/utils';
+import { formatCurrency, calcGST, formatDate, dateToUtcIso, apiDateToLocalDate } from '@/lib/utils';
 import type { Batch } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -36,7 +38,6 @@ const lineSchema = z.object({
 });
 
 const invoiceSchema = z.object({
-  financial_year_id: z.string().min(1, 'Financial year is required'),
   invoice_number: z.string().optional(),
   party_id: z.string().min(1, 'Vendor is required'),
   invoice_date: z.string().min(1, 'Date is required'),
@@ -69,7 +70,6 @@ export default function PurchaseInvoiceFormPage() {
   const queryClient = useQueryClient();
   const [showAddVendor, setShowAddVendor] = useState(false);
 
-  const selectedFYId = useFYStore((state) => state.selectedFY?.id ?? '');
   const { selectedDate } = useDateStore();
   const fyBounds = useFYBounds();
 
@@ -116,7 +116,7 @@ export default function PurchaseInvoiceFormPage() {
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<InvoiceForm>({
     resolver: zodResolver(validatedSchema) as any,
     defaultValues: {
-      financial_year_id: selectedFYId,
+
       invoice_number: '',
       party_id: '',
       invoice_date: selectedDate,
@@ -132,6 +132,8 @@ export default function PurchaseInvoiceFormPage() {
   const watchedLines = watch('lines');
   const isInterState = watch('is_inter_state');
   const company = useAuthStore((state) => state.user?.company);
+  const user = useAuthStore((state) => state.user);
+  const isOnline = useOnlineStatus();
 
   // Cache of batches per item_id: { [itemId]: Batch[] }
   const [batchesCache, setBatchesCache] = useState<Record<string, Batch[]>>({});
@@ -175,10 +177,10 @@ export default function PurchaseInvoiceFormPage() {
     }
 
     reset({
-      financial_year_id: invoiceData.financial_year_id,
+
       invoice_number: invoiceData.invoice_number ?? '',
       party_id: invoiceData.party_id,
-      invoice_date: invoiceData.invoice_date,
+      invoice_date: apiDateToLocalDate(invoiceData.invoice_date as string),
       vendor_invoice_number: invoiceData.vendor_invoice_number ?? '',
       due_date: invoiceData.due_date ?? '',
       is_inter_state: invoiceData.is_inter_state,
@@ -222,7 +224,27 @@ export default function PurchaseInvoiceFormPage() {
   }, [watch('party_id'), company, vendorsData, setValue]);
 
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => purchaseInvoicesApi.create(data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      const { lines, ...header } = data as { lines: Record<string, unknown>[]; [k: string]: unknown };
+      const invoiceRecord = buildSyncRecord<import('@/types').PurchaseInvoice>(header, user!.company_id);
+      await db.purchaseInvoices.put(invoiceRecord);
+      for (const line of (lines ?? [])) {
+        await db.purchaseInvoiceLines.put(
+          buildSyncRecord<import('@/types').PurchaseInvoiceLine>(
+            { ...line, purchase_invoice_id: invoiceRecord.id },
+            user!.company_id,
+          ),
+        );
+      }
+      if (isOnline) {
+        const res = await purchaseInvoicesApi.create(data);
+        await db.purchaseInvoices.put({ ...res.data.data, sync_status: 'synced' });
+        await db.purchaseInvoices.delete(invoiceRecord.id);
+        return res;
+      }
+      toast('Saved offline — will sync when back online');
+      return { data: { data: invoiceRecord } };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] });
       toast.success('Purchase invoice created');
@@ -231,7 +253,33 @@ export default function PurchaseInvoiceFormPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => purchaseInvoicesApi.update(id, data),
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
+      const { lines, ...header } = data as { lines: Record<string, unknown>[]; [k: string]: unknown };
+      const existing = await db.purchaseInvoices.get(id);
+      const invoiceRecord = buildSyncRecord<import('@/types').PurchaseInvoice>(
+        { ...existing, ...header },
+        user!.company_id,
+        id,
+        existing?.created_at,
+      );
+      await db.purchaseInvoices.put(invoiceRecord);
+      for (const line of (lines ?? [])) {
+        await db.purchaseInvoiceLines.put(
+          buildSyncRecord<import('@/types').PurchaseInvoiceLine>(
+            { ...line, purchase_invoice_id: id },
+            user!.company_id,
+            (line as { id?: string }).id,
+          ),
+        );
+      }
+      if (isOnline) {
+        const res = await purchaseInvoicesApi.update(id, data);
+        await db.purchaseInvoices.put({ ...res.data.data, sync_status: 'synced' });
+        return res;
+      }
+      toast('Saved offline — will sync when back online');
+      return { data: { data: invoiceRecord } };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] });
       if (invoiceId) {
@@ -261,7 +309,7 @@ export default function PurchaseInvoiceFormPage() {
     const map = new Map<string, number>();
     (stockSummaryData?.data ?? []).forEach((row) => {
       const key = `${row.item_id}:${row.godown_id}`;
-      map.set(key, row.current_stock ?? 0);
+      map.set(key, Number(row.current_stock ?? 0));
     });
     return map;
   }, [stockSummaryData?.data]);
@@ -302,7 +350,7 @@ export default function PurchaseInvoiceFormPage() {
     const item = itemMap.get(line.item_id);
     const baseUnit = item?.unit ?? '';
 
-    return `${qty} ${baseUnit} (stock)`;
+    return `${parseFloat(qty.toFixed(3))} ${baseUnit} (stock)`;
   };
 
   const handleItemSelect = (index: number, itemId: string) => {
@@ -374,6 +422,7 @@ export default function PurchaseInvoiceFormPage() {
   const onSubmit = (formData: InvoiceForm) => {
     const payload = {
       ...formData,
+      invoice_date: dateToUtcIso(formData.invoice_date),
       lines: formData.lines.map((line) => ({
         ...line,
         unit: line.unit || null,
@@ -419,13 +468,6 @@ export default function PurchaseInvoiceFormPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input
-                  id="invoice_number"
-                  label="Invoice Number"
-                  placeholder="Auto-generated if empty"
-                  error={errors.invoice_number?.message}
-                  {...register('invoice_number')}
-                />
                 <SlideSelect
                   name="party_id"
                   label="Vendor"
@@ -524,8 +566,8 @@ export default function PurchaseInvoiceFormPage() {
                         <div className="col-span-1">
                           <input
                             type="number"
-                            min="0.001"
-                            step="0.001"
+                            min="1"
+                            step="1"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                             {...register(`lines.${index}.quantity`)}
                           />
@@ -554,7 +596,7 @@ export default function PurchaseInvoiceFormPage() {
                           <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                             placeholder="0.00"
                             {...register(`lines.${index}.rate`)}
@@ -566,7 +608,7 @@ export default function PurchaseInvoiceFormPage() {
                             type="number"
                             min="0"
                             max="100"
-                            step="0.01"
+                            step="1"
                             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                             {...register(`lines.${index}.discount_percent`)}
                           />
@@ -608,7 +650,7 @@ export default function PurchaseInvoiceFormPage() {
                                   <span>Exp: <strong>{formatDate(selectedBatch.expiry_date)}</strong></span>
                                 )}
                                 {selectedBatch.current_stock !== undefined && (
-                                  <span>Stock: <strong>{selectedBatch.current_stock} {lineItem?.unit ?? ''}</strong></span>
+                                  <span>Stock: <strong>{parseFloat(Number(selectedBatch.current_stock).toFixed(3))} {lineItem?.unit ?? ''}</strong></span>
                                 )}
                               </div>
                             )}

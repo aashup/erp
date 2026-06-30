@@ -322,6 +322,7 @@ export interface SalesInvoice extends SyncColumns {
   sgst_total: number;
   igst_total: number;
   grand_total: number;
+  round_off?: number;
   amount_paid: number;
   balance_due: number;
   notes: string | null;
@@ -726,6 +727,14 @@ export interface Employee extends SyncColumns {
   salary_structure?: SalaryStructure | null;
 }
 
+export interface AdvanceVoucherRow {
+  id: string;
+  voucher_number: string;
+  voucher_date: string;
+  narration: string | null;
+  amount: number;
+}
+
 export interface SalaryComponentDefinition extends SyncColumns {
   id: string;
   company_id: string;
@@ -832,4 +841,11 @@ export interface RegisterResponse {
     token: string;
     permissions: string[];
   };
+}
+
+export interface POSPendingCheckout {
+  id: string;         // same UUID as the temp local invoice
+  company_id: string;
+  payload: import('@/api/pos').POSCheckoutPayload;
+  created_at: string;
 }

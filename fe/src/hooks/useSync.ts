@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useOnlineStatus } from './useOnlineStatus';
-import { syncAll, getPendingCount } from '@/lib/sync';
+import { syncAll, syncPendingPOSCheckouts, getPendingCount } from '@/lib/sync';
 import { useAuthStore } from '@/store/authStore';
 
 export function useSync() {
@@ -25,6 +25,7 @@ export function useSync() {
     isSyncingRef.current = true;
     setIsSyncing(true);
     try {
+      await syncPendingPOSCheckouts();
       await syncAll();
       setLastSync(new Date());
       await refreshPendingCount();

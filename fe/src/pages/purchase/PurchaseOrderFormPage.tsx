@@ -8,9 +8,9 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { useFYBounds } from "@/hooks/useFinancialYear";
 import { useDateStore } from "@/store/dateStore";
 import { partiesApi } from "@/api/parties";
-import { itemsApi } from "@/api/inventory";
+import { itemsApi, stockLedgerApi } from "@/api/inventory";
 import { purchaseOrdersApi } from "@/api/purchase";
-import { formatCurrency, calcGST } from "@/lib/utils";
+import { formatCurrency, calcGST, dateToUtcIso, apiDateToLocalDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -78,6 +78,12 @@ export default function PurchaseOrderFormPage() {
     select: (res) => res.data,
   });
 
+  const { data: stockSummaryData } = useQuery({
+    queryKey: ['stock-summary-all'],
+    queryFn: () => stockLedgerApi.summary({ per_page: '999' }),
+    select: (res) => res.data,
+  });
+
   const { data: existingPO } = useQuery({
     queryKey: ["purchase-order", orderId],
     queryFn: () => purchaseOrdersApi.get(orderId!),
@@ -116,7 +122,7 @@ export default function PurchaseOrderFormPage() {
       reset({
         po_number: existingPO.po_number ?? "",
         party_id: existingPO.party_id,
-        po_date: existingPO.po_date,
+        po_date: apiDateToLocalDate(existingPO.po_date as string),
         expected_delivery_date: existingPO.expected_delivery_date ?? "",
         is_inter_state: (existingPO as any).is_inter_state ?? false,
         notes: existingPO.notes ?? "",
@@ -135,6 +141,14 @@ export default function PurchaseOrderFormPage() {
     () => new Map((itemsData?.data ?? []).map((i) => [i.id, i])),
     [itemsData?.data]
   );
+
+  const stockByItemMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (stockSummaryData?.data ?? []).forEach((row) => {
+      map.set(row.item_id, (map.get(row.item_id) ?? 0) + Number(row.current_stock ?? 0));
+    });
+    return map;
+  }, [stockSummaryData?.data]);
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) =>
@@ -158,7 +172,7 @@ export default function PurchaseOrderFormPage() {
   });
 
   const onSubmit = (formData: PoForm) => {
-    const payload = { ...formData } as Record<string, unknown>;
+    const payload = { ...formData, po_date: dateToUtcIso(formData.po_date) } as Record<string, unknown>;
     if (isEditMode) {
       updateMutation.mutate(payload);
     } else {
@@ -216,6 +230,15 @@ export default function PurchaseOrderFormPage() {
     return `CGST ${gstRate / 2}% = ${formatCurrency(gst.cgst)} · SGST ${gstRate / 2}% = ${formatCurrency(gst.sgst)}`;
   };
 
+  const getLineAvailableQty = (lineIndex: number) => {
+    const line = watchedLines?.[lineIndex];
+    if (!line?.item_id) return null;
+    const qty = stockByItemMap.get(line.item_id) ?? 0;
+    const item = itemMap.get(line.item_id);
+    const baseUnit = item?.unit ?? '';
+    return `${parseFloat(qty.toFixed(3))} ${baseUnit} (stock)`;
+  };
+
   const vendorOptions = (vendorsData?.data ?? []).map((p) => ({
     value: p.id,
     label: p.name,
@@ -251,13 +274,6 @@ export default function PurchaseOrderFormPage() {
           <CardHeader><span className="font-semibold text-gray-700 dark:text-gray-200">Order Details</span></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input
-                id="po_number"
-                label="PO Number"
-                placeholder="Auto-generated if empty"
-                error={errors.po_number?.message}
-                {...register("po_number")}
-              />
               <SlideSelect
                 name="party_id"
                 label="Vendor *"
@@ -285,7 +301,7 @@ export default function PurchaseOrderFormPage() {
                 type="date"
                 {...register("expected_delivery_date")}
               />
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-12">
                 <Input
                   id="notes"
                   label="Notes"
@@ -349,19 +365,32 @@ export default function PurchaseOrderFormPage() {
                 <div key={field.id} className="space-y-1">
                   <div className="grid grid-cols-12 gap-2 items-start">
                     <div className="col-span-4">
-                      <SlideSelect
-                        name={`lines.${index}.item_id`}
-                        placeholder="Select item"
-                        panelTitle="Select Item"
-                        options={itemOptions}
-                        value={watch(`lines.${index}.item_id`)}
-                        onChange={(val) => handleItemChange(index, val)}
-                      />
-                      {errors.lines?.[index]?.item_id && (
-                        <p className="mt-1 text-xs text-red-500">
-                          {errors.lines[index]?.item_id?.message}
-                        </p>
-                      )}
+                      {(() => {
+                        const selectedItemIds = new Set(
+                          (watchedLines ?? [])
+                            .filter((_, i) => i !== index)
+                            .map((l) => l.item_id)
+                            .filter(Boolean)
+                        );
+                        const filteredItemOptions = itemOptions.filter((o) => !selectedItemIds.has(o.value));
+                        return (
+                          <>
+                            <SlideSelect
+                              name={`lines.${index}.item_id`}
+                              placeholder="Select item"
+                              panelTitle="Select Item"
+                              options={filteredItemOptions}
+                              value={watch(`lines.${index}.item_id`)}
+                              onChange={(val) => handleItemChange(index, val)}
+                            />
+                            {errors.lines?.[index]?.item_id && (
+                              <p className="mt-1 text-xs text-red-500">
+                                {errors.lines[index]?.item_id?.message}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <div className="col-span-2">
                       <input
@@ -376,7 +405,7 @@ export default function PurchaseOrderFormPage() {
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                         {...register(`lines.${index}.rate`)}
                       />
@@ -386,7 +415,7 @@ export default function PurchaseOrderFormPage() {
                         type="number"
                         min="0"
                         max="100"
-                        step="0.01"
+                        step="1"
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                         {...register(`lines.${index}.discount_percent`)}
                       />
@@ -395,7 +424,7 @@ export default function PurchaseOrderFormPage() {
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 py-2 px-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                         {...register(`lines.${index}.gst_rate`)}
                       />
@@ -430,12 +459,19 @@ export default function PurchaseOrderFormPage() {
                       )}
                     </div>
                   </div>
-                  {/* Per-line GST info */}
-                  {getLineGSTInfo(index) && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 pl-1">
-                      {getLineGSTInfo(index)}
-                    </p>
-                  )}
+                  {/* Per-line stock + GST info */}
+                  <div className="flex items-center justify-between pl-1">
+                    {getLineGSTInfo(index) ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {getLineGSTInfo(index)}
+                      </p>
+                    ) : <span />}
+                    {getLineAvailableQty(index) && (
+                      <span className="bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded text-blue-900 dark:text-blue-200 font-semibold text-xs">
+                        Available: {getLineAvailableQty(index)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

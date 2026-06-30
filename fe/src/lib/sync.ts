@@ -1,5 +1,6 @@
 import { db } from './db';
 import api from './axios';
+import type { SalesInvoice } from '@/types';
 
 type SyncTable =
   | 'items'
@@ -72,8 +73,11 @@ export async function pushPendingChanges(): Promise<number> {
 
   const res = await api.post('/sync/push', { changes });
   const syncedCount = res.data.synced_count as number;
+  const failedIds = new Set<string>(
+    ((res.data.failed as { id: string }[]) ?? []).map((f) => f.id)
+  );
 
-  // Mark pushed records as synced in local DB
+  // Mark pushed records as synced (or conflict if the server rejected them)
   for (const change of changes) {
     const localTable = Object.entries(tableToApiName).find(
       ([, v]) => v === change.table
@@ -82,10 +86,14 @@ export async function pushPendingChanges(): Promise<number> {
 
     const table = db.table(localTable);
     for (const record of change.records as { id: string }[]) {
-      await table.update(record.id, {
-        sync_status: 'synced',
-        synced_at: new Date().toISOString(),
-      });
+      if (failedIds.has(record.id)) {
+        await table.update(record.id, { sync_status: 'conflict' });
+      } else {
+        await table.update(record.id, {
+          sync_status: 'synced',
+          synced_at: new Date().toISOString(),
+        });
+      }
     }
   }
 
@@ -158,10 +166,60 @@ export async function clearLocalData(): Promise<void> {
   localStorage.removeItem('last_synced_at');
 }
 
+/**
+ * Build a Dexie record for offline-first creates/updates.
+ * Sets sync_status:'pending' so the sync engine pushes it when back online.
+ */
+export function buildSyncRecord<T>(
+  data: Partial<T>,
+  companyId: string,
+  existingId?: string,
+  existingCreatedAt?: string,
+): T {
+  const now = new Date().toISOString();
+  return {
+    ...data,
+    id: existingId ?? crypto.randomUUID(),
+    company_id: companyId,
+    sync_status: 'pending' as const,
+    device_id: null,
+    synced_at: null,
+    updated_at_local: now,
+    created_at: existingCreatedAt ?? now,
+    updated_at: now,
+  } as T;
+}
+
 export function getPendingCount(): Promise<number> {
-  const counts = Object.keys(tableToApiName).map(async (tableName) => {
-    const table = db.table(tableName);
-    return table.where('sync_status').equals('pending').count();
-  });
+  const counts = [
+    ...Object.keys(tableToApiName).map((tableName) =>
+      db.table(tableName).where('sync_status').equals('pending').count()
+    ),
+    db.posPendingCheckouts.count(),
+  ];
   return Promise.all(counts).then((c) => c.reduce((a, b) => a + b, 0));
+}
+
+/**
+ * Replay pending offline POS checkouts via /pos/checkout.
+ * Must run BEFORE syncAll() so temp placeholder invoices are replaced
+ * before the generic push phase tries to push them.
+ */
+export async function syncPendingPOSCheckouts(): Promise<number> {
+  const pending = await db.posPendingCheckouts.orderBy('created_at').toArray();
+  let synced = 0;
+  for (const item of pending) {
+    try {
+      const res = await api.post<{ data: SalesInvoice }>('/pos/checkout', item.payload);
+      const inv = res.data.data;
+      // Replace temp placeholder with real server invoice
+      await db.salesInvoices.put({ ...inv, sync_status: 'synced' });
+      await db.salesInvoices.delete(item.id);
+      await db.posPendingCheckouts.delete(item.id);
+      synced++;
+    } catch {
+      // Keep in queue — will retry on next sync
+    }
+  }
+  return synced;
 }

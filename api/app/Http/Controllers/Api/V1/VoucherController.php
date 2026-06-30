@@ -21,8 +21,8 @@ class VoucherController extends Controller
         $query = Voucher::with('lines.ledger.group')
             ->when($request->voucher_type, fn ($q, $t) => $q->where('voucher_type', $t))
             ->when($request->search, fn ($q, $s) => $q->where('voucher_number', 'like', "%{$s}%"))
-            ->when($request->date_from, fn ($q, $d) => $q->whereDate('vouchers.voucher_date', '>=', $d))
-            ->when($request->date_to, fn ($q, $d) => $q->whereDate('vouchers.voucher_date', '<=', $d));
+            ->when($request->date_from, fn ($q, $d) => $q->where('vouchers.voucher_date', '>=', $d))
+            ->when($request->date_to, fn ($q, $d) => $q->where('vouchers.voucher_date', '<=', $d));
 
         // Sorting
         if ($request->sort_by) {

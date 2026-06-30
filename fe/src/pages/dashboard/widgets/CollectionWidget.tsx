@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { dashboardApi } from "@/api/dashboard";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, periodToDateRange } from "@/lib/utils";
 import { PeriodFilter, type Period } from "./PeriodFilter";
+import { useFYStore } from "@/store/fyStore";
+import { useDateStore } from "@/store/dateStore";
 
 function Row({ label, value }: { label: string; value: number }) {
   return (
@@ -17,10 +19,13 @@ function Row({ label, value }: { label: string; value: number }) {
 
 export function CollectionWidget() {
   const [period, setPeriod] = useState<Period>("today");
+  const selectedFY = useFYStore((s) => s.selectedFY);
+  const selectedDate = useDateStore((s) => s.selectedDate);
+  const { date_from, date_to } = periodToDateRange(period, selectedDate, selectedFY);
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["dashboard-collection", period],
-    queryFn: () => dashboardApi.collection(period),
+    queryKey: ["dashboard-collection", date_from, date_to],
+    queryFn: () => dashboardApi.collection({ date_from, date_to }),
     select: (res) => res.data.data,
   });
 

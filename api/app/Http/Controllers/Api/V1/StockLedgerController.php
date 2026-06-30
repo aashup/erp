@@ -26,15 +26,15 @@ class StockLedgerController extends Controller
             ->when($request->item_id, fn ($q, $v) => $q->where('stock_ledger.item_id', $v))
             ->when($request->godown_id, fn ($q, $v) => $q->where('stock_ledger.godown_id', $v))
             ->when($request->type, fn ($q, $v) => $q->where('stock_ledger.type', $v))
-            ->when($request->from_date, fn ($q, $v) => $q->whereDate('stock_ledger.created_at', '>=', $v))
-            ->when($request->to_date, fn ($q, $v) => $q->whereDate('stock_ledger.created_at', '<=', $v));
+            ->when($request->from_date, fn ($q, $v) => $q->whereDate('stock_ledger.date', '>=', $v))
+            ->when($request->to_date, fn ($q, $v) => $q->whereDate('stock_ledger.date', '<=', $v));
 
         // Sorting
         if ($request->sort_by) {
             $sortOrder = $request->sort_order === 'asc' ? 'asc' : 'desc';
 
             match ($request->sort_by) {
-                'created_at' => $query->orderBy('stock_ledger.created_at', $sortOrder),
+                'date' => $query->orderBy('stock_ledger.date', $sortOrder),
                 'item_name' => $query->join('items', 'stock_ledger.item_id', '=', 'items.id')->orderBy('items.name', $sortOrder),
                 'godown_name' => $query->join('godowns', 'stock_ledger.godown_id', '=', 'godowns.id')->orderBy('godowns.name', $sortOrder),
                 'type' => $query->orderBy('stock_ledger.type', $sortOrder),
@@ -42,10 +42,10 @@ class StockLedgerController extends Controller
                 'rate' => $query->orderBy('stock_ledger.rate', $sortOrder),
                 'value' => $query->orderBy('stock_ledger.value', $sortOrder),
                 'narration' => $query->orderBy('stock_ledger.narration', $sortOrder),
-                default => $query->orderByDesc('stock_ledger.created_at'),
+                default => $query->orderByDesc('stock_ledger.date'),
             };
         } else {
-            $query->orderByDesc('stock_ledger.created_at');
+            $query->orderByDesc('stock_ledger.date');
         }
 
         // $this->applyFYFilter($query, $request, 'stock_ledger.created_at');
@@ -66,8 +66,7 @@ class StockLedgerController extends Controller
 
         $query = StockLedger::select('stock_ledger.item_id', 'stock_ledger.godown_id', DB::raw('SUM(stock_ledger.quantity) as current_stock'))
             ->where('stock_ledger.company_id', $companyId)
-            ->groupBy('stock_ledger.item_id', 'stock_ledger.godown_id')
-            ->having(DB::raw('SUM(stock_ledger.quantity)'), '!=', 0);
+            ->groupBy('stock_ledger.item_id', 'stock_ledger.godown_id');
 
         if ($request->godown_id) {
             $query->where('stock_ledger.godown_id', $request->godown_id);
@@ -136,6 +135,7 @@ class StockLedgerController extends Controller
             'godown_id' => $validated['godown_id'],
             'batch_id' => $validated['batch_id'] ?? null,
             'type' => 'opening',
+            'date' => now()->toDateString(),
             'quantity' => $validated['quantity'],
             'rate' => $validated['rate'],
             'value' => $validated['quantity'] * $validated['rate'],
@@ -168,6 +168,7 @@ class StockLedgerController extends Controller
             'godown_id' => $validated['godown_id'],
             'batch_id' => $validated['batch_id'] ?? null,
             'type' => 'adjustment',
+            'date' => now()->toDateString(),
             'quantity' => $validated['quantity'],
             'rate' => $validated['rate'],
             'value' => abs($validated['quantity']) * $validated['rate'],
@@ -220,6 +221,7 @@ class StockLedgerController extends Controller
                 'godown_id' => $validated['from_godown_id'],
                 'batch_id' => $validated['batch_id'] ?? null,
                 'type' => 'transfer_out',
+                'date' => now()->toDateString(),
                 'quantity' => -$validated['quantity'],
                 'rate' => $validated['rate'],
                 'value' => $validated['quantity'] * $validated['rate'],
@@ -233,6 +235,7 @@ class StockLedgerController extends Controller
                 'godown_id' => $validated['to_godown_id'],
                 'batch_id' => $validated['batch_id'] ?? null,
                 'type' => 'transfer_in',
+                'date' => now()->toDateString(),
                 'quantity' => $validated['quantity'],
                 'rate' => $validated['rate'],
                 'value' => $validated['quantity'] * $validated['rate'],
@@ -309,9 +312,9 @@ class StockLedgerController extends Controller
         $entries = StockLedger::with(['godown:id,name', 'batch:id,batch_number'])
             ->where('item_id', $item->id)
             ->when($request->godown_id, fn ($q, $v) => $q->where('godown_id', $v))
-            ->when($request->from_date, fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
-            ->when($request->to_date, fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
-            ->orderBy('created_at')
+            ->when($request->from_date, fn ($q, $v) => $q->whereDate('date', '>=', $v))
+            ->when($request->to_date, fn ($q, $v) => $q->whereDate('date', '<=', $v))
+            ->orderBy('date')
             ->paginate($request->per_page ?? 50);
 
         return response()->json($entries);

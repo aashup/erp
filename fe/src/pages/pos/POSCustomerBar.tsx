@@ -111,7 +111,7 @@ export default function POSCustomerBar({ customer, onCustomerChange }: Props) {
                 ? 'Loading…'
                 : balanceLabel
                 ? `Bal: ${balanceLabel}`
-                : 'Bal: ₹0'}
+                : `Bal: ${formatCurrency(0)}`}
             </p>
           </div>
           <button

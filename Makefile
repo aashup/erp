@@ -1,6 +1,6 @@
 COMPOSE := docker compose
 
-.PHONY: start rebuild rebuild-fe rebuild-be migrate seed pint logs backend-log frontend-log down
+.PHONY: start rebuild rebuild-fe rebuild-be migrate seed tinker pint logs backend-log frontend-log down
 
 # ─────────────────────────────────────────────
 # Start — build images and bring all services up
@@ -29,6 +29,8 @@ rebuild-api:
 	$(COMPOSE) build --no-cache api
 	$(COMPOSE) up -d api
 
+env:
+	$(COMPOSE) up -d api
 # ─────────────────────────────────────────────
 # Database
 # ─────────────────────────────────────────────
@@ -47,6 +49,9 @@ seed:
 # ─────────────────────────────────────────────
 # Code Quality
 # ─────────────────────────────────────────────
+tinker:
+	$(COMPOSE) exec -it api php artisan tinker
+
 pint:
 	$(COMPOSE) exec api ./vendor/bin/pint
 
